@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
+import { useRouter, Link } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -12,22 +12,23 @@ export default function Login() {
   const { login } = useAuth();
 
   const handleLogin = async () => {
-    if (!username || !password) {
-      Alert.alert('Error', 'Please enter both username and password');
-      return;
-    }
-
     setIsLoading(true);
+    
     try {
+      console.log('Attempting login with username:', username);
       const success = await login(username, password);
+      console.log('Login result:', success);
       
       if (success) {
+        console.log('Login successful, navigating to home');
         router.replace('/');
       } else {
         Alert.alert('Login Failed', 'Invalid username or password');
       }
-    } catch (error) {
-      Alert.alert('Error', 'An error occurred during login');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error?.message || 'An error occurred during login';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -36,7 +37,6 @@ export default function Login() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.emoji}>🔥</Text>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Login to continue playing</Text>
 
@@ -69,6 +69,15 @@ export default function Login() {
             </Text>
           </TouchableOpacity>
 
+          <View style={styles.signupLinkContainer}>
+            <Text style={styles.signupLinkText}>Don't have an account? </Text>
+            <Link href="/signup" asChild>
+              <TouchableOpacity>
+                <Text style={styles.signupLink}>Sign up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+
           <View style={styles.demoCredentials}>
             <Text style={styles.demoTitle}>Demo Credentials:</Text>
             <Text style={styles.demoText}>Player: player / player</Text>
@@ -91,10 +100,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-  },
-  emoji: {
-    fontSize: 60,
-    marginBottom: 20,
   },
   title: {
     fontSize: 32,
@@ -153,5 +158,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginBottom: 4,
+  },
+  signupLinkContainer: {
+    flexDirection: 'row',
+    marginTop: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signupLinkText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  signupLink: {
+    fontSize: 14,
+    color: '#f4511e',
+    fontWeight: 'bold',
   },
 });

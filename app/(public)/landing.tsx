@@ -1,24 +1,11 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Link, useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
-import { useEffect } from 'react';
+import { Link } from 'expo-router';
 
 export default function Landing() {
-  const router = useRouter();
-  const { isLoggedIn } = useAuth();
-
-  useEffect(() => {
-    // Redirect to player if already logged in
-    if (isLoggedIn) {
-      router.replace('/');
-    }
-  }, [isLoggedIn]);
-
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.emoji}>🔥</Text>
         <Text style={styles.title}>Survivor OutDraft</Text>
         <Text style={styles.subtitle}>
           Play along with your favorite reality show
@@ -27,6 +14,12 @@ export default function Landing() {
         <Link href="/login" asChild>
           <TouchableOpacity style={styles.loginButton}>
             <Text style={styles.loginButtonText}>Login to Play</Text>
+          </TouchableOpacity>
+        </Link>
+
+        <Link href="/signup" asChild>
+          <TouchableOpacity style={styles.signupButton}>
+            <Text style={styles.signupButtonText}>Create Account</Text>
           </TouchableOpacity>
         </Link>
 
@@ -50,10 +43,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  emoji: {
-    fontSize: 80,
-    marginBottom: 20,
-  },
   title: {
     fontSize: 42,
     fontWeight: 'bold',
@@ -73,7 +62,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 50,
     paddingVertical: 18,
     borderRadius: 30,
-    marginBottom: 30,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -82,6 +71,25 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  signupButton: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 50,
+    paddingVertical: 18,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#f4511e',
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  signupButtonText: {
+    color: '#f4511e',
     fontSize: 18,
     fontWeight: 'bold',
   },

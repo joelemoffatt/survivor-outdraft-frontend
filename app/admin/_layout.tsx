@@ -11,6 +11,7 @@ export default function AdminLayout() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        headerShown: false
       }}
     >
       <Stack.Screen

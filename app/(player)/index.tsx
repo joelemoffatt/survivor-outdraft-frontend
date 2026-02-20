@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Link, useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function PlayerHome() {
   const router = useRouter();
@@ -14,11 +14,11 @@ export default function PlayerHome() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🔥 Survivor OutDraft</Text>
-      <Text style={styles.subtitle}>Player View</Text>
+      <Text style={styles.title}>Survivor OutDraft</Text>
+      <Text style={styles.subtitle}>Dashboard</Text>
       
       {user && (
-        <Text style={styles.welcome}>Welcome, {user.name}!</Text>
+        <Text style={styles.welcome}>Welcome, {user.username}!</Text>
       )}
       
       <Text style={styles.platform}>

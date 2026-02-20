@@ -8,9 +8,17 @@ const API_BASE_URL = __DEV__
  */
 class ApiService {
   private baseUrl: string;
+  private token: string | null = null;
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
+  }
+
+  /**
+   * Set authentication token for subsequent requests
+   */
+  setToken(token: string | null) {
+    this.token = token;
   }
 
   /**
@@ -22,17 +30,30 @@ class ApiService {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add authorization header if token is available
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    // Add any additional headers from options
+    if (options.headers) {
+      const additionalHeaders = options.headers as Record<string, string>;
+      Object.assign(headers, additionalHeaders);
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       return await response.json();
@@ -67,6 +88,29 @@ class ApiService {
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
+
+  // Auth endpoints
+  async register(username: string, email: string, password: string): Promise<AuthResponse> {
+    return this.post<AuthResponse>('/v1/auth/register', {
+      username,
+      email,
+      password,
+    });
+  }
+
+  async login(username: string, password: string): Promise<AuthResponse> {
+    return this.post<AuthResponse>('/v1/auth/login', {
+      username,
+      password,
+    });
+  }
+}
+
+export interface AuthResponse {
+  token: string;
+  username: string;
+  email: string;
+  role: 'USER' | 'ADMIN';
 }
 
 export const apiService = new ApiService();

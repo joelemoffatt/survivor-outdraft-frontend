@@ -14,11 +14,11 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>📊 Admin Dashboard</Text>
+      <Text style={styles.title}>Admin Dashboard</Text>
       <Text style={styles.subtitle}>Manage your Survivor game</Text>
       
       {user && (
-        <Text style={styles.welcome}>Welcome, {user.name}!</Text>
+        <Text style={styles.welcome}>Welcome, {user.username}!</Text>
       )}
       
       <Text style={styles.platform}>
@@ -26,7 +26,7 @@ export default function AdminDashboard() {
       </Text>
       {Platform.OS !== 'web' && (
         <Text style={styles.warning}>
-          ⚠️ Admin dashboard is optimized for web
+          Admin dashboard is optimized for web
         </Text>
       )}
 
