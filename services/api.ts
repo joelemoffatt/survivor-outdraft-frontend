@@ -3,6 +3,8 @@ const API_BASE_URL = __DEV__
   ? 'http://localhost:8080/api'  // Development
   : 'https://your-production-url.com/api';  // Production
 
+import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../types/survivor';
+
 /**
  * Base API client for Survivor OutDraft backend
  */
@@ -103,6 +105,31 @@ class ApiService {
       username,
       password,
     });
+  }
+
+  // Survivor endpoints
+  async getSeasons(): Promise<Season[]> {
+    return this.get<Season[]>('/v1/seasons');
+  }
+
+  async getEpisodes(seasonId: number): Promise<Episode[]> {
+    return this.get<Episode[]>(`/v1/episodes?seasonId=${seasonId}`);
+  }
+
+  async getChallenges(seasonId: number, episodeNumber: number): Promise<Challenge[]> {
+    return this.get<Challenge[]>(`/v1/challenges?seasonId=${seasonId}&episodeNumber=${episodeNumber}`);
+  }
+
+  async getVotes(seasonId: number, episodeNumber: number): Promise<Vote[]> {
+    return this.get<Vote[]>(`/v1/votes?seasonId=${seasonId}&episodeNumber=${episodeNumber}`);
+  }
+
+  async getCastaways(seasonId: number): Promise<Castaway[]> {
+    return this.get<Castaway[]>(`/v1/castaways?seasonId=${seasonId}`);
+  }
+
+  async getEpisodeDetail(seasonId: number, episodeNumber: number): Promise<EpisodeDetail> {
+    return this.get<EpisodeDetail>(`/v1/episodes/detail?seasonId=${seasonId}&episodeNumber=${episodeNumber}`);
   }
 }
 
