@@ -2,10 +2,12 @@ import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native
 import { StatusBar } from 'expo-status-bar';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useResponsive } from '../../constants/theme';
 
 export default function PlayerHome() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const responsive = useResponsive();
 
   const handleLogout = () => {
     logout();
@@ -21,9 +23,14 @@ export default function PlayerHome() {
         <Text style={styles.welcome}>Welcome, {user.username}!</Text>
       )}
       
-      <Text style={styles.platform}>
-        Platform: {Platform.OS}
-      </Text>
+      <View style={styles.infoContainer}>
+        <Text style={styles.info}>
+          Platform: {Platform.OS}
+        </Text>
+        <Text style={styles.info}>
+          Screen Type: {responsive.screenType} ({responsive.width}px)
+        </Text>
+      </View>
 
       {user?.isAdmin && (
         <Link href="/admin" asChild>
@@ -66,10 +73,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontWeight: '600',
   },
-  platform: {
+  infoContainer: {
+    marginBottom: 30,
+    alignItems: 'center',
+    gap: 8,
+  },
+  info: {
     fontSize: 14,
     color: '#999',
-    marginBottom: 30,
   },
   button: {
     backgroundColor: '#f4511e',

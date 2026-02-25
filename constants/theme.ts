@@ -1,3 +1,5 @@
+import { useWindowDimensions } from 'react-native';
+
 /**
  * App-wide constants
  */
@@ -28,4 +30,30 @@ export const FontSizes = {
   large: 20,
   xlarge: 24,
   xxlarge: 32,
+};
+
+export const Breakpoints = {
+  mobile: 0,
+  tablet: 768,
+  desktop: 1024,
+  wide: 1440,
+};
+
+export const useResponsive = () => {
+  const { width } = useWindowDimensions();
+  return {
+    isMobile: width < Breakpoints.tablet,
+    isTablet: width >= Breakpoints.tablet && width < Breakpoints.desktop,
+    isDesktop: width >= Breakpoints.desktop,
+    isWide: width >= Breakpoints.wide,
+    width,
+    screenType: 
+      width < Breakpoints.tablet 
+        ? 'Mobile' 
+        : width < Breakpoints.desktop 
+          ? 'Tablet' 
+          : width < Breakpoints.wide
+            ? 'Desktop'
+            : 'Wide Desktop',
+  };
 };

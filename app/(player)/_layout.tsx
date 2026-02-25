@@ -1,79 +1,49 @@
 import { Stack } from 'expo-router';
-import { useSegments, useRouter } from 'expo-router';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { useResponsive } from '../../constants/theme';
+import { ResponsiveNavigation, NavigationItem } from '../../components/shared/ResponsiveNavigation';
 
-function TopSegmentBar() {
-  const segments = useSegments();
-  const router = useRouter();
-  const currentScreen = segments[segments.length - 1] || 'index';
+const navigationItems: NavigationItem[] = [
+  { name: 'index', label: 'Home', href: '/(player)/', icon: '🏠' },
+  { name: 'team', label: 'My Team', href: '/(player)/team', icon: '👥' },
+  { name: 'history', label: 'History', href: '/(player)/history', icon: '📋' },
+  { name: 'settings', label: 'Settings', href: '/(player)/settings', icon: '⚙️' },
+];
 
-  const tabs = [
-    { name: 'index', label: 'Dashboard' },
-    { name: 'history', label: 'History' },
-  ];
+export default function PlayerLayout() {
+  const responsive = useResponsive();
 
   return (
-    <View style={styles.segmentContainer}>
-      {tabs.map((tab) => (
-        <TouchableOpacity
-          key={tab.name}
-          style={[
-            styles.segment,
-            currentScreen === tab.name && styles.segmentActive,
-          ]}
-          onPress={() => router.push(`/(player)/${tab.name === 'index' ? '' : tab.name}`)}
-        >
-          <Text
-            style={[
-              styles.segmentText,
-              currentScreen === tab.name && styles.segmentTextActive,
-            ]}
-          >
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
+    <View style={[styles.container, responsive.isMobile && styles.mobileContainer]}>
+      {!responsive.isMobile && (
+        <ResponsiveNavigation items={navigationItems} baseRoute="/(player)" logo="🏁" />
+      )}
+
+      <View style={styles.contentContainer}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="history" />
+          <Stack.Screen name="team" />
+          <Stack.Screen name="settings" />
+        </Stack>
+      </View>
+
+      {responsive.isMobile && (
+        <ResponsiveNavigation items={navigationItems} baseRoute="/(player)" logo="🏁" />
+      )}
     </View>
   );
 }
 
-export default function PlayerLayout() {
-  return (
-    <>
-      <TopSegmentBar />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="history" />
-      </Stack>
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
-  segmentContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  segment: {
+  container: {
     flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+    flexDirection: 'row',
   },
-  segmentActive: {
-    borderBottomColor: '#f4511e',
+  mobileContainer: {
+    flexDirection: 'column',
   },
-  segmentText: {
-    fontSize: 16,
-    color: '#999',
-    fontWeight: '500',
-  },
-  segmentTextActive: {
-    color: '#f4511e',
-    fontWeight: 'bold',
+  contentContainer: {
+    flex: 1,
   },
 });
