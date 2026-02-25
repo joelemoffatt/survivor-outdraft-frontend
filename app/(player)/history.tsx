@@ -11,6 +11,20 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import apiService from '../../services/api';
 import { Episode, EpisodeDetail, Season } from '../../types/survivor';
+import {
+  isMeaningfulText,
+  joinParts,
+  sentenceCase,
+  sentenceForCastaway,
+  humanizeEvent,
+  humanizeSuccess,
+  advantageActionText,
+  isTribalChallenge,
+  formatPlacement,
+  capitalizeFirstLetterOnly,
+  formatBootEvent,
+  formatAdvantageMovement,
+} from '../../services/textFormatter';
 
 type HistoryLevel = 'seasons' | 'episodes' | 'eventGroups';
 type SectionKey = 'challenges' | 'journeys' | 'advantageMovements' | 'tribals' | 'boots' | 'finalResultsBoots';
@@ -121,61 +135,6 @@ export default function HistoryScreen() {
     setExpandedTribalVotes((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
-  const isMeaningfulText = (value: string | null | undefined) => {
-    if (!value) return false;
-    const normalized = value.trim().toLowerCase();
-    return normalized !== '' && normalized !== 'unknown' && normalized !== 'none' && normalized !== 'n/a';
-  };
-
-  const joinParts = (parts: Array<string | null | undefined>) =>
-    parts.filter((part): part is string => Boolean(part && part.trim().length > 0)).join(' • ');
-
-  const sentenceCase = (value: string | null | undefined) => {
-    if (!value) return '';
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  };
-
-  const sentenceForCastaway = (name: string, fragments: Array<string | null | undefined>) => {
-    const parts = fragments.filter((part): part is string => Boolean(part && part.trim().length > 0));
-    if (parts.length === 0) return name;
-    const sentence = parts.join(' ').trim();
-    const normalized = sentence.charAt(0).toUpperCase() + sentence.slice(1);
-    return `${name} - ${normalized}`;
-  };
-
-  const humanizeEvent = (value: string | null | undefined) => {
-    if (!value) return '';
-    const withSpaces = value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').trim();
-    if (!withSpaces) return '';
-    return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1).toLowerCase();
-  };
-
-  const humanizeSuccess = (value: string | null | undefined) => {
-    if (!value) return '';
-    const normalized = value.trim().toLowerCase();
-    if (!normalized) return '';
-    if (normalized === 'yes' || normalized === 'true') return 'and it was successful';
-    if (normalized === 'no' || normalized === 'false') return 'and it was not successful';
-    return `with result ${value}`;
-  };
-
-  const advantageActionText = (event: string | null | undefined, advantageType: string | null | undefined) => {
-    const rawEvent = event?.trim().toLowerCase() || '';
-    if (rawEvent.includes('beware')) {
-      return isMeaningfulText(advantageType)
-        ? `Found beware advantage for ${advantageType}`
-        : 'Found beware advantage';
-    }
-    return isMeaningfulText(event)
-      ? `${humanizeEvent(event)}${isMeaningfulText(advantageType) ? ` a ${advantageType}` : ' an advantage'}`
-      : 'Had an advantage event';
-  };
-
-  const isTribalChallenge = (challengeType: string | null | undefined) =>
-    Boolean(challengeType && challengeType.toLowerCase().includes('tribal'));
-
   const renderHeader = () => {
     if (level === 'seasons') {
       return <Text style={styles.title}>Seasons</Text>;
@@ -263,27 +222,31 @@ export default function HistoryScreen() {
                           <Text style={styles.emptyText}>No performances for this challenge</Text>
                         )}
                         {isTribalChallenge(challenge.type) ? (
-                          challenge.performancesByTribe.map((group, groupIndex) => (
-                            <Text key={`challenge-${challengeIndex}-tribe-${groupIndex}`} style={styles.lineText}>
-                              {sentenceForCastaway(group.tribeName, [
-                                group.performances[0]?.place != null
-                                  ? `placed ${group.performances[0].place}`
-                                  : 'competed',
-                              ])}
-                            </Text>
-                          ))
+                          (() => {
+                            const totalTribes = challenge.performancesByTribe.length;
+                            return challenge.performancesByTribe.map((group, groupIndex) => (
+                              <Text key={`challenge-${challengeIndex}-tribe-${groupIndex}`} style={styles.lineText}>
+                                {sentenceForCastaway(group.tribeName, [
+                                  group.performances[0]?.place != null
+                                    ? formatPlacement(group.performances[0].place, totalTribes)
+                                    : 'competed',
+                                ])}
+                              </Text>
+                            ));
+                          })()
                         ) : (
-                          challenge.performancesByTribe
-                            .flatMap((group) => group.performances)
-                            .map((performance, perfIndex) => (
+                          (() => {
+                            const allPerformances = challenge.performancesByTribe.flatMap((group) => group.performances);
+                            const totalCompetitors = allPerformances.filter(p => p.place != null).length;
+                            return allPerformances.map((performance, perfIndex) => (
                               <Text key={`challenge-${challengeIndex}-perf-${perfIndex}`} style={styles.lineText}>
                                 {sentenceForCastaway(performance.castawayName, [
-                                  performance.place != null ? `placed ${performance.place}` : null,
-                                  performance.won ? 'won' : null,
+                                  performance.place != null ? formatPlacement(performance.place, totalCompetitors) : null,
                                   performance.satOut ? 'sat out' : null,
                                 ])}
                               </Text>
-                            ))
+                            ));
+                          })()
                         )}
                       </View>
                     )}
@@ -303,7 +266,7 @@ export default function HistoryScreen() {
                   <Text key={`journey-${journeyIndex}`} style={styles.lineText}>
                     {sentenceForCastaway(journey.castawayName, [
                       isMeaningfulText(journey.reward ?? undefined)
-                        ? `got reward ${journey.reward}`
+                        ? `got reward ${capitalizeFirstLetterOnly(journey.reward)}`
                         : 'got no reward',
                       journey.lostVote ? 'and lost their vote' : null,
                       journey.choseToPlay ? 'and chose to play' : null,
@@ -327,14 +290,14 @@ export default function HistoryScreen() {
               <View style={[styles.sectionContent, styles.advantageContent]}>
                 {episodeDetail.advantageMovements.map((movement, movementIndex) => (
                   <Text key={`movement-${movementIndex}`} style={styles.lineText}>
-                    {sentenceForCastaway(movement.castawayName, [
-                      advantageActionText(movement.event, movement.advantageType),
-                      isMeaningfulText(movement.playedForName ?? undefined)
-                        ? `for ${movement.playedForName}`
-                        : null,
-                      isMeaningfulText(movement.success ?? undefined) ? humanizeSuccess(movement.success) : null,
-                      movement.votesNullified && movement.votesNullified > 0 ? `and nullified ${movement.votesNullified} votes` : null,
-                    ])}
+                    {sentenceCase(movement.castawayName)} - {formatAdvantageMovement(
+                      movement.castawayName,
+                      movement.event,
+                      movement.advantageType,
+                      movement.playedForName,
+                      movement.success,
+                      movement.votesNullified
+                    )}
                   </Text>
                 ))}
               </View>
@@ -384,7 +347,7 @@ export default function HistoryScreen() {
                 {episodeDetail.boots.map((boot, bootIndex) => (
                   <Text key={`boot-${bootIndex}`} style={styles.lineText}>
                     {sentenceForCastaway(boot.castawayName, [
-                      isMeaningfulText(boot.event ?? undefined) ? humanizeEvent(boot.event) : 'left the game',
+                      isMeaningfulText(boot.event ?? undefined) ? formatBootEvent(boot.event) : 'left the game',
                       isMeaningfulText(boot.tribeName ?? undefined) ? `from ${boot.tribeName}` : null,
                       boot.bootOrder != null ? `boot order ${boot.bootOrder}` : null,
                     ])}
@@ -403,7 +366,7 @@ export default function HistoryScreen() {
                 {episodeDetail.finalResultsBoots.map((boot, bootIndex) => (
                   <Text key={`result-${bootIndex}`} style={styles.lineText}>
                     {sentenceForCastaway(boot.castawayName, [
-                      isMeaningfulText(boot.event ?? undefined) ? humanizeEvent(boot.event) : 'finished',
+                      isMeaningfulText(boot.event ?? undefined) ? formatBootEvent(boot.event) : 'finished',
                       isMeaningfulText(boot.tribeName ?? undefined) ? `from ${boot.tribeName}` : null,
                       boot.bootOrder != null ? `boot order ${boot.bootOrder}` : null,
                     ])}
