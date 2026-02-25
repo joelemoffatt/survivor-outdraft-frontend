@@ -3,7 +3,7 @@
  */
 
 export interface Season {
-  seasonId: number;
+  season: number;
   version: string;
   seasonName?: string;
   location?: string;
@@ -20,13 +20,19 @@ export interface Season {
 
 export interface Episode {
   id: number;
-  seasonId: number;
+  season?: SeasonMinimal;
   episodeNumber: number;
   episodeTitle: string;
   episodeDate: string;
   episodeLength: number;
   isFinale: boolean;
   episodeSummary?: string;
+}
+
+export interface SeasonMinimal {
+  season: number;
+  version: string;
+  seasonName: string;
 }
 
 export interface Castaway {

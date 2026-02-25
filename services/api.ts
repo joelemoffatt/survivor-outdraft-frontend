@@ -1,5 +1,6 @@
 // API Configuration
-const API_BASE_URL = __DEV__ 
+const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+const API_BASE_URL = isDevelopment
   ? 'http://localhost:8080/api'  // Development
   : 'https://your-production-url.com/api';  // Production
 
@@ -32,6 +33,8 @@ class ApiService {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    console.log('API Request:', url);
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -55,10 +58,13 @@ class ApiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('API Error Response:', errorData);
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('API Response:', data);
+      return data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -131,13 +137,72 @@ class ApiService {
   async getEpisodeDetail(seasonId: number, episodeNumber: number): Promise<EpisodeDetail> {
     return this.get<EpisodeDetail>(`/v1/episodes/detail?seasonId=${seasonId}&episodeNumber=${episodeNumber}`);
   }
+
+  // Group endpoints
+  async getUserGroups(userId: number): Promise<GroupResponse[]> {
+    return this.get<GroupResponse[]>(`/v1/groups/user/${userId}`);
+  }
+
+  async getGroupById(groupId: number): Promise<GroupResponse> {
+    return this.get<GroupResponse>(`/v1/groups/${groupId}`);
+  }
+
+  // Team endpoints
+  async getTeamByGroupAndUser(groupId: number, userId: number): Promise<TeamResponse> {
+    return this.get<TeamResponse>(`/v1/teams/group/${groupId}/user/${userId}`);
+  }
+
+  async getTeamById(teamId: number): Promise<TeamResponse> {
+    return this.get<TeamResponse>(`/v1/teams/${teamId}`);
+  }
 }
 
 export interface AuthResponse {
+  id: number;
   token: string;
   username: string;
   email: string;
   role: 'USER' | 'ADMIN';
+}
+
+export interface GroupResponse {
+  id: number;
+  name: string;
+  admin: {
+    id: number;
+    username: string;
+  };
+  season: {
+    id: number;
+    seasonName: string;
+    version: string;
+  };
+  draftDate: string | null;
+  status: 'PENDING' | 'ACTIVE' | 'COMPLETED';
+  createdAt: string;
+}
+
+export interface TeamCastawayResponse {
+  id: number;
+  draftOrder: number;
+  points: number;
+  draftedAt: string;
+  castawayPerformance: {
+    id: number;
+    castaway: {
+      id: number;
+      name: string;
+      full_name: string;
+    };
+  };
+}
+
+export interface TeamResponse {
+  id: number;
+  teamName: string;
+  totalPoints: number;
+  createdAt: string;
+  roster: TeamCastawayResponse[];
 }
 
 export const apiService = new ApiService();

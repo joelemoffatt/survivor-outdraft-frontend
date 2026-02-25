@@ -50,7 +50,6 @@ export function ResponsiveNavigation({
         currentScreen === item.name && styles.navItemActive,
       ]}
       onPress={() => router.push(item.href)}
-      title={item.label}
     >
       <Text style={[styles.icon, currentScreen === item.name && styles.iconActive]}>
         {item.icon}

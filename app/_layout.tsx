@@ -1,22 +1,34 @@
 import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { GroupProvider } from '../contexts/GroupContext';
 import { View, ActivityIndicator } from 'react-native';
 import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 
 function RootLayoutNav() {
   const { isLoggedIn, user, isLoading } = useAuth();
   const isAdmin = user?.isAdmin || false;
   const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
-    if (!isLoading && !isLoggedIn) {
-      router.replace('/login');
-    }
-  }, [isLoggedIn, isLoading, router]);
+    if (isLoading) return;
 
-  // Wait for auth to load before rendering routes with guards
+    const inPublicGroup = segments[0] === '(public)';
+    const inPlayerGroup = segments[0] === '(player)';
+    const inAdminGroup = segments[0] === 'admin';
+
+    if (!isLoggedIn && inPlayerGroup) {
+      // Redirect to landing if trying to access player routes while not logged in
+      router.replace('/landing');
+    } else if (!isLoggedIn && inAdminGroup) {
+      // Redirect to landing if trying to access admin routes while not logged in
+      router.replace('/landing');
+    }
+  }, [isLoggedIn, isLoading, router, segments]);
+
+  // Wait for auth to load before rendering
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -27,20 +39,9 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* Public group - only accessible when NOT logged in */}
-      <Stack.Protected guard={!isLoggedIn}>
-        <Stack.Screen name="(public)" />
-      </Stack.Protected>
-
-      {/* Player group - only accessible when logged in */}
-      <Stack.Protected guard={isLoggedIn}>
-        <Stack.Screen name="(player)" />
-        
-        {/* Admin route - only accessible when logged in AND isAdmin */}
-        <Stack.Protected guard={isAdmin}>
-          <Stack.Screen name="admin" />
-        </Stack.Protected>
-      </Stack.Protected>
+      <Stack.Screen name="(public)" />
+      <Stack.Screen name="(player)" />
+      <Stack.Screen name="admin" />
     </Stack>
   );
 }
@@ -48,9 +49,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <SafeAreaProvider>
-        <RootLayoutNav />
-      </SafeAreaProvider>
+      <GroupProvider>
+        <SafeAreaProvider>
+          <RootLayoutNav />
+        </SafeAreaProvider>
+      </GroupProvider>
     </AuthProvider>
   );
 }

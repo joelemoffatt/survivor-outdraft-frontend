@@ -4,7 +4,7 @@ import apiService, { AuthResponse } from '../services/api';
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  user: { username: string; email: string; isAdmin: boolean } | null;
+  user: { id: number; username: string; email: string; isAdmin: boolean } | null;
   token: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
@@ -19,7 +19,7 @@ const USER_KEY = 'auth_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ username: string; email: string; isAdmin: boolean } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; email: string; isAdmin: boolean } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiService.login(username, password);
       
       const userData = {
+        id: response.id,
         username: response.username,
         email: response.email,
         isAdmin: response.role === 'ADMIN',
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiService.register(username, email, password);
       
       const userData = {
+        id: response.id,
         username: response.username,
         email: response.email,
         isAdmin: response.role === 'ADMIN',

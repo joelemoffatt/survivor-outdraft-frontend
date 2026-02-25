@@ -60,7 +60,7 @@ export default function HistoryScreen() {
     setContentLoading(true);
 
     try {
-      const episodesData = await apiService.getEpisodes(season.seasonId);
+      const episodesData = await apiService.getEpisodes(season.season);
       setEpisodes(episodesData);
       setLevel('episodes');
     } catch (error) {
@@ -81,7 +81,7 @@ export default function HistoryScreen() {
     setContentLoading(true);
 
     try {
-      const detail = await apiService.getEpisodeDetail(selectedSeason.seasonId, episode.episodeNumber);
+      const detail = await apiService.getEpisodeDetail(selectedSeason.season, episode.episodeNumber);
       setEpisodeDetail(detail);
       setExpandedSections(defaultExpandedSections);
       setExpandedChallenges({});
@@ -187,7 +187,7 @@ export default function HistoryScreen() {
           <TouchableOpacity onPress={handleBackToSeasons}>
             <Text style={styles.backButton}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Season {selectedSeason?.seasonId} Episodes</Text>
+          <Text style={styles.title}>Season {selectedSeason?.season} Episodes</Text>
         </View>
       );
     }
@@ -205,8 +205,8 @@ export default function HistoryScreen() {
   const renderSeasons = () => (
     <View style={styles.columnList}>
       {seasons.map((season) => (
-        <TouchableOpacity key={season.seasonId} style={styles.rowCard} onPress={() => handleSelectSeason(season)}>
-          <Text style={styles.rowTitle}>Season {season.seasonId}</Text>
+        <TouchableOpacity key={season.season} style={styles.rowCard} onPress={() => handleSelectSeason(season)}>
+          <Text style={styles.rowTitle}>Season {season.season}</Text>
         </TouchableOpacity>
       ))}
     </View>

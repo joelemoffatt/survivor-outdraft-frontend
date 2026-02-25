@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { useResponsive } from '../../constants/theme';
 import { ResponsiveNavigation, NavigationItem } from '../../components/shared/ResponsiveNavigation';
+import { PlayerHeader } from '../../components/shared/PlayerHeader';
 
 const navigationItems: NavigationItem[] = [
   { name: 'index', label: 'Home', href: '/(player)/', icon: '🏠' },
@@ -20,12 +21,16 @@ export default function PlayerLayout() {
       )}
 
       <View style={styles.contentContainer}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="history" />
-          <Stack.Screen name="team" />
-          <Stack.Screen name="settings" />
-        </Stack>
+        <PlayerHeader />
+        
+        <View style={styles.stackContainer}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="history" />
+            <Stack.Screen name="team" />
+            <Stack.Screen name="settings" />
+          </Stack>
+        </View>
       </View>
 
       {responsive.isMobile && (
@@ -44,6 +49,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   contentContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    overflow: 'visible',
+  },
+  stackContainer: {
     flex: 1,
   },
 });
