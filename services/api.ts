@@ -1,7 +1,7 @@
 // API Configuration
 const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const API_BASE_URL = isDevelopment
-  ? 'http://localhost:8080/api'  // Development
+  ? 'http://192.168.86.20:8080/api'  // Development
   : 'https://your-production-url.com/api';  // Production
 
 import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../types/survivor';
@@ -32,8 +32,8 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
-    console.log('API Request:', url);
+    // Print the full URL before sending the request
+    console.log('API Request URL:', url);
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

@@ -12,18 +12,16 @@ import { StatusBar } from 'expo-status-bar';
 import apiService from '../../services/api';
 import { Episode, EpisodeDetail, Season } from '../../types/survivor';
 import {
-  isMeaningfulText,
+  getJourneySentence,
+  getChallengeSentence,
+  getChallengePerformanceSentence,
+  getAdvantageMovementSentence,
+  getTribalSentence,
+  getTribalVoteSentence,
+  getBootSentence,
+  getFinalResultBootSentence,
   joinParts,
-  sentenceCase,
-  sentenceForCastaway,
-  humanizeEvent,
-  humanizeSuccess,
-  advantageActionText,
   isTribalChallenge,
-  formatPlacement,
-  capitalizeFirstLetterOnly,
-  formatBootEvent,
-  formatAdvantageMovement,
 } from '../../services/textFormatter';
 
 type HistoryLevel = 'seasons' | 'episodes' | 'eventGroups';
@@ -226,11 +224,7 @@ export default function HistoryScreen() {
                             const totalTribes = challenge.performancesByTribe.length;
                             return challenge.performancesByTribe.map((group, groupIndex) => (
                               <Text key={`challenge-${challengeIndex}-tribe-${groupIndex}`} style={styles.lineText}>
-                                {sentenceForCastaway(group.tribeName, [
-                                  group.performances[0]?.place != null
-                                    ? formatPlacement(group.performances[0].place, totalTribes)
-                                    : 'competed',
-                                ])}
+                                {getChallengeSentence(challenge, group, totalTribes)}
                               </Text>
                             ));
                           })()
@@ -240,10 +234,7 @@ export default function HistoryScreen() {
                             const totalCompetitors = allPerformances.filter(p => p.place != null).length;
                             return allPerformances.map((performance, perfIndex) => (
                               <Text key={`challenge-${challengeIndex}-perf-${perfIndex}`} style={styles.lineText}>
-                                {sentenceForCastaway(performance.castawayName, [
-                                  performance.place != null ? formatPlacement(performance.place, totalCompetitors) : null,
-                                  performance.satOut ? 'sat out' : null,
-                                ])}
+                                {getChallengePerformanceSentence(performance, totalCompetitors)}
                               </Text>
                             ));
                           })()
@@ -264,14 +255,7 @@ export default function HistoryScreen() {
               <View style={[styles.sectionContent, styles.journeyContent]}>
                 {episodeDetail.journeys.map((journey, journeyIndex) => (
                   <Text key={`journey-${journeyIndex}`} style={styles.lineText}>
-                    {sentenceForCastaway(journey.castawayName, [
-                      isMeaningfulText(journey.reward ?? undefined)
-                        ? `got reward ${capitalizeFirstLetterOnly(journey.reward)}`
-                        : 'got no reward',
-                      journey.lostVote ? 'and lost their vote' : null,
-                      journey.choseToPlay ? 'and chose to play' : null,
-                      isMeaningfulText(journey.event ?? undefined) ? `during ${humanizeEvent(journey.event)}` : null,
-                    ])}
+                    {getJourneySentence(journey)}
                   </Text>
                 ))}
               </View>
@@ -290,14 +274,7 @@ export default function HistoryScreen() {
               <View style={[styles.sectionContent, styles.advantageContent]}>
                 {episodeDetail.advantageMovements.map((movement, movementIndex) => (
                   <Text key={`movement-${movementIndex}`} style={styles.lineText}>
-                    {sentenceCase(movement.castawayName)} - {formatAdvantageMovement(
-                      movement.castawayName,
-                      movement.event,
-                      movement.advantageType,
-                      movement.playedForName,
-                      movement.success,
-                      movement.votesNullified
-                    )}
+                    {getAdvantageMovementSentence(movement)}
                   </Text>
                 ))}
               </View>
@@ -315,19 +292,14 @@ export default function HistoryScreen() {
                     <TouchableOpacity onPress={() => toggleTribalVotes(tribalIndex)}>
                       <Text style={styles.itemTitle}>{tribal.tribeName}</Text>
                       <Text style={styles.itemSubtitle}>
-                        {isMeaningfulText(tribal.votedOutName)
-                          ? `${tribal.votedOutName} was voted out${tribal.bootOrder != null ? ` at boot order ${tribal.bootOrder}` : ''}.`
-                          : 'No voted out data available.'}
+                        {getTribalSentence(tribal)}
                       </Text>
                     </TouchableOpacity>
                     {expandedTribalVotes[tribalIndex] && (
                       <View style={styles.subSectionContent}>
                         {tribal.votes.map((vote, voteIndex) => (
                           <Text key={`tribal-${tribalIndex}-vote-${voteIndex}`} style={styles.lineText}>
-                            {sentenceForCastaway(vote.voterName, [
-                              `voted for ${vote.votedForName}`,
-                              vote.nullified ? 'vote was nullified' : null,
-                            ])}
+                            {getTribalVoteSentence(vote)}
                           </Text>
                         ))}
                       </View>
@@ -346,11 +318,7 @@ export default function HistoryScreen() {
               <View style={[styles.sectionContent, styles.bootContent]}>
                 {episodeDetail.boots.map((boot, bootIndex) => (
                   <Text key={`boot-${bootIndex}`} style={styles.lineText}>
-                    {sentenceForCastaway(boot.castawayName, [
-                      isMeaningfulText(boot.event ?? undefined) ? formatBootEvent(boot.event) : 'left the game',
-                      isMeaningfulText(boot.tribeName ?? undefined) ? `from ${boot.tribeName}` : null,
-                      boot.bootOrder != null ? `boot order ${boot.bootOrder}` : null,
-                    ])}
+                    {getBootSentence(boot)}
                   </Text>
                 ))}
               </View>
@@ -365,11 +333,7 @@ export default function HistoryScreen() {
               <View style={[styles.sectionContent, styles.resultContent]}>
                 {episodeDetail.finalResultsBoots.map((boot, bootIndex) => (
                   <Text key={`result-${bootIndex}`} style={styles.lineText}>
-                    {sentenceForCastaway(boot.castawayName, [
-                      isMeaningfulText(boot.event ?? undefined) ? formatBootEvent(boot.event) : 'finished',
-                      isMeaningfulText(boot.tribeName ?? undefined) ? `from ${boot.tribeName}` : null,
-                      boot.bootOrder != null ? `boot order ${boot.bootOrder}` : null,
-                    ])}
+                    {getFinalResultBootSentence(boot)}
                   </Text>
                 ))}
               </View>
