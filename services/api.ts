@@ -1,7 +1,7 @@
 // API Configuration
 const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const API_BASE_URL = isDevelopment
-  ? 'http://192.168.86.20:8080/api'  // Development
+  ? 'http://10.18.233.112:8080/api'  // Development
   : 'https://your-production-url.com/api';  // Production
 
 import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../types/survivor';

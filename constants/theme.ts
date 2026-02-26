@@ -8,6 +8,7 @@ export const Colors = {
   primary: '#f4511e',
   secondary: '#2c3e50',
   background: '#fff',
+  secondaryBackground: '#fbfbfb',
   adminBackground: '#ecf0f1',
   text: '#000',
   textSecondary: '#666',

@@ -8,9 +8,10 @@ import { useGroup } from '../../contexts/GroupContext';
 
 interface PlayerHeaderProps {
   onGroupChange?: (groupId: number) => void;
+  showGroupSelector?: boolean;
 }
 
-export function PlayerHeader({ onGroupChange }: PlayerHeaderProps) {
+export function PlayerHeader({ onGroupChange, showGroupSelector = true }: PlayerHeaderProps) {
   const [groups, setGroups] = useState<GroupResponse[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,26 +69,28 @@ export function PlayerHeader({ onGroupChange }: PlayerHeaderProps) {
 
   return (
     <View style={[styles.header, responsive.isMobile && styles.mobileHeader]}>
-      {loading ? (
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="small" color={Colors.primary} />
-          <Text style={styles.infoText}>Loading groups...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.centerContent}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Text style={styles.hintText}>Check browser console for details</Text>
-        </View>
-      ) : groups.length === 0 ? (
-        <View style={styles.centerContent}>
-          <Text style={styles.infoText}>No groups available</Text>
-        </View>
-      ) : (
-        <GroupSelector
-          groups={groups}
-          selectedGroupId={selectedGroupId}
-          onSelectGroup={handleGroupSelect}
-        />
+      {showGroupSelector && (
+        loading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.infoText}>Loading groups...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.centerContent}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.hintText}>Check browser console for details</Text>
+          </View>
+        ) : groups.length === 0 ? (
+          <View style={styles.centerContent}>
+            <Text style={styles.infoText}>No groups available</Text>
+          </View>
+        ) : (
+          <GroupSelector
+            groups={groups}
+            selectedGroupId={selectedGroupId}
+            onSelectGroup={handleGroupSelect}
+          />
+        )
       )}
     </View>
   );

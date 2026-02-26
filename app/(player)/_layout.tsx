@@ -3,16 +3,20 @@ import { View, StyleSheet } from 'react-native';
 import { useResponsive } from '../../constants/theme';
 import { ResponsiveNavigation, NavigationItem } from '../../components/shared/ResponsiveNavigation';
 import { PlayerHeader } from '../../components/shared/PlayerHeader';
+import { useRouter, useSegments } from 'expo-router';
 
 const navigationItems: NavigationItem[] = [
   { name: 'index', label: 'Home', href: '/(player)/', icon: '🏠' },
   { name: 'team', label: 'My Team', href: '/(player)/team', icon: '👥' },
   { name: 'history', label: 'History', href: '/(player)/history', icon: '📋' },
-  { name: 'settings', label: 'Settings', href: '/(player)/settings', icon: '⚙️' },
+  { name: 'profile', label: 'Profile', href: '/(player)/profile', icon: '👤' },
 ];
 
 export default function PlayerLayout() {
   const responsive = useResponsive();
+  const segments = useSegments();
+  // segments example: ["(player)", "team"] or ["(player)", "index"]
+  const currentScreen = "index";
 
   return (
     <View style={[styles.container, responsive.isMobile && styles.mobileContainer]}>
@@ -21,13 +25,13 @@ export default function PlayerLayout() {
       )}
 
       <View style={styles.contentContainer}>
-        <PlayerHeader />
-        
+        <PlayerHeader showGroupSelector={currentScreen === "index" || currentScreen === "team"} />
         <View style={styles.stackContainer}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="history" />
             <Stack.Screen name="team" />
+            <Stack.Screen name="profile" />
             <Stack.Screen name="settings" />
           </Stack>
         </View>

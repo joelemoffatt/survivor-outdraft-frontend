@@ -71,7 +71,7 @@ export function GroupSelector({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
   },
 
   trigger: {
@@ -94,20 +94,11 @@ const styles = StyleSheet.create({
   },
 
   dropdown: {
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
     maxHeight: 400,
+    marginTop: Spacing.sm,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     backgroundColor: '#fff',
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
   },
 
   option: {
