@@ -14,9 +14,6 @@ const navigationItems: NavigationItem[] = [
 
 export default function PlayerLayout() {
   const responsive = useResponsive();
-  const segments = useSegments();
-  // segments example: ["(player)", "team"] or ["(player)", "index"]
-  const currentScreen = "index";
 
   return (
     <View style={[styles.container, responsive.isMobile && styles.mobileContainer]}>
@@ -25,7 +22,6 @@ export default function PlayerLayout() {
       )}
 
       <View style={styles.contentContainer}>
-        <PlayerHeader showGroupSelector={currentScreen === "index" || currentScreen === "team"} />
         <View style={styles.stackContainer}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />

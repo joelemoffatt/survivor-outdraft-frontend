@@ -71,6 +71,7 @@ export default function EpisodeHistory() {
       {episodeDetail.challenges.length > 0 && (
         <HistorySection
           title="Challenges"
+          category="challenges"
           collapsible
           collapsed={collapsedSections.challenges}
           onToggle={() => toggleSection('challenges')}
@@ -100,6 +101,7 @@ export default function EpisodeHistory() {
       {episodeDetail.journeys.length > 0 && (
         <HistorySection
           title="Journeys"
+          category="journeys"
           collapsible
           collapsed={collapsedSections.journeys}
           onToggle={() => toggleSection('journeys')}
@@ -114,6 +116,7 @@ export default function EpisodeHistory() {
       {episodeDetail.advantageMovements.length > 0 && (
         <HistorySection
           title="Advantage Movements"
+          category="advantages"
           collapsible
           collapsed={collapsedSections.advantageMovements}
           onToggle={() => toggleSection('advantageMovements')}
@@ -128,6 +131,7 @@ export default function EpisodeHistory() {
       {episodeDetail.tribals.length > 0 && (
         <HistorySection
           title="Tribals"
+          category="tribals"
           collapsible
           collapsed={collapsedSections.tribals}
           onToggle={() => toggleSection('tribals')}
@@ -149,6 +153,7 @@ export default function EpisodeHistory() {
       {episodeDetail.boots.length > 0 && (
         <HistorySection
           title="Other Boots"
+          category="boots"
           collapsible
           collapsed={collapsedSections.boots}
           onToggle={() => toggleSection('boots')}
@@ -163,6 +168,7 @@ export default function EpisodeHistory() {
       {episodeDetail.finalResultsBoots && episodeDetail.finalResultsBoots.length > 0 && (
         <HistorySection
           title="Results"
+          category="results"
           collapsible
           collapsed={collapsedSections.results}
           onToggle={() => toggleSection('results')}

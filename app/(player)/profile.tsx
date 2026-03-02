@@ -27,7 +27,7 @@ export default function ProfileScreen() {
         setError(null);
         const userGroups = await apiService.getUserGroups(user.id);
         setGroups(userGroups);
-        if (userGroups.length > 0 && selectedGroupId == null) {
+        if (userGroups.length > 0) {
           setSelectedGroupId(userGroups[0].id);
         }
       } catch (err: any) {
@@ -38,7 +38,7 @@ export default function ProfileScreen() {
     };
 
     fetchGroups();
-  }, [user, selectedGroupId, setSelectedGroupId]);
+  }, [user]);
 
   const handleLogout = async () => {
     await logout();

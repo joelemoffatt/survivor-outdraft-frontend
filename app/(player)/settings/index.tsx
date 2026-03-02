@@ -1,30 +1,18 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { useResponsive } from '../../../constants/theme';
-import { useRouter } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
 
 export default function SettingsScreen() {
-  const responsive = useResponsive();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    // Add your logout logic here (e.g., clear auth, redirect)
-    alert('Logged out!');
-  };
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
-      <View style={styles.menuCol}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(player)/settings/general')}>
-          <Text style={styles.menuText}>General</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(player)/settings/groups')}>
-          <Text style={styles.menuText}>Groups</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+      <View style={styles.header}>
+        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.subtitle}>Tune your experience</Text>
+      </View>
+      <View style={styles.card}>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Coming soon</Text>
+        </View>
+        <Text style={styles.cardTitle}>More controls are on the way</Text>
+        <Text style={styles.cardText}>Account, notifications, and group options will live here.</Text>
       </View>
     </View>
   );
@@ -33,40 +21,59 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: 20,
+    backgroundColor: '#f7f5f2',
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  header: {
+    marginBottom: 24,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#201f1d',
   },
-  menuCol: {
-    width: '100%',
-    alignItems: 'flex-start',
+  subtitle: {
+    marginTop: 6,
+    fontSize: 16,
+    color: '#6b6a67',
   },
-  menuHeader: {
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e6e1da',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f1ebe3',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 12,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: '#7a5f3c',
+  },
+  cardTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  menuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    fontWeight: '700',
+    color: '#201f1d',
     marginBottom: 8,
-    borderRadius: 6,
-    backgroundColor: '#f5f5f5',
-    width: '100%',
   },
-  menuText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  logoutText: {
-    fontSize: 16,
-    color: '#d32f2f',
-    fontWeight: 'bold',
+  cardText: {
+    fontSize: 15,
+    color: '#5f5d59',
+    lineHeight: 22,
   },
 });

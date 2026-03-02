@@ -1,7 +1,11 @@
 // API Configuration
 const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+const developmentApiBaseUrl =
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+  process.env.API_BASE_URL ||
+  'http://localhost:8080/api';
 const API_BASE_URL = isDevelopment
-  ? 'http://10.18.233.112:8080/api'  // Development
+  ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
 
 import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../types/survivor';
@@ -115,11 +119,13 @@ class ApiService {
 
   // Survivor endpoints
   async getSeasons(): Promise<Season[]> {
-    return this.get<Season[]>('/v1/seasons');
+    const seasons = await this.get<Season[]>('/v1/seasons');
+    return seasons.sort((a, b) => b.season - a.season);
   }
 
   async getEpisodes(seasonId: number): Promise<Episode[]> {
-    return this.get<Episode[]>(`/v1/episodes?seasonId=${seasonId}`);
+    const episodes = await this.get<Episode[]>(`/v1/episodes?seasonId=${seasonId}`);
+    return episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
   }
 
   async getChallenges(seasonId: number, episodeNumber: number): Promise<Challenge[]> {

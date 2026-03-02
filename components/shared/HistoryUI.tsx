@@ -30,6 +30,7 @@ type HistorySectionProps = {
   collapsible?: boolean;
   collapsed?: boolean;
   onToggle?: () => void;
+  category?: 'challenges' | 'journeys' | 'advantages' | 'tribals' | 'boots' | 'results';
 };
 
 type HistoryTextProps = {
@@ -69,19 +70,41 @@ export const HistorySection = ({
   children,
   collapsible,
   collapsed,
+  category,
   onToggle,
-}: HistorySectionProps) => (
-  <View style={styles.sectionBlock}>
-    {collapsible ? (
-      <TouchableOpacity style={styles.sectionHeader} onPress={onToggle}>
+}: HistorySectionProps) => {
+  const getCategoryColor = (cat?: string) => {
+    switch (cat) {
+      case 'challenges':
+        return '#FF6B6B';
+      case 'journeys':
+        return '#4ECDC4';
+      case 'advantages':
+        return '#FFD93D';
+      case 'tribals':
+        return '#6C5CE7';
+      case 'boots':
+        return '#FFA502';
+      case 'results':
+        return '#2ECC71';
+      default:
+        return Colors.primary;
+    }
+  };
+
+  return (
+    <View style={[styles.sectionBlock, { borderLeftColor: getCategoryColor(category) }]}>
+      {collapsible ? (
+        <TouchableOpacity style={styles.sectionHeader} onPress={onToggle}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+        </TouchableOpacity>
+      ) : (
         <Text style={styles.sectionTitle}>{title}</Text>
-      </TouchableOpacity>
-    ) : (
-      <Text style={styles.sectionTitle}>{title}</Text>
-    )}
-    {!collapsed && children}
-  </View>
-);
+      )}
+      {!collapsed && children}
+    </View>
+  );
+};
 
 export const HistoryLineGroup = ({ children }: HistoryTextProps) => (
   <View style={styles.lineGroup}>{children}</View>
