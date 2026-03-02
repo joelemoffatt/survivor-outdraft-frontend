@@ -1,20 +1,49 @@
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useResponsive, Colors, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
-import apiService, { TeamResponse } from '../../services/api';
+import apiService, { TeamResponse, GroupResponse } from '../../services/api';
+import DraftScreen from '../../components/player/DraftScreen';
 
 export default function TeamScreen() {
   const responsive = useResponsive();
   const { user } = useAuth();
-  const { selectedGroupId } = useGroup();
+  const { selectedGroupId, setSelectedGroupId } = useGroup();
   const [team, setTeam] = useState<TeamResponse | null>(null);
+  const [group, setGroup] = useState<GroupResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<string>('');
+  const [startingDraft, setStartingDraft] = useState(false);
+  const [draftComplete, setDraftComplete] = useState(false);
+  const [selectingGroup, setSelectingGroup] = useState(false);
+
+  // Auto-select first group if none selected
+  useEffect(() => {
+    if (selectedGroupId || !user || selectingGroup) {
+      return;
+    }
+
+    setSelectingGroup(true);
+    const autoSelectGroup = async () => {
+      try {
+        const userGroups = await apiService.getUserGroups(user.id);
+        if (userGroups.length > 0) {
+          setSelectedGroupId(userGroups[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to auto-select group:', err);
+      } finally {
+        setSelectingGroup(false);
+      }
+    };
+
+    autoSelectGroup();
+  }, [user, selectedGroupId, selectingGroup, setSelectedGroupId]);
 
   useEffect(() => {
-    const fetchTeam = async () => {
+    const fetchData = async () => {
       if (!user || !selectedGroupId) {
         setLoading(false);
         return;
@@ -23,23 +52,80 @@ export default function TeamScreen() {
       try {
         setLoading(true);
         setError(null);
+        
+        // Fetch group info
+        const groupData = await apiService.getGroupById(selectedGroupId);
+        setGroup(groupData);
+        
+        // Fetch team data
         const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
         setTeam(teamData);
+
+        // Reset draftComplete if draft is still in progress
+        if (groupData.status === 'DRAFTING') {
+          setDraftComplete(false);
+        }
       } catch (err: any) {
-        console.error('Failed to fetch team:', err);
-        setError(err?.message || 'Failed to load team');
+        console.error('Failed to fetch data:', err);
+        setError(err?.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTeam();
+    fetchData();
   }, [user, selectedGroupId]);
+
+  // Countdown timer for draft start
+  useEffect(() => {
+    if (!group || !group.draftStartTime || group.status !== 'PENDING') {
+      setCountdown('');
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const startTime = new Date(group.draftStartTime!);
+      const diff = startTime.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setCountdown('Draft should start soon!');
+        return;
+      }
+
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      setCountdown(`${minutes}m ${seconds}s`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [group]);
+
+  const handleStartDraft = async () => {
+    if (!selectedGroupId) return;
+    
+    try {
+      setStartingDraft(true);
+      await apiService.startDraft(selectedGroupId);
+      
+      // Refresh group data
+      const groupData = await apiService.getGroupById(selectedGroupId);
+      setGroup(groupData);
+    } catch (err: any) {
+      console.error('Failed to start draft:', err);
+      alert('Failed to start draft: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setStartingDraft(false);
+    }
+  };
 
   if (!selectedGroupId) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Please select a group first</Text>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.infoText}>Loading groups...</Text>
       </View>
     );
   }
@@ -48,7 +134,7 @@ export default function TeamScreen() {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.infoText}>Loading team...</Text>
+        <Text style={styles.infoText}>Loading...</Text>
       </View>
     );
   }
@@ -61,7 +147,7 @@ export default function TeamScreen() {
     );
   }
 
-  if (!team) {
+  if (!team || !group) {
     return (
       <View style={styles.container}>
         <Text style={styles.infoText}>No team found for this group</Text>
@@ -69,6 +155,93 @@ export default function TeamScreen() {
     );
   }
 
+  // BEFORE DRAFT - Show countdown
+  if (group.status === 'PENDING') {
+    const isAdmin = user?.id === group.admin.id;
+    
+    return (
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
+        <View style={styles.headerSection}>
+          <Text style={styles.teamName}>{team.teamName}</Text>
+          <Text style={styles.draftStatusLabel}>Draft Not Started</Text>
+        </View>
+
+        <View style={styles.draftInfoCard}>
+          <Text style={styles.draftInfoTitle}>🏁 Draft Coming Soon!</Text>
+          
+          {group.draftStartTime && (
+            <View style={styles.countdownSection}>
+              <Text style={styles.countdownLabel}>Draft starts in:</Text>
+              <Text style={styles.countdownValue}>{countdown}</Text>
+              <Text style={styles.countdownSubtext}>
+                {new Date(group.draftStartTime).toLocaleString()}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.draftDetailsSection}>
+            <View style={styles.draftDetail}>
+              <Text style={styles.draftDetailLabel}>Team Size</Text>
+              <Text style={styles.draftDetailValue}>{group.teamSize || '?'} players</Text>
+            </View>
+            <View style={styles.draftDetail}>
+              <Text style={styles.draftDetailLabel}>Season</Text>
+              <Text style={styles.draftDetailValue}>{group.season.seasonName}</Text>
+            </View>
+          </View>
+
+          {isAdmin && (
+            <TouchableOpacity 
+              style={[styles.startButton, startingDraft && styles.startButtonDisabled]}
+              onPress={handleStartDraft}
+              disabled={startingDraft}
+            >
+              {startingDraft ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.startButtonText}>🚀 Start Draft Now</Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {!isAdmin && (
+            <Text style={styles.adminNote}>
+              The draft will be started by {group.admin.username}
+            </Text>
+          )}
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // DURING DRAFT - Show draft UI
+  if (group.status === 'DRAFTING' && !draftComplete) {
+    return (
+      <DraftScreen
+        groupId={selectedGroupId}
+        teamSize={group.teamSize || 5}
+        onDraftComplete={async () => {
+          try {
+            // Refresh group + team data when draft completes
+            const groupData = await apiService.getGroupById(selectedGroupId);
+            setGroup(groupData);
+
+            if (user) {
+              const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
+              setTeam(teamData);
+            }
+
+            setDraftComplete(true);
+          } catch (err: any) {
+            console.error('Failed to refresh team after draft complete:', err);
+            setError(err?.message || 'Failed to refresh team data');
+          }
+        }}
+      />
+    );
+  }
+
+  // AFTER DRAFT - Show team roster (existing functionality)
   return (
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
       <View style={styles.headerSection}>
@@ -249,6 +422,105 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: Colors.warning,
+    textAlign: 'center',
+  },
+  // Draft-specific styles
+  draftStatusLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  draftingStatus: {
+    color: '#ff6b35',
+  },
+  draftInfoCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 16,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+  },
+  draftInfoTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: Spacing.lg,
+    textAlign: 'center',
+  },
+  countdownSection: {
+    alignItems: 'center',
+    marginVertical: Spacing.xl,
+    padding: Spacing.lg,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '100%',
+  },
+  countdownLabel: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  countdownValue: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginBottom: Spacing.sm,
+  },
+  countdownSubtext: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  draftDetailsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: Spacing.lg,
+    gap: Spacing.md,
+  },
+  draftDetail: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Spacing.md,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  draftDetailLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+    textTransform: 'uppercase',
+  },
+  draftDetailValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  startButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: 8,
+    marginTop: Spacing.xl,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+  startButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  startButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  adminNote: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: Spacing.lg,
+    fontStyle: 'italic',
     textAlign: 'center',
   },
 });

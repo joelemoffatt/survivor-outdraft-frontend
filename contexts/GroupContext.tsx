@@ -14,29 +14,30 @@ export function GroupProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.id) {
       setSelectedGroupId(null);
       return;
     }
 
-    if (selectedGroupId !== null || !user.id) {
+    // Only auto-select if no group is currently selected
+    if (selectedGroupId !== null) {
       return;
     }
 
     let isActive = true;
 
-    const loadGroups = async () => {
+    const autoSelectFirstGroup = async () => {
       try {
         const userGroups = await apiService.getUserGroups(user.id);
         if (isActive && userGroups.length > 0) {
           setSelectedGroupId(userGroups[0].id);
         }
       } catch (error) {
-        console.error('Failed to auto-select group:', error);
+        console.error('Failed to auto-select first group:', error);
       }
     };
 
-    loadGroups();
+    autoSelectFirstGroup();
 
     return () => {
       isActive = false;

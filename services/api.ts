@@ -161,6 +161,31 @@ class ApiService {
   async getTeamById(teamId: number): Promise<TeamResponse> {
     return this.get<TeamResponse>(`/v1/teams/${teamId}`);
   }
+
+  // Draft endpoints
+  async startDraft(groupId: number): Promise<DraftState> {
+    return this.post<DraftState>(`/v1/draft/${groupId}/start`, {});
+  }
+
+  async getDraftState(groupId: number): Promise<DraftState> {
+    return this.get<DraftState>(`/v1/draft/${groupId}/state`);
+  }
+
+  async makeDraftPick(groupId: number, castawayPerformanceId: number): Promise<DraftState> {
+    return this.post<DraftState>(`/v1/draft/${groupId}/pick`, { castawayPerformanceId });
+  }
+
+  async getUndraftedCastaways(groupId: number): Promise<CastawayPerformance[]> {
+    return this.get<CastawayPerformance[]>(`/v1/draft/${groupId}/undrafted`);
+  }
+
+  async isMyTurn(groupId: number): Promise<{ isMyTurn: boolean; pickNumber?: number }> {
+    return this.get(`/v1/draft/${groupId}/my-turn`);
+  }
+
+  async completeDraft(groupId: number): Promise<GroupResponse> {
+    return this.post<GroupResponse>(`/v1/draft/${groupId}/complete`, {});
+  }
 }
 
 export interface AuthResponse {
@@ -184,7 +209,11 @@ export interface GroupResponse {
     version: string;
   };
   draftDate: string | null;
-  status: 'PENDING' | 'ACTIVE' | 'COMPLETED';
+  draftStartTime: string | null;
+  draftEndTime: string | null;
+  teamSize: number | null;
+  draftOrder: string | null;
+  status: 'PENDING' | 'DRAFTING' | 'ACTIVE' | 'COMPLETED';
   createdAt: string;
 }
 
@@ -209,6 +238,36 @@ export interface TeamResponse {
   totalPoints: number;
   createdAt: string;
   roster: TeamCastawayResponse[];
+}
+
+export interface DraftPosition {
+  position: number;
+  user: {
+    id: number;
+    username: string;
+  };
+  pickCount: number;
+  nextPickNumber: number | null;
+}
+
+export interface DraftState {
+  group: GroupResponse;
+  draftOrder: DraftPosition[];
+  currentTurn: DraftPosition | null;
+  currentPickNumber: number;
+  totalPicks: number;
+  teams: TeamResponse[];
+  undraftedCastaways: CastawayPerformance[];
+  isComplete: boolean;
+}
+
+export interface CastawayPerformance {
+  id: number;
+  castaway: {
+    id: number;
+    name: string;
+    full_name: string;
+  };
 }
 
 export const apiService = new ApiService();
