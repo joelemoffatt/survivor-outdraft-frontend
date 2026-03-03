@@ -121,6 +121,32 @@ export default function TeamScreen() {
     }
   };
 
+  const handleResetDraft = async () => {
+    if (!selectedGroupId) return;
+    if (!confirm('Are you sure you want to reset the draft? This cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await apiService.resetDraft(selectedGroupId);
+      
+      // Refresh group and team data
+      const groupData = await apiService.getGroupById(selectedGroupId);
+      setGroup(groupData);
+      
+      if (user) {
+        const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
+        setTeam(teamData);
+      }
+    } catch (err: any) {
+      console.error('Failed to reset draft:', err);
+      alert('Failed to reset draft: ' + (err?.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!selectedGroupId) {
     return (
       <View style={styles.container}>
@@ -248,6 +274,16 @@ export default function TeamScreen() {
         <Text style={styles.teamName}>{team.teamName}</Text>
         <Text style={styles.totalPointsLabel}>Total Points</Text>
         <Text style={styles.totalPoints}>{team.totalPoints}</Text>
+        
+        {user?.id === group.admin.id && (
+          <TouchableOpacity 
+            style={styles.resetButton}
+            onPress={handleResetDraft}
+            disabled={loading}
+          >
+            <Text style={styles.resetButtonText}>Reset Draft</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.rosterSection}>
@@ -515,6 +551,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  resetButton: {
+    backgroundColor: '#ff6b6b',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: 6,
+    marginTop: Spacing.lg,
+    alignItems: 'center',
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   adminNote: {
     fontSize: 14,

@@ -186,6 +186,10 @@ class ApiService {
   async completeDraft(groupId: number): Promise<GroupResponse> {
     return this.post<GroupResponse>(`/v1/draft/${groupId}/complete`, {});
   }
+
+  async resetDraft(groupId: number): Promise<GroupResponse> {
+    return this.post<GroupResponse>(`/v1/draft/${groupId}/reset`, {});
+  }
 }
 
 export interface AuthResponse {
