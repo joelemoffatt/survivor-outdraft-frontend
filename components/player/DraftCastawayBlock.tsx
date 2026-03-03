@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { Colors, Spacing } from '../../constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface CastawayData {
   id: number;
@@ -89,7 +90,7 @@ export default function DraftCastawayBlock({
               </View>
               {selectedCastaway === castaway.id && (
                 <View style={styles.selectionIndicator}>
-                  <Text style={styles.selectionCheck}>✓</Text>
+                  <Ionicons name="checkmark" size={24} color="#fff" />
                 </View>
               )}
             </TouchableOpacity>
@@ -158,10 +159,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#fff',
-  },
-  selectionCheck: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
   },
 });

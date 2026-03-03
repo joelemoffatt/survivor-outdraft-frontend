@@ -17,9 +17,108 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: "Seasons",
+          title: "Survivor History",
           headerBackVisible: false,
-          headerLeft: () => <EmptyBackSpace />,
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="seasons"
+        options={{
+          title: "Seasons",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="episodes"
+        options={{
+          title: "Episodes",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="castaways"
+        options={{
+          title: "Castaways",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="tribes"
+        options={{
+          title: "Tribes",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="challenges"
+        options={{
+          title: "Challenges",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="tribals"
+        options={{
+          title: "Tribals",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="votes"
+        options={{
+          title: "Votes",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="advantages"
+        options={{
+          title: "Advantages",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="journeys"
+        options={{
+          title: "Journeys",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="boots"
+        options={{
+          title: "Boots",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="results"
+        options={{
+          title: "Results",
+          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -34,7 +133,7 @@ export default function HistoryLayout() {
           const season = route?.params?.season || "";
           return {
             title: season ? `Season ${season} Episodes` : "Season Episodes",
-            headerLeft: () => <BackButton onPress={() => router.push("/history")} />,
+            headerLeft: () => <BackButton onPress={() => router.push("/(player)/history/seasons")} />,
             headerTitleAlign: "left",
             headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
           };
@@ -57,7 +156,7 @@ export default function HistoryLayout() {
           }
           return {
             title,
-            headerLeft: () => <BackButton onPress={() => router.push(`/history/season/${season}`)} />,
+            headerLeft: () => <BackButton onPress={() => router.push(`/(player)/history/season/${season}`)} />,
             headerTitleAlign: "left",
             headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
           };

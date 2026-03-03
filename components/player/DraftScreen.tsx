@@ -153,10 +153,10 @@ export default function DraftScreen({
       <View style={[styles.turnBanner, isMyTurn && styles.myTurnBanner]}>
         <Text style={styles.turnBannerText}>
           {isMyTurn
-            ? '🎯 Your Turn to Pick!'
+            ? 'Your Turn to Pick!'
             : draftState.currentTurn
-            ? `⏳ Waiting for ${draftState.currentTurn.user.username}`
-            : '⏳ Waiting for next turn'}
+            ? `Waiting for ${draftState.currentTurn.user.username}`
+            : 'Waiting for next turn'}
         </Text>
       </View>
 

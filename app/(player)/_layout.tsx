@@ -6,10 +6,9 @@ import { PlayerHeader } from '../../components/shared/PlayerHeader';
 import { useRouter, useSegments } from 'expo-router';
 
 const navigationItems: NavigationItem[] = [
-  { name: 'index', label: 'Home', href: '/(player)/', icon: '🏠' },
-  { name: 'team', label: 'My Team', href: '/(player)/team', icon: '👥' },
-  { name: 'history', label: 'History', href: '/(player)/history', icon: '📋' },
-  { name: 'profile', label: 'Profile', href: '/(player)/profile', icon: '👤' },
+  { name: 'index', label: 'Home', href: '/(player)/', icon: 'home' },
+  { name: 'team', label: 'My Team', href: '/(player)/team', icon: 'people' },
+  { name: 'more', label: 'More', href: '/(player)/more', icon: 'ellipsis-horizontal' },
 ];
 
 export default function PlayerLayout() {
@@ -18,7 +17,7 @@ export default function PlayerLayout() {
   return (
     <View style={[styles.container, responsive.isMobile && styles.mobileContainer]}>
       {!responsive.isMobile && (
-        <ResponsiveNavigation items={navigationItems} baseRoute="/(player)" logo="🏁" />
+        <ResponsiveNavigation items={navigationItems} baseRoute="/(player)" logo="flag" />
       )}
 
       <View style={styles.contentContainer}>
@@ -27,14 +26,14 @@ export default function PlayerLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="history" />
             <Stack.Screen name="team" />
-            <Stack.Screen name="profile" />
+            <Stack.Screen name="more" />
             <Stack.Screen name="settings" />
           </Stack>
         </View>
       </View>
 
       {responsive.isMobile && (
-        <ResponsiveNavigation items={navigationItems} baseRoute="/(player)" logo="🏁" />
+        <ResponsiveNavigation items={navigationItems} baseRoute="/(player)" logo="flag" />
       )}
     </View>
   );

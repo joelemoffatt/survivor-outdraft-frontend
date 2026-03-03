@@ -193,7 +193,7 @@ export default function TeamScreen() {
         </View>
 
         <View style={styles.draftInfoCard}>
-          <Text style={styles.draftInfoTitle}>🏁 Draft Coming Soon!</Text>
+          <Text style={styles.draftInfoTitle}>Draft Coming Soon!</Text>
           
           {group.draftStartTime && (
             <View style={styles.countdownSection}>
@@ -225,7 +225,7 @@ export default function TeamScreen() {
               {startingDraft ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.startButtonText}>🚀 Start Draft Now</Text>
+                <Text style={styles.startButtonText}>Start Draft Now</Text>
               )}
             </TouchableOpacity>
           )}

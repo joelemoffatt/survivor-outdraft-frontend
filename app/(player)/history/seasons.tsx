@@ -1,38 +1,48 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Colors, FontSizes, Spacing } from '../../../constants/theme';
+import { Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import apiService from '../../../services/api';
+import { Season } from '../../../types/survivor';
+import {
+  HistoryCard,
+  HistoryContainer,
+  HistoryEmpty,
+  HistoryLoading,
+} from '../../../components/shared/HistoryUI';
 
 export default function SeasonsScreen() {
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadSeasons = async () => {
+      try {
+        const data = await apiService.getSeasons();
+        setSeasons(data);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to load seasons');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSeasons();
+  }, []);
+
+  if (loading) {
+    return <HistoryLoading label="Loading seasons..." />;
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Seasons</Text>
-      <View style={styles.card}>
-        <Text style={styles.text}>Browse all Survivor seasons and their details.</Text>
-      </View>
-    </ScrollView>
+    <HistoryContainer>
+      {seasons.map((season) => (
+        <HistoryCard
+          key={season.season}
+          title={`Season ${season.season}`}
+          onPress={() => router.push(`/(player)/history/season/${season.season}`)}
+        />
+      ))}
+      {seasons.length === 0 && <HistoryEmpty label="No seasons available" />}
+    </HistoryContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    padding: Spacing.lg,
-  },
-  title: {
-    fontSize: FontSizes.xxlarge,
-    fontWeight: '700',
-    color: Colors.secondary,
-    marginBottom: Spacing.md,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: Spacing.lg,
-  },
-  text: {
-    fontSize: FontSizes.medium,
-    color: Colors.text,
-  },
-});

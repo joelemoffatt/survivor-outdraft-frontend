@@ -1,6 +1,7 @@
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useSegments, useRouter } from 'expo-router';
 import { useResponsive, Colors, Spacing } from '../../constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export interface NavigationItem {
   name: string;
@@ -18,7 +19,7 @@ interface ResponsiveNavigationProps {
 export function ResponsiveNavigation({
   items,
   baseRoute,
-  logo = '🏁',
+  logo = 'flag',
 }: ResponsiveNavigationProps) {
   const segments = useSegments();
   const router = useRouter();
@@ -35,7 +36,12 @@ export function ResponsiveNavigation({
       ]}
       onPress={() => router.push(item.href)}
     >
-      <Text style={styles.mobileIcon}>{item.icon}</Text>
+      <Ionicons
+        name={item.icon as keyof typeof Ionicons.glyphMap}
+        size={24}
+        color={currentScreen === item.name ? '#fff' : '#ccc'}
+        style={styles.mobileIcon}
+      />
       <Text style={[styles.mobileLabel, currentScreen === item.name && styles.navItemTextActive]}>
         {item.label}
       </Text>
@@ -51,9 +57,11 @@ export function ResponsiveNavigation({
       ]}
       onPress={() => router.push(item.href)}
     >
-      <Text style={[styles.icon, currentScreen === item.name && styles.iconActive]}>
-        {item.icon}
-      </Text>
+      <Ionicons
+        name={item.icon as keyof typeof Ionicons.glyphMap}
+        size={28}
+        color={currentScreen === item.name ? '#fff' : '#ccc'}
+      />
     </TouchableOpacity>
   );
 
@@ -70,7 +78,7 @@ export function ResponsiveNavigation({
       <ScrollView style={styles.sidebar}>
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <Text style={styles.logo}>{logo}</Text>
+          <Ionicons name={logo as keyof typeof Ionicons.glyphMap} size={32} color="#fff" />
         </View>
 
         {/* Navigation Items */}
@@ -99,10 +107,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
 
-  logo: {
-    fontSize: 32,
-  },
-
   navItemsContainer: {
     alignItems: 'center',
     gap: Spacing.md,
@@ -119,14 +123,6 @@ const styles = StyleSheet.create({
 
   navItemActive: {
     backgroundColor: Colors.primary,
-  },
-
-  icon: {
-    fontSize: 28,
-  },
-
-  iconActive: {
-    fontSize: 28,
   },
 
   // Mobile Bottom Navigation
@@ -148,7 +144,6 @@ const styles = StyleSheet.create({
   },
 
   mobileIcon: {
-    fontSize: 24,
     marginBottom: 4,
   },
 

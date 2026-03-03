@@ -4,10 +4,10 @@ import { useResponsive } from '../../constants/theme';
 import { ResponsiveNavigation, NavigationItem } from '../../components/shared/ResponsiveNavigation';
 
 const navigationItems: NavigationItem[] = [
-  { name: 'index', label: 'Home', href: '/admin', icon: '🏠' },
-  { name: 'create', label: 'Create', href: '/admin/create', icon: '➕' },
-  { name: 'social', label: 'Social', href: '/admin/social', icon: '💬' },
-  { name: 'game', label: 'Game', href: '/admin/game', icon: '🎲' },
+  { name: 'index', label: 'Home', href: '/admin', icon: 'home' },
+  { name: 'create', label: 'Create', href: '/admin/create', icon: 'add-circle' },
+  { name: 'social', label: 'Social', href: '/admin/social', icon: 'people' },
+  { name: 'game', label: 'Game', href: '/admin/game', icon: 'game-controller' },
 ];
 
 export default function AdminLayout() {
@@ -16,7 +16,7 @@ export default function AdminLayout() {
   return (
     <View style={[styles.container, responsive.isMobile && styles.mobileContainer]}>
       {!responsive.isMobile && (
-        <ResponsiveNavigation items={navigationItems} baseRoute="/admin" logo="🛠️" />
+        <ResponsiveNavigation items={navigationItems} baseRoute="/admin" logo="construct" />
       )}
 
       <View style={styles.contentContainer}>
@@ -31,7 +31,7 @@ export default function AdminLayout() {
       </View>
 
       {responsive.isMobile && (
-        <ResponsiveNavigation items={navigationItems} baseRoute="/admin" logo="🛠️" />
+        <ResponsiveNavigation items={navigationItems} baseRoute="/admin" logo="construct" />
       )}
     </View>
   );

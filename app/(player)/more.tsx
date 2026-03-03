@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import apiService, { GroupResponse } from '../../services/api';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
 interface MenuSection {
   title?: string;
@@ -22,20 +23,16 @@ interface MenuItem {
 export default function MoreScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const [showMenu, setShowMenu] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', onPress: () => {}, style: 'cancel' },
-      {
-        text: 'Logout',
-        onPress: async () => {
-          await logout();
-          router.replace('/login');
-        },
-        style: 'destructive',
-      },
-    ]);
+    setShowLogoutDialog(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutDialog(false);
+    await logout();
+    router.replace('/login');
   };
 
   const menuSections: MenuSection[] = [
@@ -178,7 +175,7 @@ export default function MoreScreen() {
             <Text style={styles.email}>{user?.email || 'Unknown'}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/(player)/profile/edit')}>
+        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/(player)/more_folder/edit')}>
           <Ionicons name="pencil" size={20} color="#fff" />
           <Text style={styles.editButtonText}>Edit</Text>
         </TouchableOpacity>
@@ -217,6 +214,17 @@ export default function MoreScreen() {
           </View>
         </View>
       ))}
+
+      <ConfirmDialog
+        visible={showLogoutDialog}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        confirmText="Logout"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutDialog(false)}
+      />
     </ScrollView>
   );
 }
