@@ -22,20 +22,6 @@ export default function PlayerHome() {
       {user && (
         <Text style={styles.welcome}>Welcome, {user.username}!</Text>
       )}
-      
-      <View style={styles.infoContainer}>
-        <Text style={styles.info}>
-          Platform: {Platform.OS}
-      <Link href="/PlayerEventExport" asChild>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Export Episode Event Sentences</Text>
-        </TouchableOpacity>
-      </Link>
-        </Text>
-        <Text style={styles.info}>
-          Screen Type: {responsive.screenType} ({responsive.width}px)
-        </Text>
-      </View>
 
       {user?.isAdmin && (
         <Link href="/admin" asChild>

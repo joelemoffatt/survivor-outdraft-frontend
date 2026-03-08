@@ -12,6 +12,7 @@ export default function TeamScreen() {
   const { selectedGroupId, setSelectedGroupId } = useGroup();
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [group, setGroup] = useState<GroupResponse | null>(null);
+  const [allTeams, setAllTeams] = useState<TeamResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<string>('');
@@ -61,6 +62,10 @@ export default function TeamScreen() {
         const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
         setTeam(teamData);
 
+        // Fetch all teams in the group
+        const teamsData = await apiService.getTeamsByGroupId(selectedGroupId);
+        setAllTeams(teamsData);
+
         // Reset draftComplete if draft is still in progress
         if (groupData.status === 'DRAFTING') {
           setDraftComplete(false);
@@ -102,6 +107,31 @@ export default function TeamScreen() {
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, [group]);
+
+  // Poll for draft status changes while draft is PENDING
+  useEffect(() => {
+    if (!group || group.status !== 'PENDING' || !selectedGroupId) {
+      return;
+    }
+
+    const pollDraftStatus = async () => {
+      try {
+        const updatedGroup = await apiService.getGroupById(selectedGroupId);
+        
+        // If status changed from PENDING to DRAFTING, update state
+        if (updatedGroup.status !== 'PENDING' && group.status === 'PENDING') {
+          setGroup(updatedGroup);
+        }
+      } catch (err) {
+        // Silently handle polling errors to avoid spam in console
+        console.debug('Draft status poll failed:', err);
+      }
+    };
+
+    // Poll every 3 seconds while waiting for draft
+    const pollInterval = setInterval(pollDraftStatus, 3000);
+    return () => clearInterval(pollInterval);
+  }, [group, selectedGroupId]);
 
   const handleStartDraft = async () => {
     if (!selectedGroupId) return;
@@ -257,6 +287,10 @@ export default function TeamScreen() {
               setTeam(teamData);
             }
 
+            // Fetch all teams in the group
+            const teamsData = await apiService.getTeamsByGroupId(selectedGroupId);
+            setAllTeams(teamsData);
+
             setDraftComplete(true);
           } catch (err: any) {
             console.error('Failed to refresh team after draft complete:', err);
@@ -267,27 +301,19 @@ export default function TeamScreen() {
     );
   }
 
-  // AFTER DRAFT - Show team roster (existing functionality)
+  // AFTER DRAFT - Show your team and all teams in the group
   return (
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
+      {/* Your Team */}
       <View style={styles.headerSection}>
-        <Text style={styles.teamName}>{team.teamName}</Text>
-        <Text style={styles.totalPointsLabel}>Total Points</Text>
-        <Text style={styles.totalPoints}>{team.totalPoints}</Text>
-        
-        {user?.id === group.admin.id && (
-          <TouchableOpacity 
-            style={styles.resetButton}
-            onPress={handleResetDraft}
-            disabled={loading}
-          >
-            <Text style={styles.resetButtonText}>Reset Draft</Text>
-          </TouchableOpacity>
-        )}
+        <Text style={styles.teamName}>Your Team: {team.teamName}</Text>
+        {/* Hiding points for now - not working yet */}
+        {/* <Text style={styles.totalPointsLabel}>Total Points</Text>
+        <Text style={styles.totalPoints}>{team.totalPoints}</Text> */}
       </View>
 
       <View style={styles.rosterSection}>
-        <Text style={styles.sectionTitle}>Roster</Text>
+        <Text style={styles.sectionTitle}>Your Roster</Text>
         {team.roster && team.roster.length > 0 ? (
           <View>
             {team.roster
@@ -302,10 +328,10 @@ export default function TeamScreen() {
                       </Text>
                       <Text style={styles.castawayName}>{castawayName}</Text>
                     </View>
-                    <View style={styles.pointsDisplay}>
+                    {/* <View style={styles.pointsDisplay}>
                       <Text style={styles.points}>{teamCastaway.points}</Text>
                       <Text style={styles.pointsLabel}>pts</Text>
-                    </View>
+                    </View> */}
                   </View>
                 );
               })}
@@ -315,20 +341,43 @@ export default function TeamScreen() {
         )}
       </View>
 
-      <View style={styles.summarySection}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Team Size</Text>
-          <Text style={styles.summaryValue}>{team.roster?.length || 0}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Average Points</Text>
-          <Text style={styles.summaryValue}>
-            {team.roster && team.roster.length > 0
-              ? (team.totalPoints / team.roster.length).toFixed(1)
-              : '0'}
-          </Text>
-        </View>
+      {/* All Teams in Group */}
+      <View style={styles.groupTeamsSection}>
+        <Text style={styles.sectionTitle}>All Teams in {group.name}</Text>
+        {allTeams.map((t) => (
+          <View key={t.id} style={[styles.teamCard, t.id === team.id && styles.yourTeamCard]}>
+            <View style={styles.teamCardHeader}>
+              <Text style={styles.teamCardName}>
+                {t.teamName} {t.id === team.id && '(You)'}
+              </Text>
+              <Text style={styles.teamRosterCount}>
+                {t.roster?.length || 0} players
+              </Text>
+            </View>
+            {t.roster && t.roster.length > 0 && (
+              <View style={styles.teamCardRoster}>
+                {t.roster
+                  .sort((a, b) => (a.draftOrder || 0) - (b.draftOrder || 0))
+                  .map((castaway, idx) => (
+                    <Text key={castaway.id} style={styles.teamCardCastaway}>
+                      {idx + 1}. {castaway.castawayPerformance?.castaway?.name || 'Unknown'}
+                    </Text>
+                  ))}
+              </View>
+            )}
+          </View>
+        ))}
       </View>
+      
+      {user?.id === group.admin.id && (
+        <TouchableOpacity 
+          style={styles.resetButton}
+          onPress={handleResetDraft}
+          disabled={loading}
+        >
+          <Text style={styles.resetButtonText}>Reset Draft</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -571,6 +620,52 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  groupTeamsSection: {
+    marginTop: Spacing.xl,
+    paddingTop: Spacing.xl,
+    borderTopWidth: 2,
+    borderTopColor: Colors.primary,
+  },
+  teamCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  yourTeamCard: {
+    backgroundColor: '#e8f4f8',
+    borderColor: Colors.primary,
+    borderWidth: 2,
+  },
+  teamCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  teamCardName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  teamRosterCount: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  teamCardRoster: {
+    gap: Spacing.xs,
+  },
+  teamCardCastaway: {
+    fontSize: 14,
+    color: Colors.text,
+    paddingVertical: 2,
   },
 });
 

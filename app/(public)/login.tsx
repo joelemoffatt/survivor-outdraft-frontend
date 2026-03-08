@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,58 +35,64 @@ export default function Login() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Login to continue playing</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Login to continue playing</Text>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+          <View style={styles.form}>
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
 
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoading}
-          >
-            <Text style={styles.loginButtonText}>
-              {isLoading ? 'Logging in...' : 'Login'}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              <Text style={styles.loginButtonText}>
+                {isLoading ? 'Logging in...' : 'Login'}
+              </Text>
+            </TouchableOpacity>
 
-          <View style={styles.signupLinkContainer}>
-            <Text style={styles.signupLinkText}>Don't have an account? </Text>
-            <Link href="/signup" asChild>
-              <TouchableOpacity>
-                <Text style={styles.signupLink}>Sign up</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
+            <View style={styles.signupLinkContainer}>
+              <Text style={styles.signupLinkText}>Don't have an account? </Text>
+              <Link href="/signup" asChild>
+                <TouchableOpacity>
+                  <Text style={styles.signupLink}>Sign up</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
 
-          <View style={styles.demoCredentials}>
-            <Text style={styles.demoTitle}>Demo Credentials:</Text>
-            <Text style={styles.demoText}>Player: player / player</Text>
-            <Text style={styles.demoText}>Admin: admin / admin</Text>
+            <View style={styles.demoCredentials}>
+              <Text style={styles.demoTitle}>Demo Credentials:</Text>
+              <Text style={styles.demoText}>Player: player / player</Text>
+              <Text style={styles.demoText}>Admin: admin / admin</Text>
+            </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
       <StatusBar style="auto" />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -94,6 +100,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

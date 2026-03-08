@@ -6,7 +6,11 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "quad:users": "node scripts/launch-quadrants.mjs",
+    "quad:users:reset": "RESET_AUTH=1 node scripts/launch-quadrants.mjs",
+    "quad:users:retina": "QUAD_DISPLAY_PRESET=retina node scripts/launch-quadrants.mjs",
+    "quad:users:1080": "QUAD_DISPLAY_PRESET=external1080 node scripts/launch-quadrants.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -24,6 +28,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "expo-module-scripts": "^55.0.2",
+    "playwright": "^1.53.2",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.2"
   },

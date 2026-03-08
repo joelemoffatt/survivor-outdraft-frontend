@@ -127,14 +127,15 @@ export default function SelectGroupScreen() {
           ]}
           onPress={() => handleSelectGroup(group.id)}
         >
-          <View style={styles.groupHeader}>
-            <View style={styles.groupTitleRow}>
+          <View style={styles.cardContent}>
+            <View style={styles.cardLeft}>
               <Text style={styles.groupName}>{group.name}</Text>
+              <Text style={styles.seasonText}>{group.season.seasonName}</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(group.status) + '20' }]}>
               <Ionicons
                 name={getStatusIcon(group.status) as any}
-                size={14}
+                size={12}
                 color={getStatusColor(group.status)}
               />
               <Text style={[styles.statusText, { color: getStatusColor(group.status) }]}>
@@ -142,31 +143,7 @@ export default function SelectGroupScreen() {
               </Text>
             </View>
           </View>
-
-          <View style={styles.groupInfo}>
-            <View style={styles.infoRow}>
-              <Ionicons name="tv-outline" size={16} color={Colors.textSecondary} />
-              <Text style={styles.infoText}>{group.season.seasonName}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="person-outline" size={16} color={Colors.textSecondary} />
-              <Text style={styles.infoText}>Admin: {group.admin.username}</Text>
-            </View>
-            {group.teamSize && (
-              <View style={styles.infoRow}>
-                <Ionicons name="people-outline" size={16} color={Colors.textSecondary} />
-                <Text style={styles.infoText}>Team Size: {group.teamSize}</Text>
-              </View>
-            )}
-            {group.draftDate && (
-              <View style={styles.infoRow}>
-                <Ionicons name="calendar-outline" size={16} color={Colors.textSecondary} />
-                <Text style={styles.infoText}>
-                  Draft: {new Date(group.draftDate).toLocaleDateString()}
-                </Text>
-              </View>
-            )}
-          </View>
+          {selectedGroupId === group.id && <View style={styles.selectedIndicator} />}
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -195,85 +172,59 @@ const styles = StyleSheet.create({
   },
   groupCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 8,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    position: 'relative',
   },
   selectedCard: {
     borderColor: Colors.primary,
     backgroundColor: '#f8f9ff',
+    borderWidth: 2,
   },
-  groupHeader: {
-    marginBottom: Spacing.md,
-  },
-  groupTitleRow: {
+  cardContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    justifyContent: 'space-between',
+  },
+  cardLeft: {
+    flex: 1,
+    marginRight: Spacing.sm,
   },
   groupName: {
-    fontSize: FontSizes.xlarge,
-    fontWeight: '700',
-    color: Colors.text,
-    flex: 1,
-  },
-  selectedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primary + '15',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  selectedText: {
-    fontSize: FontSizes.small,
-    color: Colors.primary,
+    fontSize: FontSizes.medium,
     fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  seasonText: {
+    fontSize: FontSizes.small,
+    color: Colors.textSecondary,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   statusText: {
-    fontSize: FontSizes.small,
+    fontSize: 11,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
-  groupInfo: {
-    gap: Spacing.sm,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  infoText: {
-    fontSize: FontSizes.medium,
-    color: Colors.textSecondary,
-  },
   selectedIndicator: {
     position: 'absolute',
-    right: 0,
+    left: 0,
     top: 0,
     bottom: 0,
-    width: 4,
+    width: 3,
     backgroundColor: Colors.primary,
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
   },
   loadingText: {
     marginTop: Spacing.md,

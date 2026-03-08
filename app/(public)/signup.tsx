@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,86 +38,96 @@ export default function Signup() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Join The Game</Text>
-        <Text style={styles.subtitle}>Create your Survivor OutDraft account</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Join The Game</Text>
+          <Text style={styles.subtitle}>Create your Survivor OutDraft account</Text>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholderTextColor="#999"
-            editable={!isLoading}
-          />
+          <View style={styles.form}>
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholderTextColor="#999"
+              editable={!isLoading}
+            />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            placeholderTextColor="#999"
-            editable={!isLoading}
-          />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              placeholderTextColor="#999"
+              editable={!isLoading}
+            />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholderTextColor="#999"
-            editable={!isLoading}
-          />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              placeholderTextColor="#999"
+              editable={!isLoading}
+            />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            placeholderTextColor="#999"
-            editable={!isLoading}
-          />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              placeholderTextColor="#999"
+              editable={!isLoading}
+            />
 
-          <TouchableOpacity
-            style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
-            onPress={handleSignup}
-            disabled={isLoading}
-          >
-            <Text style={styles.signupButtonText}>
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
+              onPress={handleSignup}
+              disabled={isLoading}
+            >
+              <Text style={styles.signupButtonText}>
+                {isLoading ? 'Creating Account...' : 'Create Account'}
+              </Text>
+            </TouchableOpacity>
 
-          <View style={styles.loginLinkContainer}>
-            <Text style={styles.loginLinkText}>Already have an account? </Text>
-            <Link href="/login" asChild>
-              <TouchableOpacity>
-                <Text style={styles.loginLink}>Login</Text>
-              </TouchableOpacity>
-            </Link>
+            <View style={styles.loginLinkContainer}>
+              <Text style={styles.loginLinkText}>Already have an account? </Text>
+              <Link href="/login" asChild>
+                <TouchableOpacity>
+                  <Text style={styles.loginLink}>Login</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
       <StatusBar style="auto" />
-    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: '#fff',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   content: {
     flex: 1,

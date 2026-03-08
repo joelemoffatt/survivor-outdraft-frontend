@@ -1,13 +1,158 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
+import { useAuth } from '../../../contexts/AuthContext';
+import apiService, { GroupMemberResponse } from '../../../services/api';
+import { useRouter } from 'expo-router';
 
 export default function GroupInvitationsScreen() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [invitations, setInvitations] = useState<GroupMemberResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+  useEffect(() => {
+    loadInvitations();
+  }, [user]);
+
+  const loadInvitations = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const pendingInvitations = await apiService.getPendingInvitations(user.id);
+      setInvitations(pendingInvitations);
+    } catch (error) {
+      console.error('Failed to load invitations:', error);
+      Alert.alert('Error', 'Failed to load invitations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAccept = async (invitationId: number, groupName: string) => {
+    try {
+      setActionLoading(invitationId);
+      await apiService.acceptInvitation(invitationId);
+      
+      // Remove invitation from local state immediately
+      setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+      
+      // Show success message
+      Alert.alert('Success', `You've joined ${groupName}!`);
+    } catch (error) {
+      console.error('Failed to accept invitation:', error);
+      Alert.alert('Error', 'Failed to accept invitation');
+      // Reload invitations to sync state on error
+      await loadInvitations();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (invitationId: number, groupName: string) => {
+    Alert.alert(
+      'Reject Invitation',
+      `Are you sure you want to reject the invitation to ${groupName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setActionLoading(invitationId);
+              await apiService.rejectInvitation(invitationId);
+              
+              // Remove invitation from local state immediately
+              setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+            } catch (error) {
+              console.error('Failed to reject invitation:', error);
+              Alert.alert('Error', 'Failed to reject invitation');
+              // Reload invitations to sync state on error
+              await loadInvitations();
+            } finally {
+              setActionLoading(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Loading invitations...</Text>
+      </View>
+    );
+  }
+
+  if (invitations.length === 0) {
+    return (
+      <View style={styles.centerContainer}>
+        <Ionicons name="mail-outline" size={64} color={Colors.textSecondary} />
+        <Text style={styles.emptyTitle}>No Pending Invitations</Text>
+        <Text style={styles.emptyText}>You don't have any pending group invitations.</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Group Invitations</Text>
-      <View style={styles.placeholder}>
-        <Text style={styles.placeholderText}>Group invitations list coming soon</Text>
-      </View>
+      <Text style={styles.title}>Pending Invitations</Text>
+      
+      {invitations.map((invitation) => (
+        <View key={invitation.id} style={styles.invitationCard}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="people" size={24} color={Colors.primary} />
+            <View style={styles.cardInfo}>
+              <Text style={styles.groupName}>{invitation.group.name}</Text>
+              <Text style={styles.invitedDate}>
+                Invited {new Date(invitation.joinedAt).toLocaleDateString()}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.rejectButton]}
+              onPress={() => handleReject(invitation.id, invitation.group.name)}
+              disabled={actionLoading === invitation.id}
+            >
+              {actionLoading === invitation.id ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="close-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.buttonText}>Reject</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.acceptButton]}
+              onPress={() => handleAccept(invitation.id, invitation.group.name)}
+              disabled={actionLoading === invitation.id}
+            >
+              {actionLoading === invitation.id ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.buttonText}>Accept</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
     </ScrollView>
   );
 }
@@ -20,22 +165,91 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.lg,
   },
+  centerContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
   title: {
     fontSize: FontSizes.xxlarge,
     fontWeight: '700',
     color: Colors.secondary,
     marginBottom: Spacing.lg,
   },
-  placeholder: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-  },
-  placeholderText: {
+  loadingText: {
+    marginTop: Spacing.md,
     fontSize: FontSizes.medium,
     color: Colors.textSecondary,
+  },
+  emptyTitle: {
+    marginTop: Spacing.md,
+    fontSize: FontSizes.xlarge,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  emptyText: {
+    marginTop: Spacing.sm,
+    fontSize: FontSizes.medium,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  invitationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  groupName: {
+    fontSize: FontSizes.large,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  invitedDate: {
+    fontSize: FontSizes.small,
+    color: Colors.textSecondary,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 8,
+    gap: 6,
+  },
+  acceptButton: {
+    backgroundColor: Colors.success,
+  },
+  rejectButton: {
+    backgroundColor: Colors.warning,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
   },
 });

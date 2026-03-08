@@ -3,7 +3,7 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  'http://localhost:8080/api';
+  'http://192.168.86.20:8080/api';
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
@@ -66,10 +66,23 @@ class ApiService {
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      // Handle empty responses (e.g., 204 No Content or endpoints that return nothing)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.log('API Response: (empty or non-JSON)');
+        return {} as T;
+      }
+
+      const text = await response.text();
+      if (!text) {
+        console.log('API Response: (empty body)');
+        return {} as T;
+      }
+
+      const data = JSON.parse(text);
       console.log('API Response:', data);
       return data;
-    } catch (error) {
+    } catch (error) { 
       console.error('API request failed:', error);
       throw error;
     }
@@ -153,6 +166,16 @@ class ApiService {
     return this.get<GroupResponse>(`/v1/groups/${groupId}`);
   }
 
+  async createGroup(groupData: {
+    name: string;
+    admin: { id: number };
+    season: { id: number };
+    teamSize?: number;
+    draftDate?: string;
+  }): Promise<GroupResponse> {
+    return this.post<GroupResponse>(`/v1/groups`, groupData);
+  }
+
   // Team endpoints
   async getTeamByGroupAndUser(groupId: number, userId: number): Promise<TeamResponse> {
     return this.get<TeamResponse>(`/v1/teams/group/${groupId}/user/${userId}`);
@@ -160,6 +183,10 @@ class ApiService {
 
   async getTeamById(teamId: number): Promise<TeamResponse> {
     return this.get<TeamResponse>(`/v1/teams/${teamId}`);
+  }
+
+  async getTeamsByGroupId(groupId: number): Promise<TeamResponse[]> {
+    return this.get<TeamResponse[]>(`/v1/teams/group/${groupId}`);
   }
 
   // Draft endpoints
@@ -189,6 +216,36 @@ class ApiService {
 
   async resetDraft(groupId: number): Promise<GroupResponse> {
     return this.post<GroupResponse>(`/v1/draft/${groupId}/reset`, {});
+  }
+
+  // Invitation endpoints
+  async inviteByUsername(groupId: number, username: string): Promise<GroupMemberResponse> {
+    return this.post<GroupMemberResponse>('/v1/group-members/invite-by-username', {
+      groupId,
+      username,
+    });
+  }
+
+  async getPendingInvitations(userId: number): Promise<GroupMemberResponse[]> {
+    return this.get<GroupMemberResponse[]>(`/v1/group-members/user/${userId}/pending`);
+  }
+
+  async acceptInvitation(memberId: number): Promise<void> {
+    return this.request<void>(`/v1/group-members/${memberId}/status?status=ACCEPTED`, {
+      method: 'PATCH',
+    });
+  }
+
+  async rejectInvitation(memberId: number): Promise<void> {
+    return this.delete<void>(`/v1/group-members/${memberId}`);
+  }
+
+  async getGroupMembers(groupId: number): Promise<GroupMemberResponse[]> {
+    return this.get<GroupMemberResponse[]>(`/v1/group-members/group/${groupId}`);
+  }
+
+  async cancelInvitation(memberId: number): Promise<void> {
+    return this.delete<void>(`/v1/group-members/${memberId}`);
   }
 }
 
@@ -272,6 +329,21 @@ export interface CastawayPerformance {
     name: string;
     full_name: string;
   };
+}
+
+export interface GroupMemberResponse {
+  id: number;
+  group: {
+    id: number;
+    name: string;
+  };
+  user: {
+    id: number;
+    username: string;
+    email: string;
+  };
+  status: 'INVITED' | 'ACCEPTED' | 'DECLINED';
+  joinedAt: string;
 }
 
 export const apiService = new ApiService();

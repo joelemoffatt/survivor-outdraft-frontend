@@ -13,10 +13,11 @@ export default function HistoryLayout() {
   const router = useRouter();
 
   return (
-    <Stack>
+    <Stack screenOptions={{ animation: 'none' }}>
       <Stack.Screen
         name="index"
         options={{
+          animation: 'none',
           title: "Survivor History",
           headerBackVisible: false,
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
@@ -27,6 +28,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="seasons"
         options={{
+          animation: 'none',
           title: "Seasons",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -36,6 +38,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="episodes"
         options={{
+          animation: 'none',
           title: "Episodes",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -45,6 +48,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="castaways"
         options={{
+          animation: 'none',
           title: "Castaways",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -54,6 +58,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="tribes"
         options={{
+          animation: 'none',
           title: "Tribes",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -63,6 +68,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="challenges"
         options={{
+          animation: 'none',
           title: "Challenges",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -72,6 +78,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="tribals"
         options={{
+          animation: 'none',
           title: "Tribals",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -81,6 +88,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="votes"
         options={{
+          animation: 'none',
           title: "Votes",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -90,6 +98,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="advantages"
         options={{
+          animation: 'none',
           title: "Advantages",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -99,6 +108,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="journeys"
         options={{
+          animation: 'none',
           title: "Journeys",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -108,6 +118,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="boots"
         options={{
+          animation: 'none',
           title: "Boots",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -117,6 +128,7 @@ export default function HistoryLayout() {
       <Stack.Screen
         name="results"
         options={{
+          animation: 'none',
           title: "Results",
           headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
           headerTitleAlign: "left",
@@ -132,6 +144,7 @@ export default function HistoryLayout() {
         }) => {
           const season = route?.params?.season || "";
           return {
+            animation: 'none',
             title: season ? `Season ${season} Episodes` : "Season Episodes",
             headerLeft: () => <BackButton onPress={() => router.push("/(player)/history/seasons")} />,
             headerTitleAlign: "left",
@@ -155,6 +168,7 @@ export default function HistoryLayout() {
             title = `Season ${season} Episode`;
           }
           return {
+            animation: 'none',
             title,
             headerLeft: () => <BackButton onPress={() => router.push(`/(player)/history/season/${season}`)} />,
             headerTitleAlign: "left",

@@ -1,5 +1,7 @@
-import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, useResponsive } from '../../constants/theme';
 import { GroupSelector } from './GroupSelector';
 import apiService, { GroupResponse } from '../../services/api';
@@ -12,10 +14,12 @@ interface PlayerHeaderProps {
 }
 
 export function PlayerHeader({ onGroupChange, showGroupSelector = true }: PlayerHeaderProps) {
+  const router = useRouter();
   const [groups, setGroups] = useState<GroupResponse[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingInviteCount, setPendingInviteCount] = useState(0);
   const { user } = useAuth();
   const { setSelectedGroupId: setContextGroupId } = useGroup();
   const responsive = useResponsive();
@@ -50,6 +54,10 @@ export function PlayerHeader({ onGroupChange, showGroupSelector = true }: Player
           setContextGroupId(userGroups[0].id);
           onGroupChange?.(userGroups[0].id);
         }
+        
+        // Load pending invitations count
+        const invitations = await apiService.getPendingInvitations(user.id);
+        setPendingInviteCount(invitations.length);
       } catch (err: any) {
         console.error('Failed to fetch groups:', err);
         setError(err?.message || 'Failed to load groups');
@@ -69,29 +77,60 @@ export function PlayerHeader({ onGroupChange, showGroupSelector = true }: Player
 
   return (
     <View style={[styles.header, responsive.isMobile && styles.mobileHeader]}>
-      {showGroupSelector && (
-        loading ? (
-          <View style={styles.centerContent}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-            <Text style={styles.infoText}>Loading groups...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.centerContent}>
-            <Text style={styles.errorText}>{error}</Text>
-            <Text style={styles.hintText}>Check browser console for details</Text>
-          </View>
-        ) : groups.length === 0 ? (
-          <View style={styles.centerContent}>
-            <Text style={styles.infoText}>No groups available</Text>
-          </View>
-        ) : (
-          <GroupSelector
-            groups={groups}
-            selectedGroupId={selectedGroupId}
-            onSelectGroup={handleGroupSelect}
-          />
-        )
-      )}
+      <View style={styles.headerContent}>
+        {/* Left: Group Selector */}
+        <View style={styles.leftContent}>
+          {showGroupSelector && (
+            loading ? (
+              <View style={styles.centerContent}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.infoText}>Loading groups...</Text>
+              </View>
+            ) : error ? (
+              <View style={styles.centerContent}>
+                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.hintText}>Check browser console for details</Text>
+              </View>
+            ) : groups.length === 0 ? (
+              <View style={styles.centerContent}>
+                <Text style={styles.infoText}>No groups available</Text>
+              </View>
+            ) : (
+              <GroupSelector
+                groups={groups}
+                selectedGroupId={selectedGroupId}
+                onSelectGroup={handleGroupSelect}
+              />
+            )
+          )}
+        </View>
+
+        {/* Right: Notifications & Profile */}
+        <View style={styles.rightContent}>
+          {/* Notifications Bell */}
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => router.push('/(player)/groups/invitations')}
+          >
+            <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+            {pendingInviteCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {pendingInviteCount > 9 ? '9+' : pendingInviteCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Profile Icon */}
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => router.push('/(player)/profile')}
+          >
+            <Ionicons name="person-circle-outline" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -107,6 +146,50 @@ const styles = StyleSheet.create({
 
   mobileHeader: {
     // Mobile-specific adjustments if needed
+  },
+
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.md,
+  },
+
+  leftContent: {
+    flex: 1,
+    minWidth: 0, // Allows flex children to shrink
+  },
+
+  rightContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+
+  iconButton: {
+    position: 'relative',
+    padding: Spacing.sm,
+  },
+
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: Colors.warning,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 
   centerContent: {

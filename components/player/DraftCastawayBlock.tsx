@@ -25,10 +25,43 @@ interface DraftCastawayBlockProps {
   disabled?: boolean;
 }
 
+// Image mapping for castaway pictures
+const castawayImageMap: Record<string, any> = {
+  angelina: require('../../assets/castawayPictures/angelina.webp'),
+  aubry: require('../../assets/castawayPictures/aubry.webp'),
+  charlie: require('../../assets/castawayPictures/charlie.webp'),
+  chrissy: require('../../assets/castawayPictures/chrissy.webp'),
+  christian: require('../../assets/castawayPictures/christian.webp'),
+  cirie: require('../../assets/castawayPictures/cirie.webp'),
+  coach: require('../../assets/castawayPictures/coach.webp'),
+  colby: require('../../assets/castawayPictures/colby.webp'),
+  dee: require('../../assets/castawayPictures/dee.webp'),
+  emily: require('../../assets/castawayPictures/emily.webp'),
+  genevieve: require('../../assets/castawayPictures/genevieve.webp'),
+  jenna: require('../../assets/castawayPictures/jenna.webp'),
+  joe: require('../../assets/castawayPictures/joe.webp'),
+  jonathan: require('../../assets/castawayPictures/jonathan.webp'),
+  kamilla: require('../../assets/castawayPictures/kamilla.webp'),
+  kyle: require('../../assets/castawayPictures/kyle.webp'),
+  mike: require('../../assets/castawayPictures/mike.webp'),
+  ozzy: require('../../assets/castawayPictures/ozzy.webp'),
+  q: require('../../assets/castawayPictures/q.webp'),
+  rick: require('../../assets/castawayPictures/rick.webp'),
+  rizo: require('../../assets/castawayPictures/rizo.webp'),
+  savannah: require('../../assets/castawayPictures/savannah.webp'),
+  stephenie: require('../../assets/castawayPictures/stephenie.webp'),
+  tiffany: require('../../assets/castawayPictures/tiffany.webp'),
+};
+
 const getColumnsForWidth = (width: number): number => {
   if (width < 600) return 3;      // Mobile
   if (width < 1024) return 4;     // Tablet
   return 6;                       // Desktop/Laptop
+};
+
+const getImageForCastaway = (name: string): any => {
+  const normalized = name.toLowerCase().split(/\s+/)[0];
+  return castawayImageMap[normalized] || require('../../assets/placeholder.png');
 };
 
 export default function DraftCastawayBlock({
@@ -73,11 +106,9 @@ export default function DraftCastawayBlock({
               activeOpacity={disabled ? 1 : 0.7}
             >
               <Image
-                source={{
-                  uri: `https://survivor.fandom.com/wiki/${castaway.castaway.full_name}/image?width=200`,
-                }}
+                source={getImageForCastaway(castaway.castaway.name)}
                 style={styles.castawayImage}
-                defaultSource={require('../../assets/placeholder.png')}
+                resizeMode="cover"
               />
               <View style={styles.castawayNameContainer}>
                 <Text

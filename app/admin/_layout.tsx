@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResponsive } from '../../constants/theme';
 import { ResponsiveNavigation, NavigationItem } from '../../components/shared/ResponsiveNavigation';
 
@@ -14,18 +15,22 @@ export default function AdminLayout() {
   const responsive = useResponsive();
 
   return (
-    <View style={[styles.container, responsive.isMobile && styles.mobileContainer]}>
+    <SafeAreaView style={[styles.container, responsive.isMobile && styles.mobileContainer]} edges={['top', 'left', 'right']}>
       {!responsive.isMobile && (
         <ResponsiveNavigation items={navigationItems} baseRoute="/admin" logo="construct" />
       )}
 
       <View style={styles.contentContainer}>
         <View style={styles.stackContainer}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="create" />
-            <Stack.Screen name="social" />
-            <Stack.Screen name="game" />
+          <Stack screenOptions={{ 
+            headerShown: false, 
+            animation: 'none',
+            gestureEnabled: false,
+          }}>
+            <Stack.Screen name="index" options={{ animation: 'none' }} />
+            <Stack.Screen name="create" options={{ animation: 'none' }} />
+            <Stack.Screen name="social" options={{ animation: 'none' }} />
+            <Stack.Screen name="game" options={{ animation: 'none' }} />
           </Stack>
         </View>
       </View>
@@ -33,7 +38,7 @@ export default function AdminLayout() {
       {responsive.isMobile && (
         <ResponsiveNavigation items={navigationItems} baseRoute="/admin" logo="construct" />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

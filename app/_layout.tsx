@@ -39,10 +39,14 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(public)" />
-      <Stack.Screen name="(player)" />
-      <Stack.Screen name="admin" />
+    <Stack screenOptions={{ 
+      headerShown: false, 
+      animation: 'none',
+      gestureEnabled: false,
+    }}>
+      <Stack.Screen name="(public)" options={{ animation: 'none' }} />
+      <Stack.Screen name="(player)" options={{ animation: 'none' }} />
+      <Stack.Screen name="admin" options={{ animation: 'none' }} />
     </Stack>
   );
 }
