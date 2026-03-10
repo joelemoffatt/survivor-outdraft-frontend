@@ -28,6 +28,7 @@ export default function DraftScreen({
 }: DraftScreenProps) {
   const { user } = useAuth();
   const [draftState, setDraftState] = useState<DraftState | null>(null);
+  const [userTeam, setUserTeam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCastaway, setSelectedCastaway] = useState<number | null>(null);
@@ -42,6 +43,16 @@ export default function DraftScreen({
         const state = await apiService.getDraftState(groupId);
         setDraftState(state);
         
+        // Fetch current user's team
+        if (user?.id) {
+          try {
+            const team = await apiService.getTeamByGroupAndUser(groupId, user.id);
+            setUserTeam(team);
+          } catch (err) {
+            console.error('Failed to fetch user team:', err);
+          }
+        }
+        
         // Check if it's current user's turn
         const turnData = await apiService.isMyTurn(groupId);
         setIsMyTurn(turnData.isMyTurn);
@@ -54,7 +65,7 @@ export default function DraftScreen({
     };
 
     fetchDraftState();
-  }, [groupId]);
+  }, [groupId, user?.id]);
 
   // Poll draft state every 3 seconds
   useEffect(() => {
@@ -64,6 +75,16 @@ export default function DraftScreen({
       try {
         const state = await apiService.getDraftState(groupId);
         setDraftState(state);
+
+        // Update user's team
+        if (user?.id) {
+          try {
+            const team = await apiService.getTeamByGroupAndUser(groupId, user.id);
+            setUserTeam(team);
+          } catch (err) {
+            console.error('Failed to fetch user team:', err);
+          }
+        }
 
         // Check if draft is complete
         if (state.isComplete && onDraftComplete) {
@@ -79,7 +100,7 @@ export default function DraftScreen({
     }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [draftState, groupId, onDraftComplete]);
+  }, [draftState, groupId, onDraftComplete, user?.id]);
 
   const handleMakePick = async (castawayId: number) => {
     if (!isMyTurn || isPickingLoading) return;
@@ -219,16 +240,29 @@ export default function DraftScreen({
         </ScrollView>
       </View>
 
-      {/* Undrafted Castaways Grid */}
-      {draftState.undraftedCastaways.length > 0 && (
+      {/* Available Castaways Grid */}
+      {draftState.undraftedCastaways && draftState.undraftedCastaways.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Available Castaways</Text>
-          <DraftCastawayBlock
-            castaways={draftState.undraftedCastaways}
-            selectedCastaway={selectedCastaway}
-            onCastawayPress={handleCastawayPress}
-            disabled={!isMyTurn || isPickingLoading}
-          />
+          {(() => {
+            // Get user's drafted castaway IDs
+            const userDraftedCastawayIds = new Set<number>();
+            if (userTeam && userTeam.roster) {
+              userTeam.roster.forEach((teamCastaway: any) => {
+                userDraftedCastawayIds.add(teamCastaway.castawayPerformance.id);
+              });
+            }
+            
+            return (
+              <DraftCastawayBlock
+                castaways={draftState.undraftedCastaways as any}
+                selectedCastaway={selectedCastaway}
+                onCastawayPress={handleCastawayPress}
+                disabled={!isMyTurn || isPickingLoading}
+                userDraftedCastawayIds={userDraftedCastawayIds}
+              />
+            );
+          })()}
         </View>
       )}
 

@@ -81,7 +81,9 @@ async function tryFill(page, selector, value) {
 
 async function tryClick(page, selector) {
   try {
-    await page.locator(selector).first().click();
+    const element = page.locator(selector).first();
+    await element.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+    await element.click();
     return true;
   } catch {
     return false;
@@ -89,7 +91,7 @@ async function tryClick(page, selector) {
 }
 
 async function login(page, username) {
-  await page.goto(`${BASE_URL}${LOGIN_PATH}`, { waitUntil: 'domcontentloaded' });
+  // Page is already at login URL from launchWindow
 
   const userFilled =
     (await tryFill(page, 'input[placeholder="Username"]', username)) ||
@@ -105,18 +107,32 @@ async function login(page, username) {
     throw new Error(`Could not find login inputs for ${username}`);
   }
 
-  const clicked =
-    (await tryClick(page, 'button:has-text("Login")')) ||
-    (await tryClick(page, 'text=Login'));
+  console.log(`Submitting login for ${username}...`);
 
-  if (!clicked) {
-    throw new Error(`Could not find login button for ${username}`);
+  // Tab to move focus to login button
+  await page.keyboard.press('Tab').catch(() => {});
+  await page.waitForTimeout(100);
+
+  // Press Enter to activate the focused button
+  await page.keyboard.press('Enter').catch(() => {});
+  console.log(`Enter pressed for ${username}`);
+
+  // Wait for URL to change away from login page
+  const loginPageUrl = page.url();
+  const startTime = Date.now();
+  const maxWait = 10000;
+
+  while (Date.now() - startTime < maxWait) {
+    const currentUrl = page.url();
+    if (currentUrl !== loginPageUrl && !currentUrl.includes(LOGIN_PATH)) {
+      console.log(`✓ ${username} logged in`);
+      break;
+    }
+    await page.waitForTimeout(300);
   }
 
-  await Promise.race([
-    page.waitForLoadState('domcontentloaded'),
-    page.waitForTimeout(LOGIN_WAIT_MS),
-  ]).catch(() => {});
+  await page.waitForLoadState('domcontentloaded').catch(() => {});
+  await page.waitForTimeout(500);
 }
 
 async function launchWindow(username, slot, index) {
@@ -132,8 +148,17 @@ async function launchWindow(username, slot, index) {
     args: [
       `--window-position=${slot.x},${slot.y}`,
       `--window-size=${slot.width},${slot.height}`,
+      '--hide-crash-restore-bubble',
       '--disable-session-crashed-bubble',
       '--disable-infobars',
+      '--disable-component-extensions-with-background-pages',
+      '--disable-background-networking',
+      '--disable-sync',
+      '--disable-extensions',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--no-pings',
+      '--incognito',
     ],
   };
 
@@ -159,10 +184,14 @@ async function launchWindow(username, slot, index) {
 
   const page = context.pages()[0] || (await context.newPage());
 
+  // Navigate immediately to bypass restore dialog
+  await page.goto(`${BASE_URL}${LOGIN_PATH}`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  await page.waitForTimeout(500);
+
   if (!SKIP_LOGIN) {
     await login(page, username);
   } else {
-    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    // Already navigated above
   }
 
   return { context, page, username };
