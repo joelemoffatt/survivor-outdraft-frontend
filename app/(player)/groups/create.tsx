@@ -15,11 +15,17 @@ import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
 import apiService, { GroupResponse } from '../../../services/api';
-import { Season } from '../../../types/survivor';
+import { Episode, Season } from '../../../types/survivor';
 import FormInput from '../../../components/shared/FormInput';
 import FormPicker, { PickerOption } from '../../../components/shared/FormPicker';
 import FormButton from '../../../components/shared/FormButton';
 import InviteMember from '../../../components/shared/InviteMember';
+
+const draftStyleOptions: PickerOption[] = [
+  { label: 'Snake', value: 'SNAKE' },
+  { label: 'Round Robin', value: 'ROUND_ROBIN' },
+  { label: 'Linear', value: 'LINEAR' },
+];
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -30,12 +36,16 @@ export default function CreateGroupScreen() {
   const [createdGroup, setCreatedGroup] = useState<GroupResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingSeasons, setLoadingSeasons] = useState(true);
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [seasons, setSeasons] = useState<Season[]>([]);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
     seasonId: null as number | null,
+    latestWatchedEpisodeId: null as number | null,
     teamSize: '',
+    style: 'SNAKE' as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR',
     draftDate: '',
   });
 
@@ -48,6 +58,30 @@ export default function CreateGroupScreen() {
   useEffect(() => {
     loadSeasons();
   }, []);
+
+  useEffect(() => {
+    const loadEpisodes = async () => {
+      if (!formData.seasonId) {
+        setEpisodes([]);
+        return;
+      }
+
+      try {
+        setLoadingEpisodes(true);
+        const episodesData = await apiService.getEpisodes(formData.seasonId);
+        setEpisodes(episodesData);
+      } catch (error) {
+        console.error('Failed to load episodes:', error);
+        Alert.alert('Error', 'Failed to load episodes. Please try again.');
+        setEpisodes([]);
+      } finally {
+        setLoadingEpisodes(false);
+      }
+    };
+
+    setFormData((prev) => ({ ...prev, latestWatchedEpisodeId: null }));
+    loadEpisodes();
+  }, [formData.seasonId]);
 
   const loadSeasons = async () => {
     try {
@@ -65,6 +99,11 @@ export default function CreateGroupScreen() {
   const seasonOptions: PickerOption[] = seasons.map((season) => ({
     label: season.seasonName || `Survivor ${season.season}`,
     value: season.season,
+  }));
+
+  const episodeOptions: PickerOption[] = episodes.map((episode) => ({
+    label: `Episode ${episode.episodeNumber}${episode.episodeTitle ? ` - ${episode.episodeTitle}` : ''}`,
+    value: episode.id,
   }));
 
   const validateForm = (): boolean => {
@@ -89,8 +128,11 @@ export default function CreateGroupScreen() {
       isValid = false;
     }
 
-    if (formData.teamSize) {
-      const teamSizeNum = parseInt(formData.teamSize);
+    if (!formData.teamSize.trim()) {
+      newErrors.teamSize = 'Team size is required';
+      isValid = false;
+    } else {
+      const teamSizeNum = parseInt(formData.teamSize, 10);
       if (isNaN(teamSizeNum) || teamSizeNum < 1) {
         newErrors.teamSize = 'Team size must be a positive number';
         isValid = false;
@@ -113,14 +155,15 @@ export default function CreateGroupScreen() {
         name: formData.name.trim(),
         admin: { id: user.id },
         season: { id: formData.seasonId },
+        ...(formData.latestWatchedEpisodeId != null && {
+          latestWatchedEpisode: { id: formData.latestWatchedEpisodeId },
+        }),
+        teamSize: parseInt(formData.teamSize, 10),
+        style: formData.style,
       };
 
-      if (formData.teamSize) {
-        groupData.teamSize = parseInt(formData.teamSize);
-      }
-
       if (formData.draftDate) {
-        groupData.draftDate = formData.draftDate;
+        groupData.scheduledAt = formData.draftDate;
       }
 
       const newGroup = await apiService.createGroup(groupData);
@@ -209,6 +252,23 @@ export default function CreateGroupScreen() {
           searchable
         />
 
+        <FormPicker
+          label="Latest Episode Watched (optional)"
+          value={formData.latestWatchedEpisodeId}
+          options={episodeOptions}
+          onValueChange={(latestWatchedEpisodeId) =>
+            setFormData({ ...formData, latestWatchedEpisodeId: latestWatchedEpisodeId as number })
+          }
+          placeholder={
+            !formData.seasonId
+              ? 'Select a season first'
+              : loadingEpisodes
+                ? 'Loading episodes...'
+                : 'None (all castaways visible)'
+          }
+          searchable
+        />
+
         <FormInput
           label="Team Size"
           value={formData.teamSize}
@@ -216,6 +276,23 @@ export default function CreateGroupScreen() {
           placeholder="e.g., 10"
           error={errors.teamSize}
           keyboardType="number-pad"
+          required
+        />
+
+        <FormPicker
+          label="Draft Style"
+          value={formData.style}
+          options={draftStyleOptions}
+          onValueChange={(style) => setFormData({ ...formData, style: style as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR' })}
+          placeholder="Select draft style"
+          required
+        />
+
+        <FormInput
+          label="Scheduled Start (optional)"
+          value={formData.draftDate}
+          onChangeText={(draftDate) => setFormData({ ...formData, draftDate })}
+          placeholder="YYYY-MM-DDTHH:mm:ss"
         />
 
         <View style={styles.buttonContainer}>
@@ -223,7 +300,7 @@ export default function CreateGroupScreen() {
             title="Create Group"
             onPress={handleSubmit}
             loading={loading}
-            disabled={loadingSeasons}
+            disabled={loadingSeasons || loadingEpisodes}
           />
         </View>
       </ScrollView>

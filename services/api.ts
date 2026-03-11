@@ -3,7 +3,7 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  'http://192.168.86.20:8080/api';
+  'http://192.168.200.174:8080/api'; // ipconfig getifaddr en0
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
@@ -170,8 +170,10 @@ class ApiService {
     name: string;
     admin: { id: number };
     season: { id: number };
-    teamSize?: number;
-    draftDate?: string;
+    latestWatchedEpisode?: { id: number };
+    teamSize: number;
+    style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+    scheduledAt?: string;
   }): Promise<GroupResponse> {
     return this.post<GroupResponse>(`/v1/groups`, groupData);
   }
@@ -190,16 +192,16 @@ class ApiService {
   }
 
   // Draft endpoints
-  async startDraft(groupId: number): Promise<DraftState> {
-    return this.post<DraftState>(`/v1/draft/${groupId}/start`, {});
+  async startDraft(groupId: number): Promise<DraftDTO> {
+    return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/start`, {});
   }
 
-  async getDraftState(groupId: number): Promise<DraftState> {
-    return this.get<DraftState>(`/v1/draft/${groupId}/state`);
+  async getDraftState(groupId: number): Promise<DraftDTO> {
+    return this.get<DraftDTO>(`/v1/drafts/group/${groupId}`);
   }
 
-  async makeDraftPick(groupId: number, castawayPerformanceId: number): Promise<DraftState> {
-    return this.post<DraftState>(`/v1/draft/${groupId}/pick`, { castawayPerformanceId });
+  async makeDraftPick(draftId: number, castawayPerformanceId: number): Promise<DraftDTO> {
+    return this.post<DraftDTO>(`/v1/drafts/${draftId}/pick`, { castawayPerformanceId });
   }
 
   async getUndraftedCastaways(groupId: number): Promise<CastawayPerformance[]> {
@@ -207,15 +209,15 @@ class ApiService {
   }
 
   async isMyTurn(groupId: number): Promise<{ isMyTurn: boolean; pickNumber?: number }> {
-    return this.get(`/v1/draft/${groupId}/my-turn`);
+    return this.get(`/v1/drafts/group/${groupId}/my-turn`);
   }
 
-  async completeDraft(groupId: number): Promise<GroupResponse> {
-    return this.post<GroupResponse>(`/v1/draft/${groupId}/complete`, {});
+  async completeDraft(groupId: number): Promise<DraftDTO> {
+    return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/complete`, {});
   }
 
-  async resetDraft(groupId: number): Promise<GroupResponse> {
-    return this.post<GroupResponse>(`/v1/draft/${groupId}/reset`, {});
+  async resetDraft(groupId: number): Promise<DraftDTO> {
+    return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/reset`, {});
   }
 
   // Invitation endpoints
@@ -269,11 +271,19 @@ export interface GroupResponse {
     seasonName: string;
     version: string;
   };
-  draftDate: string | null;
-  draftStartTime: string | null;
-  draftEndTime: string | null;
+  draft?: {
+    id: number;
+    status: 'PENDING' | 'DRAFTING' | 'COMPLETED';
+    scheduledAt: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+  } | null;
   teamSize: number | null;
-  draftOrder: string | null;
+  latestEpisodeWatched?: {
+    id: number;
+    episodeNumber: number;
+    episodeTitle?: string;
+  } | null;
   status: 'PENDING' | 'DRAFTING' | 'ACTIVE' | 'COMPLETED';
   createdAt: string;
 }
@@ -301,25 +311,74 @@ export interface TeamResponse {
   roster: TeamCastawayResponse[];
 }
 
-export interface DraftPosition {
-  position: number;
-  user: {
-    id: number;
-    username: string;
-  };
-  pickCount: number;
-  nextPickNumber: number | null;
+export interface DraftUserSummary {
+  id: number;
+  username: string;
 }
 
-export interface DraftState {
-  group: GroupResponse;
-  draftOrder: DraftPosition[];
-  currentTurn: DraftPosition | null;
-  currentPickNumber: number;
-  totalPicks: number;
-  teams: TeamResponse[];
-  undraftedCastaways: CastawayPerformance[];
+export interface DraftGroupSummary {
+  id: number;
+  name: string;
+}
+
+export interface DraftTeamSummary {
+  id: number;
+  teamName: string;
+}
+
+export interface DraftParticipant {
+  id: number;
+  draftPosition: number;
+  user: DraftUserSummary;
+  teamId: number;
+  teamName: string;
+  picksMade: number;
+  active: boolean;
+}
+
+export interface DraftPickSlot {
+  id: number;
+  pickNumber: number;
+  roundNumber: number;
+  draftPosition: number;
+  user: DraftUserSummary;
+  team: DraftTeamSummary;
+  isPicked: boolean;
+  castawayPerformanceId?: number;
+  castawayName?: string;
+  pickedAt?: string;
+}
+
+export interface DraftCastaway {
+  draftId: number;
+  castawayPerformanceId: number;
+  castawayName: string;
+}
+
+export interface DraftDTO {
+  id: number;
+  group: DraftGroupSummary;
+  seasonId: number;
+  seasonName: string;
+  createdBy?: DraftUserSummary;
+  status: 'PENDING' | 'DRAFTING' | 'COMPLETED';
+  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
   isComplete: boolean;
+  scheduledAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  teamSize: number;
+  totalParticipants: number;
+  totalCastaways: number;
+  totalPicks: number;
+  participants: DraftParticipant[];
+  maxDraftsPerCastaway: number;
+  currentPickNumber: number;
+  currentTurnUser?: DraftUserSummary;
+  picks: DraftPickSlot[];
+  draftCastaways: DraftCastaway[];
 }
 
 export interface CastawayPerformance {

@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useResponsive, Colors, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
 import apiService, { TeamResponse, GroupResponse } from '../../services/api';
 import DraftScreen from '../../components/player/DraftScreen';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
 export default function TeamScreen() {
   const responsive = useResponsive();
@@ -19,6 +20,9 @@ export default function TeamScreen() {
   const [startingDraft, setStartingDraft] = useState(false);
   const [draftComplete, setDraftComplete] = useState(false);
   const [selectingGroup, setSelectingGroup] = useState(false);
+  const [resetModalVisible, setResetModalVisible] = useState(false);
+  const [resettingDraft, setResettingDraft] = useState(false);
+  const isGroupLeader = user ? Number(user.id) === Number(group?.admin?.id) : false;
 
   // Auto-select first group if none selected
   useEffect(() => {
@@ -83,14 +87,15 @@ export default function TeamScreen() {
 
   // Countdown timer for draft start
   useEffect(() => {
-    if (!group || !group.draftStartTime || group.status !== 'PENDING') {
+    const scheduledAt = group?.draft?.scheduledAt;
+    if (!group || !scheduledAt || group.status !== 'PENDING') {
       setCountdown('');
       return;
     }
 
     const updateCountdown = () => {
       const now = new Date();
-      const startTime = new Date(group.draftStartTime!);
+      const startTime = new Date(scheduledAt);
       const diff = startTime.getTime() - now.getTime();
 
       if (diff <= 0) {
@@ -151,29 +156,35 @@ export default function TeamScreen() {
     }
   };
 
-  const handleResetDraft = async () => {
+  const handleResetDraft = () => {
+    if (!selectedGroupId || resettingDraft) return;
+    setResetModalVisible(true);
+  };
+
+  const confirmResetDraft = async () => {
     if (!selectedGroupId) return;
-    if (!confirm('Are you sure you want to reset the draft? This cannot be undone.')) {
-      return;
-    }
-    
+
     try {
-      setLoading(true);
+      setResetModalVisible(false);
+      setResettingDraft(true);
       await apiService.resetDraft(selectedGroupId);
-      
-      // Refresh group and team data
+
       const groupData = await apiService.getGroupById(selectedGroupId);
       setGroup(groupData);
-      
+      setDraftComplete(false);
+
       if (user) {
         const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
         setTeam(teamData);
       }
+
+      const teamsData = await apiService.getTeamsByGroupId(selectedGroupId);
+      setAllTeams(teamsData);
     } catch (err: any) {
       console.error('Failed to reset draft:', err);
-      alert('Failed to reset draft: ' + (err?.message || 'Unknown error'));
+      Alert.alert('Reset failed', err?.message || 'Unknown error');
     } finally {
-      setLoading(false);
+      setResettingDraft(false);
     }
   };
 
@@ -213,7 +224,7 @@ export default function TeamScreen() {
 
   // BEFORE DRAFT - Show countdown
   if (group.status === 'PENDING') {
-    const isAdmin = user?.id === group.admin.id;
+    const isAdmin = isGroupLeader;
     
     return (
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
@@ -225,12 +236,12 @@ export default function TeamScreen() {
         <View style={styles.draftInfoCard}>
           <Text style={styles.draftInfoTitle}>Draft Coming Soon!</Text>
           
-          {group.draftStartTime && (
+          {group.draft?.scheduledAt && (
             <View style={styles.countdownSection}>
               <Text style={styles.countdownLabel}>Draft starts in:</Text>
               <Text style={styles.countdownValue}>{countdown}</Text>
               <Text style={styles.countdownSubtext}>
-                {new Date(group.draftStartTime).toLocaleString()}
+                {new Date(group.draft.scheduledAt).toLocaleString()}
               </Text>
             </View>
           )}
@@ -303,6 +314,7 @@ export default function TeamScreen() {
 
   // AFTER DRAFT - Show your team and all teams in the group
   return (
+    <>
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
       {/* Your Team */}
       <View style={styles.headerSection}>
@@ -369,16 +381,31 @@ export default function TeamScreen() {
         ))}
       </View>
       
-      {user?.id === group.admin.id && (
+      {isGroupLeader && (
         <TouchableOpacity 
-          style={styles.resetButton}
+          style={[styles.resetButton, resettingDraft && styles.startButtonDisabled]}
           onPress={handleResetDraft}
-          disabled={loading}
+          disabled={loading || resettingDraft}
         >
-          <Text style={styles.resetButtonText}>Reset Draft</Text>
+          {resettingDraft ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.resetButtonText}>Reset Draft</Text>
+          )}
         </TouchableOpacity>
       )}
     </ScrollView>
+    <ConfirmDialog
+      visible={resetModalVisible}
+      title="Reset Draft"
+      message="Are you sure you want to reset the draft? This cannot be undone."
+      confirmText="Reset"
+      cancelText="Cancel"
+      confirmVariant="danger"
+      onCancel={() => setResetModalVisible(false)}
+      onConfirm={confirmResetDraft}
+    />
+    </>
   );
 }
 

@@ -10,7 +10,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Colors, Spacing } from '../../constants/theme';
 import apiService, {
-  DraftState,
+  DraftDTO,
 } from '../../services/api';
 import DraftCastawayBlock from './DraftCastawayBlock';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,13 +27,13 @@ export default function DraftScreen({
   onDraftComplete,
 }: DraftScreenProps) {
   const { user } = useAuth();
-  const [draftState, setDraftState] = useState<DraftState | null>(null);
-  const [userTeam, setUserTeam] = useState<any>(null);
+  const [draftState, setDraftState] = useState<DraftDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCastaway, setSelectedCastaway] = useState<number | null>(null);
   const [isPickingLoading, setIsPickingLoading] = useState(false);
-  const [isMyTurn, setIsMyTurn] = useState(false);
+
+  const isMyTurn = !!(user?.id && draftState?.currentTurnUser?.id === user.id);
 
   // Fetch draft state
   useEffect(() => {
@@ -42,20 +42,6 @@ export default function DraftScreen({
         setLoading(true);
         const state = await apiService.getDraftState(groupId);
         setDraftState(state);
-        
-        // Fetch current user's team
-        if (user?.id) {
-          try {
-            const team = await apiService.getTeamByGroupAndUser(groupId, user.id);
-            setUserTeam(team);
-          } catch (err) {
-            console.error('Failed to fetch user team:', err);
-          }
-        }
-        
-        // Check if it's current user's turn
-        const turnData = await apiService.isMyTurn(groupId);
-        setIsMyTurn(turnData.isMyTurn);
       } catch (err: any) {
         console.error('Failed to fetch draft state:', err);
         setError(err?.message || 'Failed to load draft state');
@@ -76,39 +62,29 @@ export default function DraftScreen({
         const state = await apiService.getDraftState(groupId);
         setDraftState(state);
 
-        // Update user's team
-        if (user?.id) {
-          try {
-            const team = await apiService.getTeamByGroupAndUser(groupId, user.id);
-            setUserTeam(team);
-          } catch (err) {
-            console.error('Failed to fetch user team:', err);
-          }
-        }
-
         // Check if draft is complete
         if (state.isComplete && onDraftComplete) {
           onDraftComplete();
         }
-
-        // Update turn status
-        const turnData = await apiService.isMyTurn(groupId);
-        setIsMyTurn(turnData.isMyTurn);
       } catch (err) {
         console.error('Failed to poll draft state:', err);
       }
     }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [draftState, groupId, onDraftComplete, user?.id]);
+  }, [draftState, groupId, onDraftComplete]);
 
   const handleMakePick = async (castawayId: number) => {
     if (!isMyTurn || isPickingLoading) return;
+    if (!draftState?.id) {
+      alert('Draft is unavailable. Please refresh.');
+      return;
+    }
 
     try {
       setIsPickingLoading(true);
       const updatedState = await apiService.makeDraftPick(
-        groupId,
+        draftState.id,
         castawayId
       );
       setDraftState(updatedState);
@@ -118,10 +94,6 @@ export default function DraftScreen({
       if (updatedState.isComplete && onDraftComplete) {
         onDraftComplete();
       }
-
-      // Update turn status
-      const turnData = await apiService.isMyTurn(groupId);
-      setIsMyTurn(turnData.isMyTurn);
     } catch (err: any) {
       console.error('Failed to make pick:', err);
       alert('Failed to make pick: ' + (err?.message || 'Unknown error'));
@@ -166,7 +138,7 @@ export default function DraftScreen({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Draft In Progress</Text>
         <Text style={styles.pickCounter}>
-          Pick {draftState.currentPickNumber} of {draftState.group.teamSize! * draftState.draftOrder.length}
+          Pick {draftState.currentPickNumber} of {draftState.totalPicks}
         </Text>
       </View>
 
@@ -175,8 +147,8 @@ export default function DraftScreen({
         <Text style={styles.turnBannerText}>
           {isMyTurn
             ? 'Your Turn to Pick!'
-            : draftState.currentTurn
-            ? `Waiting for ${draftState.currentTurn.user.username}`
+            : draftState.currentTurnUser
+            ? `Waiting for ${draftState.currentTurnUser.username}`
             : 'Waiting for next turn'}
         </Text>
       </View>
@@ -192,36 +164,24 @@ export default function DraftScreen({
         >
           {(() => {
             const remainingPicks = [];
-            const numPlayers = draftState.draftOrder.length;
-            const totalPicks = draftState.group.teamSize! * numPlayers;
             let userNextPickFound = false;
             
             // Generate all remaining picks
-            for (let pickNum = draftState.currentPickNumber; pickNum <= totalPicks; pickNum++) {
-              // Calculate position using snake draft logic
-              const roundNum = Math.floor((pickNum - 1) / numPlayers);
-              let position;
-              if (roundNum % 2 === 0) {
-                // Even rounds: forward (0, 1, 2, 3)
-                position = (pickNum - 1) % numPlayers;
-              } else {
-                // Odd rounds: backward (3, 2, 1, 0)
-                position = numPlayers - 1 - ((pickNum - 1) % numPlayers);
-              }
-              
-              const pickUser = draftState.draftOrder[position];
-              if (pickUser) {
-                const isUserNextPick = !userNextPickFound && user && pickUser.user.id === user.id;
+            const openPickSlots = draftState.picks
+              .filter((pick) => !pick.isPicked && pick.pickNumber >= draftState.currentPickNumber)
+              .sort((a, b) => a.pickNumber - b.pickNumber);
+
+            for (const pickSlot of openPickSlots) {
+              const isUserNextPick = !userNextPickFound && user && pickSlot.user.id === user.id;
                 if (isUserNextPick) {
                   userNextPickFound = true;
                 }
                 
                 remainingPicks.push({
-                  pickNumber: pickNum,
-                  user: pickUser.user,
+                  pickNumber: pickSlot.pickNumber,
+                  user: pickSlot.user,
                   isUserNextPick,
                 });
-              }
             }
             
             return remainingPicks.map((pick) => (
@@ -241,21 +201,49 @@ export default function DraftScreen({
       </View>
 
       {/* Available Castaways Grid */}
-      {draftState.undraftedCastaways && draftState.undraftedCastaways.length > 0 && (
+      {draftState.draftCastaways?.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Available Castaways</Text>
           {(() => {
-            // Get user's drafted castaway IDs
+            // Get current user's drafted castaway IDs from picks
             const userDraftedCastawayIds = new Set<number>();
-            if (userTeam && userTeam.roster) {
-              userTeam.roster.forEach((teamCastaway: any) => {
-                userDraftedCastawayIds.add(teamCastaway.castawayPerformance.id);
+            const myParticipant = draftState.participants.find((participant) => participant.user.id === user?.id);
+            const myTeamId = myParticipant?.teamId;
+
+            const draftedCounts = new Map<number, number>();
+            draftState.picks
+              .filter((pick) => !!pick.castawayPerformanceId)
+              .forEach((pick) => {
+                const castawayPerformanceId = pick.castawayPerformanceId!;
+                draftedCounts.set(
+                  castawayPerformanceId,
+                  (draftedCounts.get(castawayPerformanceId) || 0) + 1
+                );
               });
+
+            draftState.picks
+              .filter((pick) => pick.isPicked && pick.team?.id === myTeamId && !!pick.castawayPerformanceId)
+              .forEach((pick) => userDraftedCastawayIds.add(pick.castawayPerformanceId!));
+
+            const draftableCastaways = draftState.draftCastaways.filter((castaway) => {
+              const draftedCount = draftedCounts.get(castaway.castawayPerformanceId) || 0;
+              return draftedCount < draftState.maxDraftsPerCastaway;
+            });
+
+            if (draftableCastaways.length === 0) {
+              return null;
             }
             
             return (
               <DraftCastawayBlock
-                castaways={draftState.undraftedCastaways as any}
+                castaways={draftableCastaways
+                  .map((castaway) => ({
+                    id: castaway.castawayPerformanceId,
+                    castaway: {
+                      name: castaway.castawayName,
+                      full_name: castaway.castawayName,
+                    },
+                  })) as any}
                 selectedCastaway={selectedCastaway}
                 onCastawayPress={handleCastawayPress}
                 disabled={!isMyTurn || isPickingLoading}
@@ -269,25 +257,33 @@ export default function DraftScreen({
       {/* Team Rosters */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Team Rosters</Text>
-        {draftState.teams.map((team) => (
-          <View key={team.id} style={styles.teamCard}>
+        {draftState.participants
+          .sort((a, b) => a.draftPosition - b.draftPosition)
+          .map((participant) => {
+            const teamPicks = draftState.picks
+              .filter((pick) => pick.isPicked && pick.team?.id === participant.teamId)
+              .sort((a, b) => a.pickNumber - b.pickNumber);
+
+            return (
+          <View key={participant.id} style={styles.teamCard}>
             <View style={styles.teamHeader}>
-              <Text style={styles.teamName}>{team.teamName}</Text>
+              <Text style={styles.teamName}>{participant.teamName}</Text>
               <Text style={styles.teamRosterCount}>
-                {team.roster?.length || 0} / {draftState.group.teamSize}
+                {teamPicks.length || 0} / {draftState.teamSize}
               </Text>
             </View>
-            {team.roster && team.roster.length > 0 ? (
-              team.roster.map((castaway, idx) => (
-                <Text key={castaway.id} style={styles.rosterEntry}>
-                  {idx + 1}. {castaway.castawayPerformance.castaway.name}
+            {teamPicks.length > 0 ? (
+              teamPicks.map((pick, idx) => (
+                <Text key={pick.id} style={styles.rosterEntry}>
+                  {idx + 1}. {pick.castawayName}
                 </Text>
               ))
             ) : (
               <Text style={styles.emptyRoster}>No picks yet</Text>
             )}
           </View>
-        ))}
+            );
+          })}
       </View>
 
       {/* Draft Progress */}
@@ -298,14 +294,14 @@ export default function DraftScreen({
             style={[
               styles.progressFill,
               {
-                width: `${(draftState.currentPickNumber / (draftState.group.teamSize! * draftState.draftOrder.length)) * 100}%`,
+                width: `${(draftState.currentPickNumber / draftState.totalPicks) * 100}%`,
               },
             ]}
           />
         </View>
         <Text style={styles.progressText}>
           {draftState.currentPickNumber} of{' '}
-          {draftState.group.teamSize! * draftState.draftOrder.length} picks
+          {draftState.totalPicks} picks
         </Text>
       </View>
     </ScrollView>
