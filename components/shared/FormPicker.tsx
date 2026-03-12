@@ -14,14 +14,14 @@ import { Colors, FontSizes, Spacing } from '../../constants/theme';
 
 export interface PickerOption {
   label: string;
-  value: string | number;
+  value: string | number | null;
 }
 
 interface FormPickerProps {
   label: string;
   value: string | number | null;
   options: PickerOption[];
-  onValueChange: (value: string | number) => void;
+  onValueChange: (value: string | number | null) => void;
   placeholder?: string;
   error?: string;
   required?: boolean;
@@ -50,7 +50,7 @@ export default function FormPicker({
       )
     : options;
 
-  const handleSelect = (selectedValue: string | number) => {
+  const handleSelect = (selectedValue: string | number | null) => {
     onValueChange(selectedValue);
     setModalVisible(false);
     setSearchQuery('');

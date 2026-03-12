@@ -3,7 +3,7 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  'http://192.168.200.174:8080/api'; // ipconfig getifaddr en0
+  'http://192.168.200.242:8080/api'; // ipconfig getifaddr en0
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
@@ -109,6 +109,14 @@ class ApiService {
     });
   }
 
+  // PATCH request
+  async patch<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
   // DELETE request
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
@@ -162,6 +170,10 @@ class ApiService {
     return this.get<GroupResponse[]>(`/v1/groups/user/${userId}`);
   }
 
+  async getAdminGroups(adminId: number): Promise<GroupResponse[]> {
+    return this.get<GroupResponse[]>(`/v1/groups/admin/${adminId}`);
+  }
+
   async getGroupById(groupId: number): Promise<GroupResponse> {
     return this.get<GroupResponse>(`/v1/groups/${groupId}`);
   }
@@ -171,11 +183,32 @@ class ApiService {
     admin: { id: number };
     season: { id: number };
     latestWatchedEpisode?: { id: number };
+    firstScoringEpisodeNumber?: number;
     teamSize: number;
     style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
     scheduledAt?: string;
   }): Promise<GroupResponse> {
     return this.post<GroupResponse>(`/v1/groups`, groupData);
+  }
+
+  async updateGroupSettings(
+    groupId: number,
+    data: {
+      name: string;
+      seasonId: number;
+      teamSize: number;
+      latestWatchedEpisodeId: number | null;
+      firstScoringEpisodeNumber: number;
+      style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+    }
+  ): Promise<GroupResponse> {
+    return this.patch<GroupResponse>(`/v1/groups/${groupId}/settings`, data);
+  }
+
+  async updateFirstScoringEpisode(groupId: number, firstScoringEpisodeNumber: number): Promise<GroupResponse> {
+    return this.patch<GroupResponse>(`/v1/groups/${groupId}/first-scoring-episode`, {
+      firstScoringEpisodeNumber,
+    });
   }
 
   // Team endpoints
@@ -204,12 +237,8 @@ class ApiService {
     return this.post<DraftDTO>(`/v1/drafts/${draftId}/pick`, { castawayPerformanceId });
   }
 
-  async getUndraftedCastaways(groupId: number): Promise<CastawayPerformance[]> {
-    return this.get<CastawayPerformance[]>(`/v1/draft/${groupId}/undrafted`);
-  }
-
-  async isMyTurn(groupId: number): Promise<{ isMyTurn: boolean; pickNumber?: number }> {
-    return this.get(`/v1/drafts/group/${groupId}/my-turn`);
+  async isMyTurn(draftId: number): Promise<{ isMyTurn: boolean; pickNumber?: number }> {
+    return this.get(`/v1/drafts/${draftId}/my-turn`);
   }
 
   async completeDraft(groupId: number): Promise<DraftDTO> {
@@ -274,11 +303,13 @@ export interface GroupResponse {
   draft?: {
     id: number;
     status: 'PENDING' | 'DRAFTING' | 'COMPLETED';
+    style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
     scheduledAt: string | null;
     startedAt: string | null;
     completedAt: string | null;
   } | null;
   teamSize: number | null;
+  firstScoringEpisodeNumber: number;
   latestEpisodeWatched?: {
     id: number;
     episodeNumber: number;

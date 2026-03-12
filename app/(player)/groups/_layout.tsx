@@ -31,6 +31,24 @@ export default function GroupsLayout() {
         }}
       />
       <Stack.Screen
+        name="manage"
+        options={{
+          animation: 'none',
+          title: "Manage Groups",
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="manage/[id]"
+        options={{
+          animation: 'none',
+          title: "Edit Group",
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
         name="invitations"
         options={{
           animation: 'none',

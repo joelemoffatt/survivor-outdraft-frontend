@@ -18,6 +18,7 @@ export default function TeamScreen() {
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<string>('');
   const [startingDraft, setStartingDraft] = useState(false);
+  const [startDraftError, setStartDraftError] = useState<string | null>(null);
   const [draftComplete, setDraftComplete] = useState(false);
   const [selectingGroup, setSelectingGroup] = useState(false);
   const [resetModalVisible, setResetModalVisible] = useState(false);
@@ -143,6 +144,7 @@ export default function TeamScreen() {
     
     try {
       setStartingDraft(true);
+      setStartDraftError(null);
       await apiService.startDraft(selectedGroupId);
       
       // Refresh group data
@@ -150,7 +152,19 @@ export default function TeamScreen() {
       setGroup(groupData);
     } catch (err: any) {
       console.error('Failed to start draft:', err);
-      alert('Failed to start draft: ' + (err?.message || 'Unknown error'));
+      const rawMessage = err?.message || 'Unknown error';
+      const isUnsafeDraftConfig = rawMessage.includes('Unsafe draft configuration');
+
+      if (isUnsafeDraftConfig) {
+        const friendlyMessage =
+          'This draft setup can leave someone with no legal pick. ' +
+          'Try lowering team size or choosing a less advanced watched episode.';
+        setStartDraftError(friendlyMessage);
+        Alert.alert('Cannot Start Draft', `${friendlyMessage}\n\nDetails: ${rawMessage}`);
+      } else {
+        setStartDraftError(rawMessage);
+        Alert.alert('Failed to start draft', rawMessage);
+      }
     } finally {
       setStartingDraft(false);
     }
@@ -258,17 +272,22 @@ export default function TeamScreen() {
           </View>
 
           {isAdmin && (
-            <TouchableOpacity 
-              style={[styles.startButton, startingDraft && styles.startButtonDisabled]}
-              onPress={handleStartDraft}
-              disabled={startingDraft}
-            >
-              {startingDraft ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.startButtonText}>Start Draft Now</Text>
+            <>
+              <TouchableOpacity 
+                style={[styles.startButton, startingDraft && styles.startButtonDisabled]}
+                onPress={handleStartDraft}
+                disabled={startingDraft}
+              >
+                {startingDraft ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.startButtonText}>Start Draft Now</Text>
+                )}
+              </TouchableOpacity>
+              {startDraftError && (
+                <Text style={styles.startDraftErrorText}>{startDraftError}</Text>
               )}
-            </TouchableOpacity>
+            </>
           )}
 
           {!isAdmin && (
@@ -627,6 +646,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  startDraftErrorText: {
+    marginTop: Spacing.sm,
+    color: Colors.warning,
+    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 20,
   },
   resetButton: {
     backgroundColor: '#ff6b6b',
