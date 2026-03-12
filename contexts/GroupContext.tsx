@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import apiService from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -12,6 +12,18 @@ const GroupContext = createContext<GroupContextType | undefined>(undefined);
 export function GroupProvider({ children }: { children: ReactNode }) {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const { user } = useAuth();
+
+  const updateSelectedGroupId = useCallback((id: number | null) => {
+    setSelectedGroupId(id);
+
+    if (!user?.id || id === null) {
+      return;
+    }
+
+    apiService.markGroupAccessed(id).catch((error) => {
+      console.error('Failed to persist selected group:', error);
+    });
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -30,7 +42,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       try {
         const userGroups = await apiService.getUserGroups(user.id);
         if (isActive && userGroups.length > 0) {
-          setSelectedGroupId(userGroups[0].id);
+          updateSelectedGroupId(userGroups[0].id);
         }
       } catch (error) {
         console.error('Failed to auto-select first group:', error);
@@ -42,10 +54,10 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [user, selectedGroupId]);
+  }, [user, selectedGroupId, updateSelectedGroupId]);
 
   return (
-    <GroupContext.Provider value={{ selectedGroupId, setSelectedGroupId }}>
+    <GroupContext.Provider value={{ selectedGroupId, setSelectedGroupId: updateSelectedGroupId }}>
       {children}
     </GroupContext.Provider>
   );

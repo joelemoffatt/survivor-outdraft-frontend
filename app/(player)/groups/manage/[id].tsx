@@ -16,6 +16,7 @@ import FormButton from '../../../../components/shared/FormButton';
 import { ConfirmDialog } from '../../../../components/shared/ConfirmDialog';
 import apiService, { GroupResponse } from '../../../../services/api';
 import { Episode, Season } from '../../../../types/survivor';
+import GroupRulesEditor, { LocalRule } from '../../../../components/admin/GroupRulesEditor';
 
 const draftStyleOptions: PickerOption[] = [
   { label: 'Snake', value: 'SNAKE' },
@@ -46,6 +47,7 @@ export default function ManageGroupDetailsScreen() {
     firstScoringEpisodeNumber: '1',
     teamSize: '',
     style: 'SNAKE' as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR',
+    pointRules: [] as LocalRule[],
   });
 
   const [errors, setErrors] = useState({
@@ -103,6 +105,10 @@ export default function ManageGroupDetailsScreen() {
         firstScoringEpisodeNumber: String(groupData.firstScoringEpisodeNumber ?? 1),
         teamSize: String(groupData.teamSize ?? ''),
         style: groupData.draft?.style ?? 'SNAKE',
+        pointRules: (groupData.pointRules ?? []).map((rule) => ({
+          ruleType: rule.ruleType as LocalRule['ruleType'],
+          points: rule.points,
+        })),
       });
     } catch (error) {
       console.error('Failed to load group settings:', error);
@@ -187,15 +193,28 @@ export default function ManageGroupDetailsScreen() {
 
     try {
       setSaving(true);
-      const updated = await apiService.updateGroupSettings(groupId, {
+      const payload: Parameters<typeof apiService.updateGroupSettings>[1] = {
         name: formData.name.trim(),
         seasonId: Number(formData.seasonId),
         teamSize: parseInt(formData.teamSize, 10),
         latestWatchedEpisodeId: formData.latestWatchedEpisodeId,
         firstScoringEpisodeNumber: parseInt(formData.firstScoringEpisodeNumber, 10),
         style: formData.style,
-      });
+        pointRules: formData.pointRules.map((rule) => ({
+          ruleType: rule.ruleType,
+          points: rule.points,
+        })),
+      };
+
+      const updated = await apiService.updateGroupSettings(groupId, payload);
       setGroup(updated);
+      setFormData((prev) => ({
+        ...prev,
+        pointRules: (updated.pointRules ?? []).map((rule) => ({
+          ruleType: rule.ruleType as LocalRule['ruleType'],
+          points: rule.points,
+        })),
+      }));
       Alert.alert('Success', 'Group settings updated. Scores were recalculated.');
     } catch (error) {
       console.error('Failed to update group settings:', error);
@@ -330,6 +349,11 @@ export default function ManageGroupDetailsScreen() {
           }
           placeholder="Select draft style"
           required
+        />
+
+        <GroupRulesEditor
+          rules={formData.pointRules}
+          onChange={(pointRules: LocalRule[]) => setFormData((prev) => ({ ...prev, pointRules }))}
         />
 
         <View style={styles.buttonContainer}>

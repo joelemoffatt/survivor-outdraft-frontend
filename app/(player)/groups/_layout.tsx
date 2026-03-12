@@ -1,6 +1,31 @@
-import { Stack } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Stack, useRouter } from "expo-router";
+import { TouchableOpacity } from "react-native";
+import { Colors, Spacing } from "../../../constants/theme";
 
 export default function GroupsLayout() {
+  const router = useRouter();
+
+  const handleBack = (fallbackRoute: string) => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace(fallbackRoute);
+  };
+
+  const renderBackButton = (fallbackRoute: string) => (
+    <TouchableOpacity
+      onPress={() => handleBack(fallbackRoute)}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+      style={{ paddingRight: Spacing.sm }}
+    >
+      <Ionicons name="chevron-back" size={24} color={Colors.text} />
+    </TouchableOpacity>
+  );
+
   return (
     <Stack screenOptions={{ animation: 'none' }}>
       <Stack.Screen
@@ -10,6 +35,7 @@ export default function GroupsLayout() {
           title: "Select Group",
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+          headerLeft: () => renderBackButton("/(player)/group"),
         }}
       />
       <Stack.Screen
@@ -19,6 +45,7 @@ export default function GroupsLayout() {
           title: "Create Group",
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+          headerLeft: () => renderBackButton("/(player)/groups/select"),
         }}
       />
       <Stack.Screen
@@ -28,6 +55,7 @@ export default function GroupsLayout() {
           title: "Group Details",
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+          headerLeft: () => renderBackButton("/(player)/group"),
         }}
       />
       <Stack.Screen
@@ -37,6 +65,7 @@ export default function GroupsLayout() {
           title: "Manage Groups",
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+          headerLeft: () => renderBackButton("/(player)/group"),
         }}
       />
       <Stack.Screen
@@ -46,6 +75,7 @@ export default function GroupsLayout() {
           title: "Edit Group",
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+          headerLeft: () => renderBackButton("/(player)/groups/manage"),
         }}
       />
       <Stack.Screen
@@ -55,6 +85,7 @@ export default function GroupsLayout() {
           title: "Invitations",
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+          headerLeft: () => renderBackButton("/(player)/group"),
         }}
       />
     </Stack>

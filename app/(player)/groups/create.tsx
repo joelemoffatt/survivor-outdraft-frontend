@@ -20,6 +20,7 @@ import FormInput from '../../../components/shared/FormInput';
 import FormPicker, { PickerOption } from '../../../components/shared/FormPicker';
 import FormButton from '../../../components/shared/FormButton';
 import InviteMember from '../../../components/shared/InviteMember';
+import GroupRulesEditor, { LocalRule, getDefaultLocalRules } from '../../../components/admin/GroupRulesEditor';
 
 const draftStyleOptions: PickerOption[] = [
   { label: 'Snake', value: 'SNAKE' },
@@ -128,6 +129,7 @@ export default function CreateGroupScreen() {
     teamSize: '',
     style: 'SNAKE' as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR',
     draftDate: '',
+    pointRules: getDefaultLocalRules() as LocalRule[],
   });
 
   const [errors, setErrors] = useState({
@@ -301,6 +303,10 @@ export default function CreateGroupScreen() {
         firstScoringEpisodeNumber: parseInt(formData.firstScoringEpisodeNumber, 10),
         teamSize: parseInt(formData.teamSize, 10),
         style: formData.style,
+        pointRules: formData.pointRules.map((rule) => ({
+          ruleType: rule.ruleType,
+          points: rule.points,
+        })),
       };
 
       if (formData.draftDate) {
@@ -488,6 +494,11 @@ export default function CreateGroupScreen() {
           value={formData.draftDate}
           onChangeText={(draftDate) => setFormData({ ...formData, draftDate })}
           placeholder="YYYY-MM-DDTHH:mm:ss"
+        />
+
+        <GroupRulesEditor
+          rules={formData.pointRules}
+          onChange={(pointRules: LocalRule[]) => setFormData((prev) => ({ ...prev, pointRules }))}
         />
 
         <View style={styles.buttonContainer}>

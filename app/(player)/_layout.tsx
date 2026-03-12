@@ -8,6 +8,7 @@ import { useRouter, useSegments } from 'expo-router';
 const navigationItems: NavigationItem[] = [
   { name: 'index', label: 'Home', href: '/(player)/', icon: 'home' },
   { name: 'team', label: 'My Team', href: '/(player)/team', icon: 'people' },
+  { name: 'group', label: 'Group', href: '/(player)/group', icon: 'people-circle' },
   { name: 'more', label: 'More', href: '/(player)/more', icon: 'ellipsis-horizontal' },
 ];
 
@@ -31,6 +32,7 @@ export default function PlayerLayout() {
             <Stack.Screen name="history" options={{ animation: 'none' }} />
             <Stack.Screen name="team" options={{ animation: 'none' }} />
             <Stack.Screen name="more" options={{ animation: 'none' }} />
+            <Stack.Screen name="group" options={{ animation: 'none' }} />
             <Stack.Screen name="groups" options={{ animation: 'none' }} />
             <Stack.Screen name="profile" options={{ animation: 'none' }} />
             <Stack.Screen name="settings" options={{ animation: 'none' }} />

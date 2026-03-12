@@ -7,10 +7,17 @@ const BackButton = ({ onPress }: { onPress: () => void }) => (
   </TouchableOpacity>
 );
 
-const EmptyBackSpace = () => <View style={{ width: 20 }} />;
-
 export default function HistoryLayout() {
   const router = useRouter();
+
+  const handleBack = (fallbackRoute: string) => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace(fallbackRoute);
+  };
 
   return (
     <Stack screenOptions={{ animation: 'none' }}>
@@ -20,7 +27,7 @@ export default function HistoryLayout() {
           animation: 'none',
           title: "Survivor History",
           headerBackVisible: false,
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -30,7 +37,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Seasons",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -40,7 +47,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Episodes",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -50,7 +57,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Castaways",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -60,7 +67,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Tribes",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -70,7 +77,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Challenges",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -80,7 +87,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Tribals",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -90,7 +97,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Votes",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -100,7 +107,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Advantages",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -110,7 +117,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Journeys",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -120,7 +127,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Boots",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -130,7 +137,7 @@ export default function HistoryLayout() {
         options={{
           animation: 'none',
           title: "Results",
-          headerLeft: () => <BackButton onPress={() => router.push("/(player)/more")} />,
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}
@@ -146,7 +153,7 @@ export default function HistoryLayout() {
           return {
             animation: 'none',
             title: season ? `Season ${season} Episodes` : "Season Episodes",
-            headerLeft: () => <BackButton onPress={() => router.push("/(player)/history/seasons")} />,
+            headerLeft: () => <BackButton onPress={() => handleBack("/(player)/history/seasons")} />,
             headerTitleAlign: "left",
             headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
           };
@@ -170,7 +177,7 @@ export default function HistoryLayout() {
           return {
             animation: 'none',
             title,
-            headerLeft: () => <BackButton onPress={() => router.push(`/(player)/history/season/${season}`)} />,
+            headerLeft: () => <BackButton onPress={() => handleBack(`/(player)/history/season/${season}`)} />,
             headerTitleAlign: "left",
             headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
           };

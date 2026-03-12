@@ -180,7 +180,7 @@ export default function MoreScreen() {
             <Text style={styles.email}>{user?.email || 'Unknown'}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/(player)/more_folder/edit')}>
+        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/(player)/profile/edit')}>
           <Ionicons name="pencil" size={20} color="#fff" />
           <Text style={styles.editButtonText}>Edit</Text>
         </TouchableOpacity>

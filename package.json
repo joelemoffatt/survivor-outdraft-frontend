@@ -10,7 +10,11 @@
     "quad:users": "node scripts/launch-quadrants.mjs",
     "quad:users:reset": "RESET_AUTH=1 node scripts/launch-quadrants.mjs",
     "quad:users:retina": "QUAD_DISPLAY_PRESET=retina node scripts/launch-quadrants.mjs",
-    "quad:users:1080": "QUAD_DISPLAY_PRESET=external1080 node scripts/launch-quadrants.mjs"
+    "quad:users:1080": "QUAD_DISPLAY_PRESET=external1080 node scripts/launch-quadrants.mjs",
+    "quad:colors": "node scripts/launch-color-quadrants.mjs",
+    "quad:colors:reset": "RESET_AUTH=1 node scripts/launch-color-quadrants.mjs",
+    "quad:colors:retina": "QUAD_DISPLAY_PRESET=retina node scripts/launch-color-quadrants.mjs",
+    "quad:colors:1080": "QUAD_DISPLAY_PRESET=external1080 node scripts/launch-color-quadrants.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

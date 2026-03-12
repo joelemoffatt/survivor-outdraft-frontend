@@ -3,7 +3,7 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  'http://192.168.200.242:8080/api'; // ipconfig getifaddr en0
+  'http://192.168.1.68:8080/api'; // ipconfig getifaddr en0
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
@@ -178,6 +178,10 @@ class ApiService {
     return this.get<GroupResponse>(`/v1/groups/${groupId}`);
   }
 
+  async markGroupAccessed(groupId: number): Promise<GroupResponse> {
+    return this.post<GroupResponse>(`/v1/groups/${groupId}/access`, {});
+  }
+
   async createGroup(groupData: {
     name: string;
     admin: { id: number };
@@ -187,6 +191,7 @@ class ApiService {
     teamSize: number;
     style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
     scheduledAt?: string;
+    pointRules: Array<{ ruleType: string; points: number }>;
   }): Promise<GroupResponse> {
     return this.post<GroupResponse>(`/v1/groups`, groupData);
   }
@@ -200,8 +205,10 @@ class ApiService {
       latestWatchedEpisodeId: number | null;
       firstScoringEpisodeNumber: number;
       style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+      pointRules?: Array<{ ruleType: string; points: number }>;
     }
   ): Promise<GroupResponse> {
+    console.log('Updating group settings with data:', data);
     return this.patch<GroupResponse>(`/v1/groups/${groupId}/settings`, data);
   }
 
@@ -321,6 +328,10 @@ export interface GroupResponse {
   } | null;
   status: 'PENDING' | 'DRAFTING' | 'ACTIVE' | 'COMPLETED';
   createdAt: string;
+  pointRules?: Array<{
+    ruleType: string;
+    points: number;
+  }>;
 }
 
 export interface TeamCastawayResponse {
@@ -438,6 +449,7 @@ export interface GroupMemberResponse {
   };
   status: 'INVITED' | 'ACCEPTED' | 'DECLINED';
   joinedAt: string;
+  lastAccessedAt?: string | null;
 }
 
 export interface ScoreEventBreakdown {

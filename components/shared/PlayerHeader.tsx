@@ -16,12 +16,11 @@ interface PlayerHeaderProps {
 export function PlayerHeader({ onGroupChange, showGroupSelector = true }: PlayerHeaderProps) {
   const router = useRouter();
   const [groups, setGroups] = useState<GroupResponse[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingInviteCount, setPendingInviteCount] = useState(0);
   const { user } = useAuth();
-  const { setSelectedGroupId: setContextGroupId } = useGroup();
+  const { selectedGroupId, setSelectedGroupId } = useGroup();
   const responsive = useResponsive();
 
   useEffect(() => {
@@ -48,11 +47,14 @@ export function PlayerHeader({ onGroupChange, showGroupSelector = true }: Player
         console.log('Fetched groups:', userGroups);
         setGroups(userGroups);
         
-        // Auto-select first group if available
-        if (userGroups.length > 0) {
-          setSelectedGroupId(userGroups[0].id);
-          setContextGroupId(userGroups[0].id);
-          onGroupChange?.(userGroups[0].id);
+        const preferredGroupId =
+          selectedGroupId && userGroups.some((group) => group.id === selectedGroupId)
+            ? selectedGroupId
+            : userGroups[0]?.id ?? null;
+
+        if (preferredGroupId !== null && preferredGroupId !== selectedGroupId) {
+          setSelectedGroupId(preferredGroupId);
+          onGroupChange?.(preferredGroupId);
         }
         
         // Load pending invitations count
@@ -67,11 +69,10 @@ export function PlayerHeader({ onGroupChange, showGroupSelector = true }: Player
     };
 
     fetchGroups();
-  }, [user]);
+  }, [user, selectedGroupId, setSelectedGroupId, onGroupChange]);
 
   const handleGroupSelect = (groupId: number) => {
     setSelectedGroupId(groupId);
-    setContextGroupId(groupId);
     onGroupChange?.(groupId);
   };
 
