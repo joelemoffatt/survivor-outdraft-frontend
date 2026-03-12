@@ -224,6 +224,10 @@ class ApiService {
     return this.get<TeamResponse[]>(`/v1/teams/group/${groupId}`);
   }
 
+  async getTeamScoreBreakdown(teamId: number): Promise<ScoreBreakdownResponse> {
+    return this.get<ScoreBreakdownResponse>(`/v1/teams/${teamId}/score-breakdown`);
+  }
+
   // Draft endpoints
   async startDraft(groupId: number): Promise<DraftDTO> {
     return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/start`, {});
@@ -434,6 +438,28 @@ export interface GroupMemberResponse {
   };
   status: 'INVITED' | 'ACCEPTED' | 'DECLINED';
   joinedAt: string;
+}
+
+export interface ScoreEventBreakdown {
+  id: number;
+  episodeNumber: number | null;
+  eventLabel: string;
+  totalPoints: number;
+}
+
+export interface CastawayScoreBreakdown {
+  teamCastawayId: number;
+  castawayPerformanceId: number;
+  castawayName: string;
+  totalPoints: number;
+  scoreEvents: ScoreEventBreakdown[];
+}
+
+export interface ScoreBreakdownResponse {
+  teamId: number;
+  teamName: string;
+  totalPoints: number;
+  castaways: CastawayScoreBreakdown[];
 }
 
 export const apiService = new ApiService();

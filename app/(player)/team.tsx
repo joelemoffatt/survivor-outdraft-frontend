@@ -1,11 +1,10 @@
-import { Alert, View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useResponsive, Colors, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
-import apiService, { TeamResponse, GroupResponse } from '../../services/api';
+import apiService, { TeamResponse, GroupResponse, ScoreBreakdownResponse, CastawayScoreBreakdown } from '../../services/api';
 import DraftScreen from '../../components/player/DraftScreen';
-import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
 export default function TeamScreen() {
   const responsive = useResponsive();
@@ -13,7 +12,6 @@ export default function TeamScreen() {
   const { selectedGroupId, setSelectedGroupId } = useGroup();
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [group, setGroup] = useState<GroupResponse | null>(null);
-  const [allTeams, setAllTeams] = useState<TeamResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<string>('');
@@ -21,8 +19,8 @@ export default function TeamScreen() {
   const [startDraftError, setStartDraftError] = useState<string | null>(null);
   const [draftComplete, setDraftComplete] = useState(false);
   const [selectingGroup, setSelectingGroup] = useState(false);
-  const [resetModalVisible, setResetModalVisible] = useState(false);
-  const [resettingDraft, setResettingDraft] = useState(false);
+  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdownResponse | null>(null);
+  const [selectedCastaway, setSelectedCastaway] = useState<CastawayScoreBreakdown | null>(null);
   const isGroupLeader = user ? Number(user.id) === Number(group?.admin?.id) : false;
 
   // Auto-select first group if none selected
@@ -67,10 +65,6 @@ export default function TeamScreen() {
         const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
         setTeam(teamData);
 
-        // Fetch all teams in the group
-        const teamsData = await apiService.getTeamsByGroupId(selectedGroupId);
-        setAllTeams(teamsData);
-
         // Reset draftComplete if draft is still in progress
         if (groupData.status === 'DRAFTING') {
           setDraftComplete(false);
@@ -85,6 +79,21 @@ export default function TeamScreen() {
 
     fetchData();
   }, [user, selectedGroupId]);
+
+  // Fetch score breakdown when team is available
+  useEffect(() => {
+    if (!team) return;
+    const fetchBreakdown = async () => {
+      try {
+        const breakdown = await apiService.getTeamScoreBreakdown(team.id);
+        setScoreBreakdown(breakdown);
+      } catch (err) {
+        console.debug('Score breakdown not available yet:', err);
+        setScoreBreakdown(null);
+      }
+    };
+    fetchBreakdown();
+  }, [team]);
 
   // Countdown timer for draft start
   useEffect(() => {
@@ -167,38 +176,6 @@ export default function TeamScreen() {
       }
     } finally {
       setStartingDraft(false);
-    }
-  };
-
-  const handleResetDraft = () => {
-    if (!selectedGroupId || resettingDraft) return;
-    setResetModalVisible(true);
-  };
-
-  const confirmResetDraft = async () => {
-    if (!selectedGroupId) return;
-
-    try {
-      setResetModalVisible(false);
-      setResettingDraft(true);
-      await apiService.resetDraft(selectedGroupId);
-
-      const groupData = await apiService.getGroupById(selectedGroupId);
-      setGroup(groupData);
-      setDraftComplete(false);
-
-      if (user) {
-        const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
-        setTeam(teamData);
-      }
-
-      const teamsData = await apiService.getTeamsByGroupId(selectedGroupId);
-      setAllTeams(teamsData);
-    } catch (err: any) {
-      console.error('Failed to reset draft:', err);
-      Alert.alert('Reset failed', err?.message || 'Unknown error');
-    } finally {
-      setResettingDraft(false);
     }
   };
 
@@ -317,10 +294,6 @@ export default function TeamScreen() {
               setTeam(teamData);
             }
 
-            // Fetch all teams in the group
-            const teamsData = await apiService.getTeamsByGroupId(selectedGroupId);
-            setAllTeams(teamsData);
-
             setDraftComplete(true);
           } catch (err: any) {
             console.error('Failed to refresh team after draft complete:', err);
@@ -337,10 +310,9 @@ export default function TeamScreen() {
     <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
       {/* Your Team */}
       <View style={styles.headerSection}>
-        <Text style={styles.teamName}>Your Team: {team.teamName}</Text>
-        {/* Hiding points for now - not working yet */}
-        {/* <Text style={styles.totalPointsLabel}>Total Points</Text>
-        <Text style={styles.totalPoints}>{team.totalPoints}</Text> */}
+        <Text style={styles.teamName}>{team.teamName}</Text>
+        <Text style={styles.totalPointsLabel}>Total Points</Text>
+        <Text style={styles.totalPoints}>{scoreBreakdown?.totalPoints ?? team.totalPoints}</Text>
       </View>
 
       <View style={styles.rosterSection}>
@@ -351,18 +323,20 @@ export default function TeamScreen() {
               .sort((a, b) => (a.draftOrder || 0) - (b.draftOrder || 0))
               .map((teamCastaway) => {
                 const castawayName = teamCastaway.castawayPerformance?.castaway?.name || 'Unknown';
+                const breakdown = scoreBreakdown?.castaways?.find(
+                  (c) => c.teamCastawayId === teamCastaway.id
+                );
+                const pts = breakdown?.totalPoints ?? teamCastaway.points;
                 return (
                   <View key={teamCastaway.id} style={styles.rosterItem}>
-                    <View style={styles.castawayInfo}>
-                      <Text style={styles.draftOrder}>
-                        {teamCastaway.draftOrder ? `Pick #${teamCastaway.draftOrder}` : 'N/A'}
-                      </Text>
-                      <Text style={styles.castawayName}>{castawayName}</Text>
-                    </View>
-                    {/* <View style={styles.pointsDisplay}>
-                      <Text style={styles.points}>{teamCastaway.points}</Text>
+                    <Text style={styles.castawayName}>{castawayName}</Text>
+                    <TouchableOpacity
+                      style={styles.pointsBadge}
+                      onPress={() => breakdown && setSelectedCastaway(breakdown)}
+                    >
+                      <Text style={styles.points}>{pts}</Text>
                       <Text style={styles.pointsLabel}>pts</Text>
-                    </View> */}
+                    </TouchableOpacity>
                   </View>
                 );
               })}
@@ -372,58 +346,51 @@ export default function TeamScreen() {
         )}
       </View>
 
-      {/* All Teams in Group */}
-      <View style={styles.groupTeamsSection}>
-        <Text style={styles.sectionTitle}>All Teams in {group.name}</Text>
-        {allTeams.map((t) => (
-          <View key={t.id} style={[styles.teamCard, t.id === team.id && styles.yourTeamCard]}>
-            <View style={styles.teamCardHeader}>
-              <Text style={styles.teamCardName}>
-                {t.teamName} {t.id === team.id && '(You)'}
-              </Text>
-              <Text style={styles.teamRosterCount}>
-                {t.roster?.length || 0} players
-              </Text>
-            </View>
-            {t.roster && t.roster.length > 0 && (
-              <View style={styles.teamCardRoster}>
-                {t.roster
-                  .sort((a, b) => (a.draftOrder || 0) - (b.draftOrder || 0))
-                  .map((castaway, idx) => (
-                    <Text key={castaway.id} style={styles.teamCardCastaway}>
-                      {idx + 1}. {castaway.castawayPerformance?.castaway?.name || 'Unknown'}
-                    </Text>
-                  ))}
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
-      
-      {isGroupLeader && (
-        <TouchableOpacity 
-          style={[styles.resetButton, resettingDraft && styles.startButtonDisabled]}
-          onPress={handleResetDraft}
-          disabled={loading || resettingDraft}
-        >
-          {resettingDraft ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.resetButtonText}>Reset Draft</Text>
-          )}
-        </TouchableOpacity>
-      )}
     </ScrollView>
-    <ConfirmDialog
-      visible={resetModalVisible}
-      title="Reset Draft"
-      message="Are you sure you want to reset the draft? This cannot be undone."
-      confirmText="Reset"
-      cancelText="Cancel"
-      confirmVariant="danger"
-      onCancel={() => setResetModalVisible(false)}
-      onConfirm={confirmResetDraft}
-    />
+
+    {/* Score events modal */}
+    <Modal
+      visible={selectedCastaway !== null}
+      animationType="fade"
+      transparent
+      onRequestClose={() => setSelectedCastaway(null)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>{selectedCastaway?.castawayName}</Text>
+          <Text style={styles.modalSubtitle}>{selectedCastaway?.totalPoints} pts total</Text>
+          <ScrollView style={styles.modalList}>
+            {selectedCastaway?.scoreEvents && selectedCastaway.scoreEvents.length > 0 ? (
+              selectedCastaway.scoreEvents
+                .slice()
+                .sort((a, b) => (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0))
+                .map((event) => (
+                  <View key={event.id} style={styles.scoreEventRow}>
+                    <View style={styles.scoreEventLeft}>
+                      <Text style={styles.scoreEventEpisode}>
+                        {event.episodeNumber != null ? `Ep ${event.episodeNumber}` : '—'}
+                      </Text>
+                      <Text style={styles.scoreEventLabel}>{event.eventLabel}</Text>
+                    </View>
+                    <Text style={styles.scoreEventPoints}>
+                      +{event.totalPoints}
+                    </Text>
+                  </View>
+                ))
+            ) : (
+              <Text style={styles.emptyText}>No scoring events yet</Text>
+            )}
+          </ScrollView>
+          <TouchableOpacity
+            style={styles.modalClose}
+            onPress={() => setSelectedCastaway(null)}
+          >
+            <Text style={styles.modalCloseText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+
     </>
   );
 }
@@ -482,6 +449,83 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
   },
+  pointsBadge: {
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    minWidth: 56,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: Spacing.xl,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.lg,
+  },
+  modalList: {
+    flexGrow: 0,
+  },
+  scoreEventRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  scoreEventLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.sm,
+  },
+  scoreEventEpisode: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    width: 44,
+  },
+  scoreEventLabel: {
+    fontSize: 15,
+    color: Colors.text,
+    flex: 1,
+  },
+  scoreEventPoints: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginLeft: Spacing.sm,
+  },
+  modalClose: {
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   castawayInfo: {
     flex: 1,
   },
@@ -502,11 +546,11 @@ const styles = StyleSheet.create({
   points: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.primary,
+    color: '#fff',
   },
   pointsLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: '#fff',
     marginTop: 2,
   },
   emptyText: {
@@ -653,19 +697,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     lineHeight: 20,
-  },
-  resetButton: {
-    backgroundColor: '#ff6b6b',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: 6,
-    marginTop: Spacing.lg,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
   adminNote: {
     fontSize: 14,

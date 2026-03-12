@@ -13,6 +13,7 @@ import { Colors, FontSizes, Spacing } from '../../../../constants/theme';
 import FormInput from '../../../../components/shared/FormInput';
 import FormPicker, { PickerOption } from '../../../../components/shared/FormPicker';
 import FormButton from '../../../../components/shared/FormButton';
+import { ConfirmDialog } from '../../../../components/shared/ConfirmDialog';
 import apiService, { GroupResponse } from '../../../../services/api';
 import { Episode, Season } from '../../../../types/survivor';
 
@@ -29,6 +30,8 @@ export default function ManageGroupDetailsScreen() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resettingDraft, setResettingDraft] = useState(false);
+  const [resetModalVisible, setResetModalVisible] = useState(false);
   const [loadingSeasons, setLoadingSeasons] = useState(true);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
 
@@ -205,6 +208,24 @@ export default function ManageGroupDetailsScreen() {
     }
   };
 
+  const confirmResetDraft = async () => {
+    try {
+      setResetModalVisible(false);
+      setResettingDraft(true);
+      await apiService.resetDraft(groupId);
+      await loadInitialData();
+      Alert.alert('Success', 'Draft has been reset.');
+    } catch (error) {
+      console.error('Failed to reset draft:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to reset draft.'
+      );
+    } finally {
+      setResettingDraft(false);
+    }
+  };
+
   if (loading || loadingSeasons) {
     return (
       <View style={styles.centerContainer}>
@@ -318,8 +339,27 @@ export default function ManageGroupDetailsScreen() {
             loading={saving}
             disabled={saving || loadingEpisodes}
           />
+          <FormButton
+            title="Reset Draft"
+            onPress={() => setResetModalVisible(true)}
+            loading={resettingDraft}
+            disabled={saving || loadingEpisodes || resettingDraft}
+            variant="danger"
+            style={styles.resetButton}
+          />
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={resetModalVisible}
+        title="Reset Draft"
+        message="Are you sure you want to reset the draft? This cannot be undone."
+        confirmText="Reset"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onCancel={() => setResetModalVisible(false)}
+        onConfirm={confirmResetDraft}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -343,6 +383,10 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: Spacing.lg,
+    gap: Spacing.md,
+  },
+  resetButton: {
+    marginTop: Spacing.sm,
   },
   centerContainer: {
     flex: 1,
