@@ -1,14 +1,23 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import Card from "../../components/shared/Card";
 import Button from "../../components/shared/Button";
+import { useAuth } from "../../contexts/AuthContext";
+import { useGroup } from "../../contexts/GroupContext";
+import apiService, {
+  GroupMemberResponse,
+  GroupResponse,
+  TeamResponse,
+} from "../../services/api";
 import {
   BorderRadius,
   Colors,
@@ -17,7 +26,7 @@ import {
   Spacing,
 } from "../../constants/theme";
 
-interface GroupMember {
+interface LeaderboardMember {
   id: number;
   username: string;
   teamName: string;
@@ -25,33 +34,165 @@ interface GroupMember {
   isYou?: boolean;
 }
 
-const MOCK_GROUP_NAME = "Island Rivals";
-const MOCK_SEASON = "Survivor 50";
-const MOCK_STATUS = "IN PROGRESS";
-const MOCK_TEAM_SIZE = 4;
+const formatGroupStatus = (status?: GroupResponse["status"]) => {
+  switch (status) {
+    case "PENDING":
+      return "Pending";
+    case "DRAFTING":
+      return "Drafting";
+    case "ACTIVE":
+      return "Active";
+    case "COMPLETED":
+      return "Completed";
+    default:
+      return "Unknown";
+  }
+};
 
-const MOCK_MEMBERS: GroupMember[] = [
-  {
-    id: 1,
-    username: "joelmoffatt",
-    teamName: "Outlast Alliance",
-    points: 186,
-    isYou: true,
-  },
-  {
-    id: 2,
-    username: "sarah_j",
-    teamName: "Hidden Immunity Idols",
-    points: 212,
-  },
-  { id: 3, username: "mike_r", teamName: "Torch Snuffers", points: 199 },
-  { id: 4, username: "dana_k", teamName: "Camp Chaos", points: 171 },
-  { id: 5, username: "alex_t", teamName: "Tribal Council Kings", points: 160 },
-];
+const getStatusStyles = (status?: GroupResponse["status"]) => {
+  switch (status) {
+    case "ACTIVE":
+      return {
+        badge: styles.statusBadgeActive,
+        text: styles.statusTextActive,
+      };
+    case "PENDING":
+      return {
+        badge: styles.statusBadgePending,
+        text: styles.statusTextPending,
+      };
+    case "DRAFTING":
+      return {
+        badge: styles.statusBadgeDrafting,
+        text: styles.statusTextDrafting,
+      };
+    case "COMPLETED":
+    default:
+      return {
+        badge: styles.statusBadgeCompleted,
+        text: styles.statusTextCompleted,
+      };
+  }
+};
 
 export default function GroupScreen() {
   const router = useRouter();
-  const leaderboardMembers = [...MOCK_MEMBERS].sort((a, b) => b.points - a.points);
+  const { user } = useAuth();
+  const { selectedGroupId } = useGroup();
+  const [group, setGroup] = useState<GroupResponse | null>(null);
+  const [members, setMembers] = useState<GroupMemberResponse[]>([]);
+  const [teams, setTeams] = useState<TeamResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [hasMultipleGroups, setHasMultipleGroups] = useState(false);
+
+  useEffect(() => {
+    const loadGroupData = async () => {
+      if (!selectedGroupId) {
+        setGroup(null);
+        setMembers([]);
+        setTeams([]);
+        setHasMultipleGroups(false);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [groupData, groupMembers, groupTeams, userGroups] = await Promise.all([
+          apiService.getGroupById(selectedGroupId),
+          apiService.getGroupMembers(selectedGroupId),
+          apiService.getTeamsByGroupId(selectedGroupId),
+          user?.id ? apiService.getUserGroups(user.id) : Promise.resolve([]),
+        ]);
+
+        setGroup(groupData);
+        setMembers(groupMembers);
+        setTeams(groupTeams);
+        setHasMultipleGroups(userGroups.length > 1);
+      } catch (err) {
+        console.error("Failed to load group page data:", err);
+        setError(err instanceof Error ? err.message : "Failed to load group data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGroupData();
+  }, [selectedGroupId, user?.id]);
+
+  const leaderboardMembers = useMemo<LeaderboardMember[]>(() => {
+    const teamByUserId = new Map<number, TeamResponse>();
+
+    teams.forEach((team) => {
+      // TeamResponse does not expose user in API type; infer by matching known team names later.
+      // Build a username->team map from accepted memberships.
+      const matchingMember = members.find((member) => team.teamName === `Team ${member.user.username}`);
+      if (matchingMember?.user?.id != null) {
+        teamByUserId.set(matchingMember.user.id, team);
+      }
+    });
+
+    return members
+      .filter((member) => member.status === "ACCEPTED")
+      .map((member) => {
+        const team = teamByUserId.get(member.user.id);
+        return {
+          id: member.user.id,
+          username: member.user.username,
+          teamName: team?.teamName ?? `Team ${member.user.username}`,
+          points: team?.totalPoints ?? 0,
+          isYou: user?.id === member.user.id,
+        };
+      })
+      .sort((a, b) => b.points - a.points);
+  }, [members, teams, user?.id]);
+
+  const statusStyles = getStatusStyles(group?.status);
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.centerText}>Loading group...</Text>
+      </View>
+    );
+  }
+
+  if (!selectedGroupId) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.centerText}>Select a group to view live standings.</Text>
+        <Button
+          label="Select Group"
+          variant="outline"
+          size="md"
+          onPress={() => router.push("/(player)/groups/select")}
+          style={styles.centerButton}
+          icon="swap-horizontal-outline"
+        />
+      </View>
+    );
+  }
+
+  if (error || !group) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error ?? "Failed to load group."}</Text>
+        <Button
+          label="Try Again"
+          variant="outline"
+          size="md"
+          onPress={() => router.replace("/(player)/group")}
+          style={styles.centerButton}
+          icon="refresh-outline"
+        />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -59,11 +200,13 @@ export default function GroupScreen() {
       <Card style={styles.headerCard} padding="lg" shadow="medium">
         <View style={styles.headerTop}>
           <View style={styles.headerText}>
-            <Text style={styles.groupName}>{MOCK_GROUP_NAME}</Text>
+            <Text style={styles.groupName}>{group.name}</Text>
             <View style={styles.seasonStatusRow}>
-              <Text style={styles.seasonLabel}>{MOCK_SEASON}</Text>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>{MOCK_STATUS}</Text>
+              <Text style={styles.seasonLabel} numberOfLines={1} ellipsizeMode="tail">
+                {group.season.seasonName}
+              </Text>
+              <View style={[styles.statusBadge, statusStyles.badge]}>
+                <Text style={[styles.statusText, statusStyles.text]}>{formatGroupStatus(group.status)}</Text>
               </View>
             </View>
           </View>
@@ -82,34 +225,45 @@ export default function GroupScreen() {
         </View>
         <View style={styles.headerStats}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{MOCK_MEMBERS.length}</Text>
+            <Text style={styles.statValue}>{leaderboardMembers.length}</Text>
             <Text style={styles.statLabel}>Members</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{MOCK_TEAM_SIZE}</Text>
+            <Text style={styles.statValue}>{group.teamSize ?? "-"}</Text>
             <Text style={styles.statLabel}>Team Size</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>Ep 2</Text>
+            <Text style={styles.statValue}>
+              {group.latestEpisodeWatched?.episodeNumber
+                ? `Ep ${group.latestEpisodeWatched.episodeNumber}`
+                : "None"}
+            </Text>
             <Text style={styles.statLabel}>Last Episode</Text>
           </View>
         </View>
-        <Button
-          label="Switch Groups"
-          variant="outline"
-          size="md"
-          fullWidth
-          onPress={() => router.push("/(player)/groups/select")}
-          style={styles.switchButton}
-          icon="swap-horizontal-outline"
-        />
+        {hasMultipleGroups ? (
+          <Button
+            label="Switch Groups"
+            variant="outline"
+            size="md"
+            fullWidth
+            onPress={() => router.push("/(player)/groups/select")}
+            style={styles.switchButton}
+            icon="swap-horizontal-outline"
+          />
+        ) : null}
       </Card>
 
       {/* Leaderboard */}
       <Text style={styles.sectionTitle}>Leaderboard</Text>
       <Card style={styles.membersCard} padding="sm" shadow="light">
+        {leaderboardMembers.length === 0 ? (
+          <View style={styles.emptyLeaderboard}>
+            <Text style={styles.emptyLeaderboardText}>No accepted members yet.</Text>
+          </View>
+        ) : null}
         {leaderboardMembers.map((member, index) => (
           <View
             key={member.id}
@@ -149,6 +303,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.secondaryBackground,
   },
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.secondaryBackground,
+  },
+  centerText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.medium,
+    textAlign: "center",
+  },
+  errorText: {
+    color: Colors.warning,
+    fontSize: FontSizes.medium,
+    textAlign: "center",
+  },
+  centerButton: {
+    marginTop: Spacing.md,
+  },
   content: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
@@ -175,11 +349,14 @@ const styles = StyleSheet.create({
   },
   seasonStatusRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: Spacing.sm,
     marginTop: Spacing.xs,
   },
   seasonLabel: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     color: Colors.textSecondary,
     fontSize: FontSizes.medium,
   },
@@ -191,16 +368,39 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     alignSelf: "flex-start",
-    backgroundColor: Colors.successBackground,
+    flexShrink: 0,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
   },
   statusText: {
-    color: Colors.success,
     fontSize: FontSizes.small,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+  statusBadgeActive: {
+    backgroundColor: Colors.successBackground,
+  },
+  statusTextActive: {
+    color: Colors.success,
+  },
+  statusBadgePending: {
+    backgroundColor: Colors.warningBackground,
+  },
+  statusTextPending: {
+    color: Colors.primary,
+  },
+  statusBadgeDrafting: {
+    backgroundColor: Colors.infoBackground,
+  },
+  statusTextDrafting: {
+    color: Colors.secondary,
+  },
+  statusBadgeCompleted: {
+    backgroundColor: Colors.lightBackground,
+  },
+  statusTextCompleted: {
+    color: Colors.textSecondary,
   },
   headerStats: {
     flexDirection: "row",
@@ -265,6 +465,14 @@ const styles = StyleSheet.create({
   // Members
   membersCard: {
     marginBottom: 0,
+  },
+  emptyLeaderboard: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  emptyLeaderboardText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.small,
   },
   rankBadge: {
     alignItems: "center",

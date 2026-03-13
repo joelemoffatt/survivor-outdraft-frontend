@@ -22,7 +22,7 @@ type RuleTemplate = {
   defaultPoints: number;
 };
 
-const DEFAULT_RULE_TEMPLATES: RuleTemplate[] = [
+export const DEFAULT_RULE_TEMPLATES: RuleTemplate[] = [
   { ruleType: 'INDIVIDUAL_IMMUNITY', label: 'Individual Immunity', defaultPoints: 2 },
   { ruleType: 'FOUND_IDOL', label: 'Found Idol', defaultPoints: 1 },
   { ruleType: 'FOUND_ADVANTAGE', label: 'Found Advantage', defaultPoints: 1 },
@@ -32,6 +32,9 @@ const DEFAULT_RULE_TEMPLATES: RuleTemplate[] = [
   { ruleType: 'MED_EVAC', label: 'Med Evac', defaultPoints: -2 },
   { ruleType: 'QUIT', label: 'Quit', defaultPoints: -2 },
 ];
+
+export const getLocalRuleLabel = (ruleType: string) =>
+  DEFAULT_RULE_TEMPLATES.find((rule) => rule.ruleType === ruleType)?.label ?? ruleType;
 
 export const getDefaultLocalRules = (): LocalRule[] =>
   DEFAULT_RULE_TEMPLATES.map((rule) => ({

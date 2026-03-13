@@ -1,42 +1,147 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useGroup } from '../../contexts/GroupContext';
 import { BorderRadius, Colors, FontSizes, Spacing } from '../../constants/theme';
+import apiService, { GroupResponse, TeamResponse } from '../../services/api';
 import {
   GroupRankingItem,
-  GroupRankingWidget,
   LastEpisodeWidget,
   TeamPointsWidget,
 } from '../../components/player/HomeWidgets';
+import LeaderboardSection from '../../components/player/LeaderboardSection';
 
 const responsiveMinHeight = 280;
 
 export default function PlayerHome() {
   const router = useRouter();
   const { user } = useAuth();
+  const { selectedGroupId } = useGroup();
+  const [group, setGroup] = useState<GroupResponse | null>(null);
+  const [team, setTeam] = useState<TeamResponse | null>(null);
+  const [groupRankings, setGroupRankings] = useState<GroupRankingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const topWidgets: { season: number; episode: number; teamPoints: number } = {
-    season: 50,
-    episode: 2,
-    teamPoints: 186,
+  useEffect(() => {
+    const loadHomeData = async () => {
+      if (!user?.id || !selectedGroupId) {
+        setGroup(null);
+        setTeam(null);
+        setGroupRankings([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [groupData, userTeam, teams] = await Promise.all([
+          apiService.getGroupById(selectedGroupId),
+          apiService.getTeamByGroupAndUser(selectedGroupId, user.id),
+          apiService.getTeamsByGroupId(selectedGroupId),
+        ]);
+
+        setGroup(groupData);
+        setTeam(userTeam);
+
+        const rankings = [...teams]
+          .sort((first, second) => second.totalPoints - first.totalPoints)
+          .map((teamItem, index) => {
+            const matchingMember = groupData.admin; // This is a placeholder; ideally we'd match via group members
+            return {
+              rank: index + 1,
+              teamName: teamItem.teamName,
+              username: teamItem.teamName.replace('Team ', ''),
+              points: teamItem.totalPoints,
+              isYourTeam: teamItem.id === userTeam.id,
+              teamId: teamItem.id,
+            };
+          });
+
+        setGroupRankings(rankings);
+      } catch (loadError) {
+        console.error('Failed to load home page data:', loadError);
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load home data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHomeData();
+  }, [selectedGroupId, user?.id]);
+
+  const displaySeasonNumber = useMemo(() => {
+    if (!group) {
+      return null;
+    }
+
+    const match = group.season.seasonName.match(/\d+/);
+    return match ? Number(match[0]) : group.season.id;
+  }, [group]);
+
+  const lastEpisodeNumber = group?.latestEpisodeWatched?.episodeNumber ?? null;
+  const hasLastEpisode = displaySeasonNumber != null && lastEpisodeNumber != null;
+
+  const lastEpisodeLabel = hasLastEpisode
+    ? `S${displaySeasonNumber} EP${lastEpisodeNumber}`
+    : '--';
+
+  const handleOpenLastEpisode = () => {
+    if (!group?.latestEpisodeWatched?.episodeNumber) {
+      return;
+    }
+
+    router.push({
+      pathname: '/(player)/history/season/[season]/episode/[episode]',
+      params: {
+        season: String(group.season.id),
+        episode: String(group.latestEpisodeWatched.episodeNumber),
+      },
+    });
   };
 
-  const groupRankings: GroupRankingItem[] = [
-    { rank: 1, teamName: 'Hidden Immunity Idols', points: 212 },
-    { rank: 2, teamName: 'Torch Snuffers', points: 199 },
-    { rank: 3, teamName: 'Outlast Alliance', points: 186, isYourTeam: true },
-    { rank: 4, teamName: 'Camp Chaos', points: 171 },
-    { rank: 5, teamName: 'Tribal Council Kings', points: 160 },
-    { rank: 6, teamName: 'Survivor Scholars', points: 142 },
-    { rank: 7, teamName: 'Island Survivors', points: 128 },
-    { rank: 8, teamName: 'Outdraft Warriors', points: 115 },
-    { rank: 9, teamName: 'Immunity Idols', points: 102 },
-    { rank: 10, teamName: 'Hidden Blindsides', points: 95 },
-    { rank: 11, teamName: 'Tribal Council Titans', points: 80 },
-    { rank: 12, teamName: 'Survivor Strategists', points: 68 },
-    { rank: 13, teamName: 'Island Outdrafts', points: 55 },
-    { rank: 14, teamName: 'Outdraft Legends', points: 40 },
-  ];
+  const handleOpenTeam = (teamId: number, isYourTeam?: boolean) => {
+    if (isYourTeam) {
+      router.push('/(player)/team');
+      return;
+    }
+
+    router.push({
+      pathname: '/(player)/teams/[teamId]',
+      params: {
+        teamId: String(teamId),
+      },
+    });
+  };
+
+  if (!selectedGroupId) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.centerText}>Select a group to see your live home dashboard.</Text>
+      </View>
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.centerText}>Loading home data...</Text>
+      </View>
+    );
+  }
+
+  if (error || !group || !team) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error ?? 'Failed to load home data.'}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -47,19 +152,21 @@ export default function PlayerHome() {
 
       <View style={styles.topRow}>
         <LastEpisodeWidget
-          season={topWidgets.season}
-          episode={topWidgets.episode}
-          onPress={() => router.push('/(player)/history/episodes')}
+          label={lastEpisodeLabel}
+          onPress={hasLastEpisode ? handleOpenLastEpisode : undefined}
           style={styles.topWidgetLeft}
         />
-        <TeamPointsWidget totalPoints={topWidgets.teamPoints} style={styles.topWidget} />
+        <TeamPointsWidget
+          totalPoints={team.totalPoints}
+          onPress={() => router.push('/(player)/team')}
+          style={styles.topWidget}
+        />
       </View>
 
-      <GroupRankingWidget
-        groupName="Island Rivals"
+      <LeaderboardSection
+        title="Leaderboard"
         rankings={groupRankings}
-        style={styles.rankingBox}
-        showDimensions
+        onTeamPress={handleOpenTeam}
       />
     </ScrollView>
   );
@@ -72,15 +179,33 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  centerContainer: {
+    alignItems: 'center',
+    backgroundColor: Colors.secondaryBackground,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  centerText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.medium,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: Colors.warning,
+    fontSize: FontSizes.medium,
+    textAlign: 'center',
   },
   headerCard: {
     backgroundColor: Colors.background,
     borderColor: Colors.border,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   },
@@ -96,7 +221,7 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: 'row',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   topWidget: {
     flex: 1,

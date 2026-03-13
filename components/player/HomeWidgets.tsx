@@ -6,19 +6,21 @@ import { BorderRadius, Colors, FontSizes, Spacing } from '../../constants/theme'
 export interface GroupRankingItem {
   rank: number;
   teamName: string;
+  username?: string;
   points: number;
   isYourTeam?: boolean;
+  teamId?: number;
 }
 
 interface LastEpisodeWidgetProps {
-  season: number;
-  episode: number;
-  onPress: () => void;
+  label: string;
+  onPress?: () => void;
   style?: ViewStyle;
 }
 
 interface TeamPointsWidgetProps {
   totalPoints: number;
+  onPress?: () => void;
   style?: ViewStyle;
 }
 
@@ -27,31 +29,38 @@ interface GroupRankingWidgetProps {
   rankings: GroupRankingItem[];
   style?: ViewStyle;
   showDimensions?: boolean;
+  onTeamPress?: (teamId: number, isYourTeam?: boolean) => void;
 }
 
-export function LastEpisodeWidget({ season, episode, onPress, style }: LastEpisodeWidgetProps) {
+export function LastEpisodeWidget({ label, onPress, style }: LastEpisodeWidgetProps) {
   return (
     <Card style={{ ...styles.squareWidget, ...(style || {}) }} padding="md" shadow="light">
-      <Text style={styles.widgetLabel}>Last Episode</Text>
-      <Text style={styles.widgetValue}>S{season}E{episode}</Text>
-      <TouchableOpacity style={styles.linkButton} onPress={onPress}>
-        <Text style={styles.linkText}>Open Episode</Text>
-      </TouchableOpacity>
+      <View>
+        <Text style={styles.widgetLabel}>Last Episode</Text>
+        <TouchableOpacity disabled={!onPress} onPress={onPress}>
+          <Text style={styles.widgetValue}>{label}</Text>
+        </TouchableOpacity>
+        <Text style={styles.widgetSubtext}>Last watched</Text>
+      </View>
     </Card>
   );
 }
 
-export function TeamPointsWidget({ totalPoints, style }: TeamPointsWidgetProps) {
+export function TeamPointsWidget({ totalPoints, onPress, style }: TeamPointsWidgetProps) {
   return (
     <Card style={{ ...styles.squareWidget, ...(style || {}) }} padding="md" shadow="light">
-      <Text style={styles.widgetLabel}>Your Team</Text>
-      <Text style={styles.widgetValue}>{totalPoints}</Text>
-      <Text style={styles.widgetSubtext}>Total points</Text>
+      <View>
+        <Text style={styles.widgetLabel}>Your Team</Text>
+        <TouchableOpacity disabled={!onPress} onPress={onPress}>
+          <Text style={styles.widgetValue}>{totalPoints}</Text>
+        </TouchableOpacity>
+        <Text style={styles.widgetSubtext}>Total points</Text>
+      </View>
     </Card>
   );
 }
 
-export function GroupRankingWidget({ groupName, rankings, style, showDimensions = false }: GroupRankingWidgetProps) {
+export function GroupRankingWidget({ groupName, rankings, style, showDimensions = false, onTeamPress }: GroupRankingWidgetProps) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -62,20 +71,45 @@ export function GroupRankingWidget({ groupName, rankings, style, showDimensions 
   return (
     <Card
       style={{ ...styles.rankingWidget, ...(style || {}) }}
-      padding="md"
+      padding="sm"
       shadow="light"
     >
-      <Text style={styles.rankingTitle}>{groupName} Ranking</Text>
       <View style={styles.rankingList} onLayout={handleLayout}>
-        {rankings.map((team) => (
+        {rankings.length === 0 ? (
+          <View style={styles.emptyRanking}>
+            <Text style={styles.emptyRankingText}>No teams yet.</Text>
+          </View>
+        ) : null}
+        {rankings.map((team, index) => (
           <View
             key={`${team.rank}-${team.teamName}`}
-            style={[styles.rankingRow, team.isYourTeam && styles.yourTeamRow]}
+            style={[
+              styles.rankingRow,
+              team.isYourTeam && styles.yourTeamRow,
+              index < rankings.length - 1 && styles.rankingRowBorder,
+            ]}
           >
-            <Text style={styles.rankText}>#{team.rank}</Text>
-            <Text style={[styles.teamNameText, team.isYourTeam && styles.yourTeamText]} numberOfLines={1}>
-              {team.teamName}
-            </Text>
+            <View style={styles.rankBadge}>
+              <Text style={styles.rankText}>#{team.rank}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.memberInfo}
+              onPress={() => team.teamId && onTeamPress?.(team.teamId, team.isYourTeam)}
+              disabled={!team.teamId || !onTeamPress}
+            >
+              <Text style={[
+                styles.memberUsername,
+                team.isYourTeam ? styles.yourTeamText : (team.teamId && onTeamPress ? styles.clickableName : null),
+              ]}>
+                {team.username}
+              </Text>
+              <Text style={[
+                styles.memberTeam,
+                team.teamId && onTeamPress ? styles.clickableName : null,
+              ]}>
+                {team.teamName}
+              </Text>
+            </TouchableOpacity>
             <Text style={[styles.pointsText, team.isYourTeam && styles.yourTeamText]}>{team.points}</Text>
           </View>
         ))}
@@ -95,7 +129,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     aspectRatio: 1,
     marginBottom: 0,
-    justifyContent: 'space-between',
   },
   widgetLabel: {
     color: Colors.textSecondary,
@@ -105,8 +138,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   widgetValue: {
-    color: Colors.text,
-    fontSize: FontSizes.xlarge,
+    color: Colors.primary,
+    fontSize: FontSizes.title,
     fontWeight: '800',
     marginTop: Spacing.sm,
   },
@@ -115,70 +148,78 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.small,
     marginTop: Spacing.sm,
   },
-  linkButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  linkText: {
-    color: Colors.background,
-    fontSize: FontSizes.small,
-    fontWeight: '700',
-  },
   rankingWidget: {
     borderRadius: BorderRadius.lg,
     marginBottom: 0,
   },
-  rankingTitle: {
-    color: Colors.text,
-    fontSize: FontSizes.large,
-    fontWeight: '800',
-    marginBottom: Spacing.md,
-  },
   rankingList: {
-    borderColor: Colors.border,
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    overflow: 'hidden',
   },
   rankingRow: {
     alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderBottomColor: Colors.border,
-    borderBottomWidth: 1,
     flexDirection: 'row',
-    minHeight: 50,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
+  rankingRowBorder: {
+    borderBottomColor: Colors.border,
+    borderBottomWidth: 1,
+  },
   yourTeamRow: {
     backgroundColor: Colors.warningBackground,
+    borderRadius: BorderRadius.md,
+  },
+  rankBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 34,
+    marginRight: Spacing.sm,
   },
   rankText: {
     color: Colors.textSecondary,
-    fontSize: FontSizes.medium,
+    fontSize: FontSizes.small,
     fontWeight: '700',
-    width: 36,
+  },
+  memberInfo: {
+    flex: 1,
+  },
+  memberUsername: {
+    color: Colors.text,
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
+  },
+  memberTeam: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.small,
+    marginTop: Spacing.xxs,
+  },
+  clickableTeamName: {
+    color: Colors.primary,
+  },
+  clickableName: {
+    color: Colors.primary,
   },
   teamNameText: {
     color: Colors.text,
     flex: 1,
     fontSize: FontSizes.medium,
     fontWeight: '600',
-    paddingRight: Spacing.sm,
   },
   pointsText: {
     color: Colors.text,
     fontSize: FontSizes.medium,
-    fontWeight: '800',
-    minWidth: 52,
-    textAlign: 'right',
+    fontWeight: '700',
   },
   yourTeamText: {
     color: Colors.primary,
+  },
+  emptyRanking: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  emptyRankingText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.small,
   },
   dimensionText: {
     color: Colors.textLight,
