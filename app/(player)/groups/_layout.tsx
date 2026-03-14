@@ -59,6 +59,16 @@ export default function GroupsLayout() {
         }}
       />
       <Stack.Screen
+        name="edit-team"
+        options={{
+          animation: 'none',
+          title: "Edit Team",
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+          headerLeft: () => renderBackButton("/(player)/team"),
+        }}
+      />
+      <Stack.Screen
         name="manage"
         options={{
           animation: 'none',

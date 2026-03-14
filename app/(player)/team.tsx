@@ -1,12 +1,18 @@
-import { Alert, View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
-import { useResponsive, Colors, Spacing } from '../../constants/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
+import { useResponsive, BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
-import apiService, { TeamResponse, GroupResponse, ScoreBreakdownResponse, CastawayScoreBreakdown } from '../../services/api';
+import apiService, { TeamResponse, GroupResponse, ScoreBreakdownResponse } from '../../services/api';
 import DraftScreen from '../../components/player/DraftScreen';
+import Card from '../../components/shared/Card';
+import Button from '../../components/shared/Button';
+import TeamView from '../../components/shared/team';
 
 export default function TeamScreen() {
+  const router = useRouter();
   const responsive = useResponsive();
   const { user } = useAuth();
   const { selectedGroupId, setSelectedGroupId } = useGroup();
@@ -20,7 +26,6 @@ export default function TeamScreen() {
   const [draftComplete, setDraftComplete] = useState(false);
   const [selectingGroup, setSelectingGroup] = useState(false);
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdownResponse | null>(null);
-  const [selectedCastaway, setSelectedCastaway] = useState<CastawayScoreBreakdown | null>(null);
   const isGroupLeader = user ? Number(user.id) === Number(group?.admin?.id) : false;
 
   // Auto-select first group if none selected
@@ -181,7 +186,7 @@ export default function TeamScreen() {
 
   if (!selectedGroupId) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.infoText}>Loading groups...</Text>
       </View>
@@ -190,7 +195,7 @@ export default function TeamScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.infoText}>Loading...</Text>
       </View>
@@ -199,7 +204,7 @@ export default function TeamScreen() {
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Error: {error}</Text>
       </View>
     );
@@ -207,7 +212,7 @@ export default function TeamScreen() {
 
   if (!team || !group) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centerContainer}>
         <Text style={styles.infoText}>No team found for this group</Text>
       </View>
     );
@@ -218,13 +223,38 @@ export default function TeamScreen() {
     const isAdmin = isGroupLeader;
     
     return (
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
-        <View style={styles.headerSection}>
-          <Text style={styles.teamName}>{team.teamName}</Text>
-          <Text style={styles.draftStatusLabel}>Draft Not Started</Text>
-        </View>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
+        <Card style={styles.headerCard} shadow="medium">
+          <View style={styles.headerTop}>
+            <View style={styles.headerText}>
+              <Text style={styles.teamName}>{team.teamName}</Text>
+              <View style={styles.seasonStatusRow}>
+                <Text style={styles.seasonLabel} numberOfLines={1} ellipsizeMode="tail">
+                  {group.name}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.detailsIconButton}
+              onPress={() => router.push('/(player)/groups/edit-team')}
+              accessibilityRole="button"
+              accessibilityLabel="Edit teams"
+            >
+              <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.draftInfoCard}>
+          <View style={styles.headerStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {scoreBreakdown?.totalPoints ?? team.totalPoints}
+              </Text>
+              <Text style={styles.statLabel}>Points Earned</Text>
+            </View>
+          </View>
+        </Card>
+
+        <Card style={styles.draftInfoCard} shadow="light">
           <Text style={styles.draftInfoTitle}>Draft Coming Soon!</Text>
           
           {group.draft?.scheduledAt && (
@@ -243,24 +273,21 @@ export default function TeamScreen() {
               <Text style={styles.draftDetailValue}>{group.teamSize || '?'} players</Text>
             </View>
             <View style={styles.draftDetail}>
-              <Text style={styles.draftDetailLabel}>Season</Text>
-              <Text style={styles.draftDetailValue}>{group.season.seasonName}</Text>
+              <Text style={styles.draftDetailLabel}>Group</Text>
+              <Text style={styles.draftDetailValue}>{group.name}</Text>
             </View>
           </View>
 
           {isAdmin && (
             <>
-              <TouchableOpacity 
-                style={[styles.startButton, startingDraft && styles.startButtonDisabled]}
+              <Button
+                label="Start Draft Now"
+                variant="primary"
+                size="lg"
                 onPress={handleStartDraft}
-                disabled={startingDraft}
-              >
-                {startingDraft ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.startButtonText}>Start Draft Now</Text>
-                )}
-              </TouchableOpacity>
+                loading={startingDraft}
+                style={styles.startButton}
+              />
               {startDraftError && (
                 <Text style={styles.startDraftErrorText}>{startDraftError}</Text>
               )}
@@ -272,7 +299,7 @@ export default function TeamScreen() {
               The draft will be started by {group.admin.username}
             </Text>
           )}
-        </View>
+        </Card>
       </ScrollView>
     );
   }
@@ -305,120 +332,94 @@ export default function TeamScreen() {
   }
 
   // AFTER DRAFT - Show your team and all teams in the group
-  return (
-    <>
-    <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.container}>
-      {/* Your Team */}
-      <View style={styles.headerSection}>
-        <Text style={styles.teamName}>{team.teamName}</Text>
-        <Text style={styles.totalPointsLabel}>Total Points</Text>
-        <Text style={styles.totalPoints}>{scoreBreakdown?.totalPoints ?? team.totalPoints}</Text>
-      </View>
-
-      <View style={styles.rosterSection}>
-        <Text style={styles.sectionTitle}>Your Roster</Text>
-        {team.roster && team.roster.length > 0 ? (
-          <View>
-            {team.roster
-              .sort((a, b) => (a.draftOrder || 0) - (b.draftOrder || 0))
-              .map((teamCastaway) => {
-                const castawayName = teamCastaway.castawayPerformance?.castaway?.name || 'Unknown';
-                const breakdown = scoreBreakdown?.castaways?.find(
-                  (c) => c.teamCastawayId === teamCastaway.id
-                );
-                const pts = breakdown?.totalPoints ?? teamCastaway.points;
-                return (
-                  <View key={teamCastaway.id} style={styles.rosterItem}>
-                    <Text style={styles.castawayName}>{castawayName}</Text>
-                    <TouchableOpacity
-                      style={styles.pointsBadge}
-                      onPress={() => breakdown && setSelectedCastaway(breakdown)}
-                    >
-                      <Text style={styles.points}>{pts}</Text>
-                      <Text style={styles.pointsLabel}>pts</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-          </View>
-        ) : (
-          <Text style={styles.emptyText}>No castaways on roster</Text>
-        )}
-      </View>
-
-    </ScrollView>
-
-    {/* Score events modal */}
-    <Modal
-      visible={selectedCastaway !== null}
-      animationType="fade"
-      transparent
-      onRequestClose={() => setSelectedCastaway(null)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>{selectedCastaway?.castawayName}</Text>
-          <Text style={styles.modalSubtitle}>{selectedCastaway?.totalPoints} pts total</Text>
-          <ScrollView style={styles.modalList}>
-            {selectedCastaway?.scoreEvents && selectedCastaway.scoreEvents.length > 0 ? (
-              selectedCastaway.scoreEvents
-                .slice()
-                .sort((a, b) => (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0))
-                .map((event) => (
-                  <View key={event.id} style={styles.scoreEventRow}>
-                    <View style={styles.scoreEventLeft}>
-                      <Text style={styles.scoreEventEpisode}>
-                        {event.episodeNumber != null ? `Ep ${event.episodeNumber}` : '—'}
-                      </Text>
-                      <Text style={styles.scoreEventLabel}>{event.eventLabel}</Text>
-                    </View>
-                    <Text style={styles.scoreEventPoints}>
-                      +{event.totalPoints}
-                    </Text>
-                  </View>
-                ))
-            ) : (
-              <Text style={styles.emptyText}>No scoring events yet</Text>
-            )}
-          </ScrollView>
-          <TouchableOpacity
-            style={styles.modalClose}
-            onPress={() => setSelectedCastaway(null)}
-          >
-            <Text style={styles.modalCloseText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-
-    </>
-  );
+  return <TeamView team={team} group={group} scoreBreakdown={scoreBreakdown} isOwnTeam />;
 }
 
 const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.secondaryBackground,
   },
-  container: {
+  contentContainer: {
     padding: Spacing.lg,
+  },
+  centerContainer: {
+    flex: 1,
+    backgroundColor: Colors.secondaryBackground,
+    padding: Spacing.lg,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerCard: {
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.medium,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+  },
+  headerText: {
+    flex: 1,
   },
   headerSection: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
-    paddingBottom: Spacing.lg,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.primary,
+    gap: Spacing.sm,
   },
   teamName: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: Spacing.lg,
+    color: Colors.text,
+    fontSize: FontSizes.xlarge,
+    fontWeight: '800',
+  },
+  headerSubtitle: {
+    fontSize: FontSizes.medium,
+    color: Colors.textSecondary,
+  },
+  seasonStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  seasonLabel: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    color: Colors.textSecondary,
+    fontSize: FontSizes.medium,
+  },
+  detailsIconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xxs,
+    marginLeft: Spacing.md,
+  },
+  headerStats: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.md,
+  },
+  statItem: {
+    alignItems: 'flex-start',
+  },
+  statValue: {
+    color: Colors.text,
+    fontSize: FontSizes.xxlarge,
+    fontWeight: '800',
+    lineHeight: 42,
+  },
+  statLabel: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.medium,
+    marginTop: Spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   totalPointsLabel: {
-    fontSize: 14,
+    fontSize: FontSizes.small,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
     textTransform: 'uppercase',
@@ -426,36 +427,55 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   totalPoints: {
-    fontSize: 48,
+    fontSize: FontSizes.title,
     fontWeight: '800',
-    color: Colors.primary,
-  },
-  rosterSection: {
-    marginBottom: Spacing.xl,
+    color: Colors.text,
   },
   sectionTitle: {
-    fontSize: 20,
+    color: Colors.text,
+    fontSize: FontSizes.medium,
     fontWeight: '700',
-    color: Colors.primary,
-    marginBottom: Spacing.lg,
-  },
-  rosterItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
+    letterSpacing: 0.3,
     marginBottom: Spacing.sm,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    textTransform: 'uppercase',
   },
-  pointsBadge: {
+  membersCard: {
+    marginBottom: 0,
+  },
+  memberRow: {
     alignItems: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    minWidth: 56,
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  memberRowBorder: {
+    borderBottomColor: Colors.border,
+    borderBottomWidth: 1,
+  },
+  memberLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  memberUsername: {
+    color: Colors.text,
+    fontSize: FontSizes.medium,
+    fontWeight: '600',
+  },
+  memberPick: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.small,
+    fontWeight: '600',
+    marginLeft: Spacing.md,
+  },
+  memberPointsButton: {
+    marginLeft: 'auto',
+    paddingVertical: Spacing.xs,
+  },
+  memberPoints: {
+    color: Colors.primary,
+    fontSize: FontSizes.medium,
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
@@ -464,10 +484,13 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   modalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.xl,
     maxHeight: '70%',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.dark,
   },
   modalTitle: {
     fontSize: 22,
@@ -489,7 +512,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: Colors.border,
   },
   scoreEventLeft: {
     flexDirection: 'row',
@@ -517,9 +540,10 @@ const styles = StyleSheet.create({
   modalClose: {
     marginTop: Spacing.lg,
     backgroundColor: Colors.primary,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     paddingVertical: Spacing.md,
     alignItems: 'center',
+    ...Shadow.light,
   },
   modalCloseText: {
     color: '#fff',
@@ -536,15 +560,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   castawayName: {
-    fontSize: 16,
+    fontSize: FontSizes.medium,
     fontWeight: '600',
-    color: Colors.primary,
+    color: Colors.text,
   },
   pointsDisplay: {
     alignItems: 'flex-end',
   },
   points: {
-    fontSize: 18,
+    fontSize: FontSizes.medium,
     fontWeight: '700',
     color: '#fff',
   },
@@ -571,7 +595,7 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: Colors.lightBackground,
     padding: Spacing.lg,
     borderRadius: 8,
     alignItems: 'center',
@@ -611,11 +635,12 @@ const styles = StyleSheet.create({
     color: '#ff6b35',
   },
   draftInfoCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 16,
-    padding: Spacing.xl,
+    backgroundColor: Colors.infoBackground,
+    marginBottom: Spacing.md,
     alignItems: 'center',
-    marginTop: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.light,
   },
   draftInfoTitle: {
     fontSize: 24,
@@ -628,9 +653,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: Spacing.xl,
     padding: Spacing.lg,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.lg,
     width: '100%',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.light,
   },
   countdownLabel: {
     fontSize: 14,
@@ -640,7 +668,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   countdownValue: {
-    fontSize: 48,
+    fontSize: FontSizes.title,
     fontWeight: '800',
     color: Colors.primary,
     marginBottom: Spacing.sm,
@@ -660,8 +688,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: Spacing.md,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.light,
   },
   draftDetailLabel: {
     fontSize: 12,
@@ -670,26 +701,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   draftDetailValue: {
-    fontSize: 18,
+    fontSize: FontSizes.medium,
     fontWeight: '700',
     color: Colors.primary,
   },
   startButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: 8,
     marginTop: Spacing.xl,
-    minWidth: 200,
-    alignItems: 'center',
-  },
-  startButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  startButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    minWidth: 220,
   },
   startDraftErrorText: {
     marginTop: Spacing.sm,

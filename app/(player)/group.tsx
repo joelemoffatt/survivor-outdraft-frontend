@@ -25,6 +25,8 @@ import {
   Shadow,
   Spacing,
 } from "../../constants/theme";
+import { GroupRankingItem } from "../../components/player/HomeWidgets";
+import LeaderboardSection from "../../components/player/LeaderboardSection";
 
 interface LeaderboardMember {
   id: number;
@@ -32,6 +34,7 @@ interface LeaderboardMember {
   teamName: string;
   points: number;
   isYou?: boolean;
+  teamId?: number;
 }
 
 const formatGroupStatus = (status?: GroupResponse["status"]) => {
@@ -146,10 +149,23 @@ export default function GroupScreen() {
           teamName: team?.teamName ?? `Team ${member.user.username}`,
           points: team?.totalPoints ?? 0,
           isYou: user?.id === member.user.id,
+          teamId: team?.id,
         };
       })
       .sort((a, b) => b.points - a.points);
   }, [members, teams, user?.id]);
+
+  const leaderboardRankings = useMemo<GroupRankingItem[]>(() => {
+    return leaderboardMembers
+      .map((member, index) => ({
+        rank: index + 1,
+        teamName: member.teamName,
+        username: member.username,
+        points: member.points,
+        isYourTeam: member.isYou,
+        teamId: member.teamId,
+      }));
+  }, [leaderboardMembers]);
 
   const statusStyles = getStatusStyles(group?.status);
 
@@ -257,43 +273,21 @@ export default function GroupScreen() {
       </Card>
 
       {/* Leaderboard */}
-      <Text style={styles.sectionTitle}>Leaderboard</Text>
-      <Card style={styles.membersCard} padding="sm" shadow="light">
-        {leaderboardMembers.length === 0 ? (
-          <View style={styles.emptyLeaderboard}>
-            <Text style={styles.emptyLeaderboardText}>No accepted members yet.</Text>
-          </View>
-        ) : null}
-        {leaderboardMembers.map((member, index) => (
-          <View
-            key={member.id}
-            style={[
-              styles.memberRow,
-              member.isYou && styles.youRow,
-              index < leaderboardMembers.length - 1 && styles.memberRowBorder,
-            ]}
-          >
-            <View style={styles.rankBadge}>
-              <Text style={styles.rankText}>#{index + 1}</Text>
-            </View>
-            <View style={[styles.avatar, member.isYou && styles.avatarYou]}>
-              <Text style={[styles.avatarText, member.isYou && styles.avatarTextYou]}>
-                {member.username.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.memberInfo}>
-              <Text style={[styles.memberUsername, member.isYou && styles.youText]}>
-                {member.username}
-                {member.isYou ? " (you)" : ""}
-              </Text>
-              <Text style={styles.memberTeam}>{member.teamName}</Text>
-            </View>
-            <Text style={[styles.memberPoints, member.isYou && styles.youText]}>
-              {member.points} pts
-            </Text>
-          </View>
-        ))}
-      </Card>
+      <LeaderboardSection
+        title="Leaderboard"
+        rankings={leaderboardRankings}
+        onTeamPress={(teamId, isYourTeam) => {
+          if (isYourTeam) {
+            router.push('/(player)/team');
+            return;
+          }
+
+          router.push({
+            pathname: '/(player)/teams/[teamId]',
+            params: { teamId: String(teamId) },
+          });
+        }}
+      />
     </ScrollView>
   );
 }
@@ -325,13 +319,13 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.lg,
   },
 
   // Header card
   headerCard: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   headerTop: {
     flexDirection: "row",
@@ -427,117 +421,5 @@ const styles = StyleSheet.create({
   },
   switchButton: {
     marginTop: Spacing.md,
-  },
-
-  // Section title
-  sectionTitle: {
-    color: Colors.text,
-    fontSize: FontSizes.medium,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-    marginBottom: Spacing.sm,
-    textTransform: "uppercase",
-  },
-
-  // Actions row
-  actionsRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  actionButton: {
-    alignItems: "center",
-    backgroundColor: Colors.background,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    flex: 1,
-    gap: Spacing.xs,
-    paddingVertical: Spacing.md,
-    ...Shadow.light,
-  },
-  actionLabel: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.small,
-    fontWeight: "600",
-  },
-
-  // Members
-  membersCard: {
-    marginBottom: 0,
-  },
-  emptyLeaderboard: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-  },
-  emptyLeaderboardText: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.small,
-  },
-  rankBadge: {
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 34,
-    marginRight: Spacing.sm,
-  },
-  rankText: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.small,
-    fontWeight: "700",
-  },
-  memberRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  memberRowBorder: {
-    borderBottomColor: Colors.border,
-    borderBottomWidth: 1,
-  },
-  youRow: {
-    backgroundColor: Colors.warningBackground,
-    borderRadius: BorderRadius.md,
-  },
-  avatar: {
-    alignItems: "center",
-    backgroundColor: Colors.lightBackground,
-    borderRadius: BorderRadius.full,
-    height: 38,
-    justifyContent: "center",
-    marginRight: Spacing.md,
-    width: 38,
-  },
-  avatarYou: {
-    backgroundColor: Colors.primary,
-  },
-  avatarText: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.medium,
-    fontWeight: "700",
-  },
-  avatarTextYou: {
-    color: Colors.background,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberUsername: {
-    color: Colors.text,
-    fontSize: FontSizes.medium,
-    fontWeight: "600",
-  },
-  memberTeam: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.small,
-    marginTop: Spacing.xxs,
-  },
-  memberPoints: {
-    color: Colors.text,
-    fontSize: FontSizes.medium,
-    fontWeight: "700",
-  },
-  youText: {
-    color: Colors.primary,
   },
 });

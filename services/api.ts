@@ -3,7 +3,7 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  'http://192.168.1.68:8080/api'; // ipconfig getifaddr en0
+  'http://192.168.86.20:8080/api'; // ipconfig getifaddr en0
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
