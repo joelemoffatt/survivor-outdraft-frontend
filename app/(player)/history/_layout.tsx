@@ -63,11 +63,31 @@ export default function HistoryLayout() {
         }}
       />
       <Stack.Screen
+        name="castaways/[id]"
+        options={{
+          animation: 'none',
+          title: "Castaway Details",
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/history/castaways")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
         name="tribes"
         options={{
           animation: 'none',
           title: "Tribes",
           headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
+          headerTitleAlign: "left",
+          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+        }}
+      />
+      <Stack.Screen
+        name="tribes/[id]"
+        options={{
+          animation: 'none',
+          title: "Tribe Details",
+          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/history/tribes")} />,
           headerTitleAlign: "left",
           headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
         }}

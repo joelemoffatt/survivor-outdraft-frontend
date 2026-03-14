@@ -157,8 +157,28 @@ class ApiService {
     return this.get<Vote[]>(`/v1/votes?seasonId=${seasonId}&episodeNumber=${episodeNumber}`);
   }
 
+  async getTribes(): Promise<TribeRecord[]> {
+    return this.get<TribeRecord[]>('/v1/tribes');
+  }
+
+  async getTribeMappingsByTribeId(tribeId: number): Promise<TribeMappingRecord[]> {
+    return this.get<TribeMappingRecord[]>(`/v1/tribe-mappings?tribeId=${tribeId}`);
+  }
+
   async getCastaways(seasonId: number): Promise<Castaway[]> {
     return this.get<Castaway[]>(`/v1/castaways?seasonId=${seasonId}`);
+  }
+
+  async searchCastaways(query: string): Promise<CastawaySearchResult[]> {
+    return this.get<CastawaySearchResult[]>(`/v1/castaways/search?query=${encodeURIComponent(query)}`);
+  }
+
+  async getCastawayById(castawayId: number): Promise<Castaway> {
+    return this.get<Castaway>(`/v1/castaways/${castawayId}`);
+  }
+
+  async getCastawayPerformancesByCastawayId(castawayId: number): Promise<CastawayPerformanceDetail[]> {
+    return this.get<CastawayPerformanceDetail[]>(`/v1/castaway-performances?castawayId=${castawayId}`);
   }
 
   async getEpisodeDetail(seasonId: number, episodeNumber: number): Promise<EpisodeDetail> {
@@ -341,8 +361,10 @@ export interface TeamCastawayResponse {
   draftedAt: string;
   castawayPerformance: {
     id: number;
+    seasonId?: number | null;
     castaway: {
       id: number;
+      json_id?: string;
       name: string;
       full_name: string;
     };
@@ -450,6 +472,49 @@ export interface GroupMemberResponse {
   status: 'INVITED' | 'ACCEPTED' | 'DECLINED';
   joinedAt: string;
   lastAccessedAt?: string | null;
+}
+
+export interface CastawaySearchResult {
+  castawayId: number;
+  season: number;
+  fullName: string;
+  jsonId: string;
+}
+
+export interface TribeRecord {
+  id: number;
+  seasonId: number;
+  seasonName: string;
+  name: string;
+  color: string;
+}
+
+export interface TribeMappingRecord {
+  id: number;
+  seasonId: number;
+  episodeId: number;
+  episodeNumber: number;
+  castawayPerformanceId?: number;
+  castawayId: number;
+  castawayJsonId?: string;
+  castawayName: string;
+  tribeId: number;
+  tribeName: string;
+  status: string;
+}
+
+export interface CastawayPerformanceDetail {
+  id: number;
+  season?: {
+    id: number;
+    seasonName: string;
+    version: string;
+  };
+  castaway?: {
+    id: number;
+    name: string;
+    full_name: string;
+  };
 }
 
 export interface ScoreEventBreakdown {

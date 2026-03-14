@@ -40,6 +40,8 @@ export interface Castaway {
   json_id: string;
   name: string;
   full_name: string;
+  date_of_birth: string;
+  date_of_death?: string;
   age?: number;
   city?: string;
   state?: string;

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
 import { CastawayScoreBreakdown, GroupResponse, ScoreBreakdownResponse, TeamResponse } from '../../services/api';
+import { getImportedCastawayImageSource } from '../../utils/castawayImages';
 import Card from './Card';
 
 interface TeamViewProps {
@@ -62,6 +63,10 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
               .sort((a, b) => (a.draftOrder || 0) - (b.draftOrder || 0))
               .map((teamCastaway, index, roster) => {
                 const castawayName = teamCastaway.castawayPerformance?.castaway?.name || 'Unknown';
+                const seasonId = teamCastaway.castawayPerformance?.seasonId;
+                const jsonId = teamCastaway.castawayPerformance?.castaway?.json_id;
+                const castawayId = teamCastaway.castawayPerformance?.castaway?.id;
+                const castawayImageSource = getImportedCastawayImageSource(seasonId, jsonId);
                 const breakdown = scoreBreakdown?.castaways?.find(
                   (c) => c.teamCastawayId === teamCastaway.id
                 );
@@ -74,10 +79,33 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                       index < roster.length - 1 && styles.memberRowBorder,
                     ]}
                   >
-                    <View style={styles.memberLeft}>
+                    <TouchableOpacity
+                      style={styles.memberLeft}
+                      onPress={() =>
+                        castawayId &&
+                        router.push({
+                          pathname: '/(player)/history/castaways/[id]',
+                          params: {
+                            id: String(castawayId),
+                            season: seasonId != null ? String(seasonId) : undefined,
+                            jsonId,
+                          },
+                        })
+                      }
+                      disabled={!castawayId}
+                      accessibilityRole="button"
+                      accessibilityLabel={`View ${castawayName} details`}
+                    >
+                      <View style={styles.avatarCircle}>
+                        {castawayImageSource ? (
+                          <Image source={castawayImageSource} style={styles.avatarImage} resizeMode="cover" />
+                        ) : (
+                          <Text style={styles.avatarInitial}>{castawayName.trim().charAt(0).toUpperCase()}</Text>
+                        )}
+                      </View>
                       <Text style={styles.memberUsername}>{castawayName}</Text>
                       <Text style={styles.memberPick}>Pick #{teamCastaway.draftOrder ?? index + 1}</Text>
-                    </View>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.memberPointsButton}
                       onPress={() => breakdown && setSelectedCastaway(breakdown)}
@@ -243,6 +271,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+  },
+  avatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.sm,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarInitial: {
+    color: Colors.background,
+    fontSize: FontSizes.small,
+    fontWeight: '700',
   },
   memberUsername: {
     color: Colors.text,

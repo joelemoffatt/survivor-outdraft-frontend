@@ -1,38 +1,105 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import apiService, { TribeRecord } from '../../../services/api';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
+import {
+  HistoryCard,
+  HistoryContainer,
+  HistoryEmpty,
+  HistoryLoading,
+} from '../../../components/shared/HistoryUI';
 
 export default function TribesScreen() {
+  const [tribes, setTribes] = useState<TribeRecord[]>([]);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadTribes = async () => {
+      try {
+        const data = await apiService.getTribes();
+        const sorted = data.sort((a, b) => {
+          if (a.seasonId !== b.seasonId) {
+            return b.seasonId - a.seasonId;
+          }
+          return a.name.localeCompare(b.name);
+        });
+        setTribes(sorted);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to load tribes');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTribes();
+  }, []);
+
+  const filteredTribes = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) {
+      return tribes;
+    }
+
+    return tribes.filter((tribe) =>
+      [tribe.name, tribe.seasonName, String(tribe.seasonId)].some((value) =>
+        value?.toLowerCase().includes(trimmed),
+      ),
+    );
+  }, [query, tribes]);
+
+  if (loading) {
+    return <HistoryLoading label="Loading tribes..." />;
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Tribes</Text>
-      <View style={styles.card}>
-        <Text style={styles.text}>Explore all tribes, their colors, and tribe compositions throughout the game.</Text>
+    <HistoryContainer>
+      <View style={styles.searchCard}>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search tribes"
+          placeholderTextColor={Colors.textLight}
+          style={styles.input}
+          autoCorrect={false}
+          autoCapitalize="words"
+          returnKeyType="search"
+        />
       </View>
-    </ScrollView>
+
+      {filteredTribes.map((tribe) => (
+        <HistoryCard
+          key={tribe.id}
+          title={`S${tribe.seasonId} - ${tribe.name}`}
+          subtitle={tribe.seasonName}
+          onPress={() =>
+            router.push({
+              pathname: '/(player)/history/tribes/[id]',
+              params: { id: String(tribe.id), seasonId: String(tribe.seasonId), tribeName: tribe.name },
+            })
+          }
+        />
+      ))}
+
+      {filteredTribes.length === 0 && <HistoryEmpty label="No tribes found" />}
+    </HistoryContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    padding: Spacing.lg,
-  },
-  title: {
-    fontSize: FontSizes.xxlarge,
-    fontWeight: '700',
-    color: Colors.secondary,
+  searchCard: {
     marginBottom: Spacing.md,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: Spacing.lg,
-  },
-  text: {
-    fontSize: FontSizes.medium,
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
     color: Colors.text,
+    fontSize: FontSizes.medium,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background,
   },
 });
