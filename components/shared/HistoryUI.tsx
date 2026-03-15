@@ -30,7 +30,8 @@ type HistorySectionProps = {
   collapsible?: boolean;
   collapsed?: boolean;
   onToggle?: () => void;
-  category?: 'challenges' | 'journeys' | 'advantages' | 'tribals' | 'boots' | 'results';
+  category?: 'challenges' | 'journeys' | 'advantages' | 'tribals' | 'boots' | 'results' | 'tribe' | 'votesCast' | 'votesReceived' | 'jury';
+  style?: import('react-native').ViewStyle;
 };
 
 type HistoryTextProps = {
@@ -72,6 +73,7 @@ export const HistorySection = ({
   collapsed,
   category,
   onToggle,
+  style,
 }: HistorySectionProps) => {
   const getCategoryColor = (cat?: string) => {
     switch (cat) {
@@ -87,13 +89,21 @@ export const HistorySection = ({
         return '#FFA502';
       case 'results':
         return '#2ECC71';
+      case 'tribe':
+        return '#00BCD4';
+      case 'votesCast':
+        return '#9B59B6';
+      case 'votesReceived':
+        return '#E17055';
+      case 'jury':
+        return '#1ABC9C';
       default:
         return Colors.primary;
     }
   };
 
   return (
-    <View style={[styles.sectionBlock, { borderLeftColor: getCategoryColor(category) }]}>
+    <View style={[styles.sectionBlock, { borderLeftColor: getCategoryColor(category) }, style]}>
       {collapsible ? (
         <TouchableOpacity style={styles.sectionHeader} onPress={onToggle}>
           <Text style={styles.sectionTitle}>{title}</Text>

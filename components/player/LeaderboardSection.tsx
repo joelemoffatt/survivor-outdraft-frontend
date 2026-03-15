@@ -1,18 +1,19 @@
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 import { GroupRankingItem, GroupRankingWidget } from './HomeWidgets';
 
 interface LeaderboardSectionProps {
   title: string;
   rankings: GroupRankingItem[];
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  titleStyle?: StyleProp<TextStyle>;
   onTeamPress?: (teamId: number, isYourTeam?: boolean) => void;
 }
 
-export default function LeaderboardSection({ title, rankings, style, onTeamPress }: LeaderboardSectionProps) {
+export default function LeaderboardSection({ title, rankings, style, titleStyle, onTeamPress }: LeaderboardSectionProps) {
   return (
-    <View style={{ ...styles.container, ...(style || {}) }}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={[styles.container, style]}>
+      <Text style={[styles.sectionTitle, titleStyle]}>{title}</Text>
       <GroupRankingWidget
         groupName=""
         rankings={rankings}

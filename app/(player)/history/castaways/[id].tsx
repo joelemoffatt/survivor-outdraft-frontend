@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { DetailRow, DetailsSection } from '../../../../components/shared/DetailsSection';
+import CastawayPerformanceSections from '../../../../components/player/CastawayPerformanceSections';
 import { Colors, FontSizes, Spacing } from '../../../../constants/theme';
 import apiService, { CastawayPerformanceDetail } from '../../../../services/api';
 import { Castaway } from '../../../../types/survivor';
@@ -104,21 +105,11 @@ export default function CastawayDetailsScreen() {
         <DetailRow label="Three Words" value={displayValue(castaway.three_words)} noBorder />
       </DetailsSection>
 
-      <DetailsSection title="Performances" style={styles.performancesSection}>
-        {performances.length > 0 ? (
-          performances.map((performance, index) => (
-            <DetailRow
-              key={performance.id}
-              label={`Performance ${index + 1}`}
-              value={displayValue(performance.season?.seasonName)}
-              helperText={`Season ID: ${performance.season?.id ?? '—'} • Version: ${displayValue(performance.season?.version)} • Performance ID: ${performance.id}`}
-              noBorder={index === performances.length - 1}
-            />
-          ))
-        ) : (
-          <DetailRow label="Performance Data" value="No performance records found" noBorder />
-        )}
-      </DetailsSection>
+      <CastawayPerformanceSections
+        performances={performances}
+        castawayName={castaway.name}
+        castawayFullName={castaway.full_name}
+      />
     </ScrollView>
   );
 }
@@ -152,9 +143,6 @@ const styles = StyleSheet.create({
     color: Colors.background,
     fontSize: 40,
     fontWeight: '700',
-  },
-  performancesSection: {
-    marginTop: Spacing.md,
   },
   centerContainer: {
     flex: 1,

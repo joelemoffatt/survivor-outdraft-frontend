@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
@@ -16,6 +16,7 @@ const responsiveMinHeight = 280;
 
 export default function PlayerHome() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { selectedGroupId } = useGroup();
   const [group, setGroup] = useState<GroupResponse | null>(null);
@@ -90,6 +91,8 @@ export default function PlayerHome() {
     ? `S${displaySeasonNumber} EP${lastEpisodeNumber}`
     : '--';
 
+  const isWideDashboard = width >= 1100;
+
   const handleOpenLastEpisode = () => {
     if (!group?.latestEpisodeWatched?.episodeNumber) {
       return;
@@ -150,24 +153,28 @@ export default function PlayerHome() {
         <Text style={styles.pageSubtitle}>Welcome back{user?.username ? `, ${user.username}` : ''}.</Text>
       </View>
 
-      <View style={styles.topRow}>
-        <LastEpisodeWidget
-          label={lastEpisodeLabel}
-          onPress={hasLastEpisode ? handleOpenLastEpisode : undefined}
-          style={styles.topWidgetLeft}
-        />
-        <TeamPointsWidget
-          totalPoints={team.totalPoints}
-          onPress={() => router.push('/(player)/team')}
-          style={styles.topWidget}
+      <View style={[styles.dashboardLayout, isWideDashboard && styles.dashboardLayoutWide]}>
+        <View style={[styles.widgetsColumn, isWideDashboard && styles.widgetsColumnWide]}>
+          <LastEpisodeWidget
+            label={lastEpisodeLabel}
+            onPress={hasLastEpisode ? handleOpenLastEpisode : undefined}
+            style={isWideDashboard ? styles.stackedWidget : styles.topWidgetLeft}
+          />
+          <TeamPointsWidget
+            totalPoints={team.totalPoints}
+            onPress={() => router.push('/(player)/team')}
+            style={isWideDashboard ? styles.stackedWidget : styles.topWidget}
+          />
+        </View>
+
+        <LeaderboardSection
+          title="Leaderboard"
+          rankings={groupRankings}
+          onTeamPress={handleOpenTeam}
+          style={[styles.leaderboardSection, isWideDashboard && styles.leaderboardSectionWide]}
+          titleStyle={isWideDashboard ? styles.leaderboardTitleWide : undefined}
         />
       </View>
-
-      <LeaderboardSection
-        title="Leaderboard"
-        rankings={groupRankings}
-        onTeamPress={handleOpenTeam}
-      />
     </ScrollView>
   );
 }
@@ -219,9 +226,23 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.medium,
     marginTop: Spacing.xs,
   },
-  topRow: {
+  dashboardLayout: {
+    gap: Spacing.md,
+  },
+  dashboardLayoutWide: {
+    alignItems: 'stretch',
+    flexDirection: 'row',
+  },
+  widgetsColumn: {
     flexDirection: 'row',
     marginBottom: Spacing.md,
+  },
+  widgetsColumnWide: {
+    alignSelf: 'flex-start',
+    flexDirection: 'column',
+    flexShrink: 0,
+    marginBottom: 0,
+    width: 280,
   },
   topWidget: {
     flex: 1,
@@ -229,6 +250,20 @@ const styles = StyleSheet.create({
   topWidgetLeft: {
     flex: 1,
     marginRight: Spacing.md,
+  },
+  stackedWidget: {
+    marginBottom: Spacing.md,
+    width: '100%',
+  },
+  leaderboardSection: {
+    width: '100%',
+  },
+  leaderboardSectionWide: {
+    alignSelf: 'stretch',
+    flex: 1,
+  },
+  leaderboardTitleWide: {
+    marginTop: 0,
   },
   rankingBox: {
     minHeight: responsiveMinHeight,
