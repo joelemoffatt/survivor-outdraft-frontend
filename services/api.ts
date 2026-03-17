@@ -138,6 +138,23 @@ class ApiService {
     });
   }
 
+  // Admin user CRUD endpoints
+  async getUsers(): Promise<UserRecord[]> {
+    return this.get<UserRecord[]>('/v1/users');
+  }
+
+  async createUser(data: CreateUserRequest): Promise<void> {
+    return this.post<void>('/v1/users', data);
+  }
+
+  async updateUser(data: UpdateUserRequest): Promise<void> {
+    return this.put<void>('/v1/users', data);
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    return this.delete<void>(`/v1/users/${id}`);
+  }
+
   // Survivor endpoints
   async getSeasons(): Promise<Season[]> {
     const seasons = await this.get<Season[]>('/v1/seasons');
@@ -317,6 +334,32 @@ export interface AuthResponse {
   username: string;
   email: string;
   role: 'USER' | 'ADMIN';
+}
+
+export interface UserRecord {
+  id: number;
+  username: string;
+  email: string;
+  role: 'USER' | 'ADMIN';
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  password: string;
+  role?: 'USER' | 'ADMIN';
+  enabled?: boolean;
+}
+
+export interface UpdateUserRequest {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  role: 'USER' | 'ADMIN';
+  enabled: boolean;
 }
 
 export interface GroupResponse {

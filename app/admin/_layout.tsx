@@ -6,9 +6,9 @@ import { ResponsiveNavigation, NavigationItem } from '../../components/shared/Re
 
 const navigationItems: NavigationItem[] = [
   { name: 'index', label: 'Home', href: '/admin', icon: 'home' },
-  { name: 'create', label: 'Create', href: '/admin/create', icon: 'add-circle' },
   { name: 'social', label: 'Social', href: '/admin/social', icon: 'people' },
   { name: 'game', label: 'Game', href: '/admin/game', icon: 'game-controller' },
+  { name: 'more', label: 'More', href: '/admin/more', icon: 'ellipsis-horizontal' },
 ];
 
 export default function AdminLayout() {
@@ -29,8 +29,10 @@ export default function AdminLayout() {
           }}>
             <Stack.Screen name="index" options={{ animation: 'none' }} />
             <Stack.Screen name="create" options={{ animation: 'none' }} />
-            <Stack.Screen name="social" options={{ animation: 'none' }} />
+            <Stack.Screen name="social/index" options={{ animation: 'none' }} />
+            <Stack.Screen name="social/[resource]" options={{ animation: 'none' }} />
             <Stack.Screen name="game" options={{ animation: 'none' }} />
+            <Stack.Screen name="more" options={{ animation: 'none'}} />
           </Stack>
         </View>
       </View>

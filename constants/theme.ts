@@ -39,6 +39,7 @@ export const Colors = {
 };
 
 export const Spacing = {
+  none: 0,
   xxs: 2,
   xs: 4,
   sm: 8,
