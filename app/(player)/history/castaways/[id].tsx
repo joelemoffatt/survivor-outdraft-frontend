@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { DetailRow, DetailsSection } from '../../../../components/shared/DetailsSection';
-import CastawayPerformanceSections from '../../../../components/player/CastawayPerformanceSections';
+import CastawayPerformanceAggregateCards from '../../../../components/player/CastawayPerformanceAggregateCards';
+import CastawayProfileCard from '../../../../components/player/CastawayProfileCard';
 import { Colors, FontSizes, Spacing } from '../../../../constants/theme';
 import apiService, { CastawayPerformanceDetail } from '../../../../services/api';
 import { Castaway } from '../../../../types/survivor';
 import { getImportedCastawayImageSource } from '../../../../utils/castawayImages';
-
-const displayValue = (value?: string | null) => {
-  if (!value || !value.trim()) {
-    return '—';
-  }
-
-  return value;
-};
 
 export default function CastawayDetailsScreen() {
   const { id, season: seasonParam, jsonId: jsonIdParam } = useLocalSearchParams<{
@@ -78,34 +70,12 @@ export default function CastawayDetailsScreen() {
   const castawayImageSource = !Number.isNaN(parsedSeason)
     ? getImportedCastawayImageSource(parsedSeason, jsonIdParam)
     : null;
-  const castawayInitial = castaway.name.trim().charAt(0).toUpperCase();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatarCircle}>
-          {castawayImageSource ? (
-            <Image source={castawayImageSource} style={styles.avatarImage} resizeMode="cover" />
-          ) : (
-            <Text style={styles.avatarInitial}>{castawayInitial}</Text>
-          )}
-        </View>
-      </View>
-      <DetailsSection title={castaway.name} subtitle={displayValue(castaway.full_name)}>
-        <DetailRow label="ID" value={castaway.id} />
-        <DetailRow label="JSON ID" value={displayValue(castaway.json_id)} />
-        <DetailRow label="Birth Date" value={displayValue(castaway.date_of_birth)} />
-        <DetailRow label="Death Date" value={displayValue(castaway.date_of_death)} />
-        <DetailRow label="City" value={displayValue(castaway.city)} />
-        <DetailRow label="State" value={displayValue(castaway.state)} />
-        <DetailRow label="Gender" value={displayValue(castaway.gender)} />
-        <DetailRow label="Occupation" value={displayValue(castaway.occupation)} />
-        <DetailRow label="Hobbies" value={displayValue(castaway.hobbies)} />
-        <DetailRow label="Pet Peeves" value={displayValue(castaway.pet_peeves)} />
-        <DetailRow label="Three Words" value={displayValue(castaway.three_words)} noBorder />
-      </DetailsSection>
+      <CastawayProfileCard castaway={castaway} imageSource={castawayImageSource} />
 
-      <CastawayPerformanceSections
+      <CastawayPerformanceAggregateCards
         performances={performances}
         castawayName={castaway.name}
         castawayFullName={castaway.full_name}
@@ -121,28 +91,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  avatarCircle: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarInitial: {
-    color: Colors.background,
-    fontSize: 40,
-    fontWeight: '700',
   },
   centerContainer: {
     flex: 1,
