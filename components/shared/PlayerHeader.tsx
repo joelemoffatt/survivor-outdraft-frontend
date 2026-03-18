@@ -126,7 +126,7 @@ export function PlayerHeader({ onGroupChange, showGroupSelector = true }: Player
           {/* Profile Icon */}
           <TouchableOpacity 
             style={styles.iconButton}
-            onPress={() => router.push('/(player)/profile')}
+            onPress={() => router.push('/profile')}
           >
             <Ionicons name="person-circle-outline" size={24} color={Colors.primary} />
           </TouchableOpacity>

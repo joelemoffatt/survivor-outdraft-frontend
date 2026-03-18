@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getNavigationConfig } from '../../constants/navigation';
 import BackButton from '../../components/shared/BackButton';
 
-export default function PlayerLayout() {
+export default function SharedLayout() {
   const responsive = useResponsive();
   const { user, isAdminView } = useAuth();
   const navigationConfig = getNavigationConfig(Boolean(user?.isAdmin && isAdminView));
@@ -20,27 +20,35 @@ export default function PlayerLayout() {
 
       <View style={styles.contentContainer}>
         <View style={styles.stackContainer}>
-          <Stack screenOptions={{ 
-            headerShown: false, 
+          <Stack screenOptions={{
+            headerShown: false,
             animation: 'none',
             gestureEnabled: false,
           }}>
-            <Stack.Screen name="index" options={{ animation: 'none' }} />
-            <Stack.Screen name="history" options={{ animation: 'none' }} />
-            <Stack.Screen name="team" options={{ animation: 'none' }} />
-            <Stack.Screen name="group" options={{ animation: 'none' }} />
-            <Stack.Screen name="groups" options={{ animation: 'none' }} />
+            <Stack.Screen name="more" options={{ animation: 'none' }} />
             <Stack.Screen
-              name="teams/[teamId]"
+              name="profile/index"
               options={{
                 animation: 'none',
                 headerShown: true,
-                title: 'Team',
+                title: 'Profile',
                 headerTitleAlign: 'left',
                 headerTitleStyle: { fontSize: 28, fontWeight: 'bold' },
-                headerLeft: () => <BackButton fallbackRoute="/(player)/group" />,
+                headerLeft: () => <BackButton fallbackRoute="/more" />,
               }}
             />
+            <Stack.Screen
+              name="profile/edit"
+              options={{
+                animation: 'none',
+                headerShown: true,
+                title: 'Edit Profile',
+                headerTitleAlign: 'left',
+                headerTitleStyle: { fontSize: 28, fontWeight: 'bold' },
+                headerLeft: () => <BackButton fallbackRoute="/profile" />,
+              }}
+            />
+            <Stack.Screen name="settings" options={{ animation: 'none' }} />
           </Stack>
         </View>
       </View>

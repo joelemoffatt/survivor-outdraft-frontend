@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import apiService, { GroupResponse } from '../../services/api';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { useGroup } from '../../contexts/GroupContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
@@ -22,11 +20,22 @@ interface MenuItem {
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdminView, setAdminView } = useAuth();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const isAdminUser = Boolean(user?.isAdmin);
+  const isViewingAdmin = isAdminUser && isAdminView;
+
+  // DEBUG — remove after confirming admin view works
+  console.log('[MORE] user=', JSON.stringify(user), 'isAdminUser=', isAdminUser, 'isAdminView=', isAdminView);
 
   const handleLogout = async () => {
     setShowLogoutDialog(true);
+  };
+
+  const handleToggleAdminView = async () => {
+    const nextAdminView = !isViewingAdmin;
+    await setAdminView(nextAdminView);
+    router.replace(nextAdminView ? '/admin' : '/(player)/');
   };
 
   const confirmLogout = async () => {
@@ -35,7 +44,7 @@ export default function MoreScreen() {
     router.replace('/login');
   };
 
-  const menuSections: MenuSection[] = [
+  const playerSections: MenuSection[] = [
     {
       title: 'Groups',
       items: [
@@ -126,18 +135,44 @@ export default function MoreScreen() {
         },
       ],
     },
+  ];
+
+  const adminSections: MenuSection[] = [
+    {
+      title: 'Admin',
+      items: [
+        {
+          label: 'Admin Dashboard',
+          icon: 'home',
+          onPress: () => router.push('/admin'),
+        },
+        {
+          label: 'Social Objects',
+          icon: 'people',
+          onPress: () => router.push('/admin/social'),
+        },
+        {
+          label: 'Game Admin',
+          icon: 'game-controller',
+          onPress: () => router.push('/admin/game'),
+        },
+      ],
+    },
+  ];
+
+  const sharedSections: MenuSection[] = [
     {
       title: 'Settings',
       items: [
         {
           label: 'Notifications',
           icon: 'notifications',
-          onPress: () => router.push('/(player)/settings/notifications'),
+          onPress: () => router.push('/settings/notifications'),
         },
         {
           label: 'App Preferences',
           icon: 'settings',
-          onPress: () => router.push('/(player)/settings/preferences'),
+          onPress: () => router.push('/settings/preferences'),
         },
       ],
     },
@@ -147,12 +182,12 @@ export default function MoreScreen() {
         {
           label: 'Terms of Service',
           icon: 'document-text',
-          onPress: () => router.push('/(player)/settings/terms'),
+          onPress: () => router.push('/settings/terms'),
         },
         {
           label: 'About This App',
           icon: 'information-circle',
-          onPress: () => router.push('/(player)/settings/about'),
+          onPress: () => router.push('/settings/about'),
         },
       ],
     },
@@ -166,16 +201,27 @@ export default function MoreScreen() {
         },
       ],
     },
-    {
-      items: [
-        {
-          label: 'Switch to Admin View',
-          icon: 'shield-checkmark',
-          onPress: () => router.push('/admin/'),
-          variant: 'highlight',
-        },
-      ],
-    },
+  ];
+
+  const menuSections: MenuSection[] = [
+    ...(isViewingAdmin ? adminSections : playerSections),
+    ...sharedSections,
+    ...(isAdminUser
+      ? [
+          {
+            items: [
+              {
+                label: isViewingAdmin ? 'Switch to Player View' : 'Switch to Admin View',
+                icon: isViewingAdmin ? 'person' : 'shield-checkmark',
+                onPress: () => {
+                  void handleToggleAdminView();
+                },
+                variant: 'highlight' as const,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -190,7 +236,7 @@ export default function MoreScreen() {
             <Text style={styles.email}>{user?.email || 'Unknown'}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/(player)/profile/edit')}>
+        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/edit')}>
           <Ionicons name="pencil" size={20} color="#fff" />
           <Text style={styles.editButtonText}>Edit</Text>
         </TouchableOpacity>

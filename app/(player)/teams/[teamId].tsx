@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import apiService, { TeamResponse, ScoreBreakdownResponse } from '../../../services/api';
-import Button from '../../../components/shared/Button';
+import BackButton from '../../../components/shared/BackButton';
 import TeamView from '../../../components/shared/team';
 
 export default function TeamDetailScreen() {
-  const router = useRouter();
   const { user } = useAuth();
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
 
@@ -62,13 +61,7 @@ export default function TeamDetailScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error ?? 'Team not found'}</Text>
-        <Button
-          label="Go Back"
-          variant="outline"
-          size="md"
-          onPress={() => router.back()}
-          style={styles.centerButton}
-        />
+        <BackButton label="Go Back" style={styles.centerButton} />
       </View>
     );
   }

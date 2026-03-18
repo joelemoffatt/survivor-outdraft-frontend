@@ -1,12 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Colors, FontSizes, Spacing, BorderRadius, Shadow } from '../../../constants/theme';
+import { Colors, FontSizes, Spacing, Shadow } from '../../../constants/theme';
 import Card from '../../../components/shared/Card';
+import BackButton from '../../../components/shared/BackButton';
 
 export default function TeamDetailsScreen() {
-  const router = useRouter();
-
   return (
     <View style={styles.container}>
       <Card style={styles.card} shadow="medium">
@@ -15,9 +13,7 @@ export default function TeamDetailsScreen() {
         <Text style={styles.subtitle}>
           Team details, stats, and history will be available here in a future update.
         </Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        <BackButton label="Go Back" />
       </Card>
     </View>
   );
@@ -55,17 +51,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: Spacing.xl,
-  },
-  backButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    ...Shadow.light,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
   },
 });

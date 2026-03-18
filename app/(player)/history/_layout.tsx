@@ -1,166 +1,70 @@
-import { Stack, useRouter } from "expo-router";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Stack } from "expo-router";
+import BackButton from "../../../components/shared/BackButton";
 
-const BackButton = ({ onPress }: { onPress: () => void }) => (
-  <TouchableOpacity onPress={onPress} style={{ paddingLeft: 16, paddingRight: 8 }}>
-    <Text style={{ fontSize: 28, color: "#f4511e", fontWeight: "bold" }}>←</Text>
-  </TouchableOpacity>
-);
+const HEADER_BASE = {
+  animation: 'none' as const,
+  headerTitleAlign: 'left' as const,
+  headerTitleStyle: { fontSize: 28, fontWeight: 'bold' as const },
+};
 
 export default function HistoryLayout() {
-  const router = useRouter();
-
-  const handleBack = (fallbackRoute: string) => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.replace(fallbackRoute);
-  };
-
   return (
     <Stack screenOptions={{ animation: 'none' }}>
       <Stack.Screen
         name="index"
-        options={{
-          animation: 'none',
-          title: "Survivor History",
-          headerBackVisible: false,
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Survivor History", headerBackVisible: false, headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="seasons"
-        options={{
-          animation: 'none',
-          title: "Seasons",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Seasons", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="episodes"
-        options={{
-          animation: 'none',
-          title: "Episodes",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Episodes", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="castaways"
-        options={{
-          animation: 'none',
-          title: "Castaways",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Castaways", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="castaways/[id]"
-        options={{
-          animation: 'none',
-          title: "Castaway Details",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/history/castaways")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Castaway Details", headerLeft: () => <BackButton fallbackRoute="/(player)/history/castaways" /> }}
       />
       <Stack.Screen
         name="tribes"
-        options={{
-          animation: 'none',
-          title: "Tribes",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Tribes", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="tribes/[id]"
-        options={{
-          animation: 'none',
-          title: "Tribe Details",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/history/tribes")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Tribe Details", headerLeft: () => <BackButton fallbackRoute="/(player)/history/tribes" /> }}
       />
       <Stack.Screen
         name="challenges"
-        options={{
-          animation: 'none',
-          title: "Challenges",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Challenges", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="tribals"
-        options={{
-          animation: 'none',
-          title: "Tribals",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Tribals", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="votes"
-        options={{
-          animation: 'none',
-          title: "Votes",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Votes", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="advantages"
-        options={{
-          animation: 'none',
-          title: "Advantages",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Advantages", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="journeys"
-        options={{
-          animation: 'none',
-          title: "Journeys",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Journeys", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="boots"
-        options={{
-          animation: 'none',
-          title: "Boots",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Boots", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="results"
-        options={{
-          animation: 'none',
-          title: "Results",
-          headerLeft: () => <BackButton onPress={() => handleBack("/(player)/more")} />,
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-        }}
+        options={{ ...HEADER_BASE, title: "Results", headerLeft: () => <BackButton fallbackRoute="/more" /> }}
       />
       <Stack.Screen
         name="season/[season]/index"
@@ -171,11 +75,9 @@ export default function HistoryLayout() {
         }) => {
           const season = route?.params?.season || "";
           return {
-            animation: 'none',
+            ...HEADER_BASE,
             title: season ? `Season ${season} Episodes` : "Season Episodes",
-            headerLeft: () => <BackButton onPress={() => handleBack("/(player)/history/seasons")} />,
-            headerTitleAlign: "left",
-            headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+            headerLeft: () => <BackButton fallbackRoute="/(player)/history/seasons" />,
           };
         }}
       />
@@ -189,17 +91,12 @@ export default function HistoryLayout() {
           const season = route?.params?.season || "";
           const episode = route?.params?.episode || "";
           let title = "Episode Details";
-          if (season && episode) {
-            title = `Season ${season} Episode ${episode}`;
-          } else if (season) {
-            title = `Season ${season} Episode`;
-          }
+          if (season && episode) title = `Season ${season} Episode ${episode}`;
+          else if (season) title = `Season ${season} Episode`;
           return {
-            animation: 'none',
+            ...HEADER_BASE,
             title,
-            headerLeft: () => <BackButton onPress={() => handleBack(`/(player)/history/season/${season}`)} />,
-            headerTitleAlign: "left",
-            headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
+            headerLeft: () => <BackButton fallbackRoute={`/(player)/history/season/${season}`} />,
           };
         }}
       />

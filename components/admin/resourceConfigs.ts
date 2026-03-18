@@ -1,4 +1,4 @@
-import apiService, { GroupMemberResponse, UserRecord } from '../../services/api';
+import apiService, { GroupMemberResponse, TeamResponse, TeamCastawayResponse, UserRecord } from '../../services/api';
 import { GenericCrudConfig } from './genericCrudTypes';
 
 export type SocialResourceKey = 'users' | 'groups' | 'group-members' | 'teams' | 'team-castaways';
@@ -76,7 +76,7 @@ export const socialObjectSpecs: SocialObjectSpec[] = [
     fields: ['id', 'teamName', 'totalPoints', 'createdAt', 'roster'],
     relationships: ['ManyToOne group -> Group', 'ManyToOne user -> User', 'OneToMany roster -> TeamCastaway[]'],
     listConnections: ['/v1/teams', '/v1/teams/group/{groupId}', '/v1/teams/user/{userId}', '/v1/teams/group/{groupId}/user/{userId}'],
-    crudReady: false,
+    crudReady: true,
     notes: ['DTO omits direct group/user IDs in list payload, so generic form mapping needs custom adapters.'],
   },
   {
@@ -91,7 +91,7 @@ export const socialObjectSpecs: SocialObjectSpec[] = [
     fields: ['id', 'team', 'castawayPerformance', 'draftOrder', 'points', 'draftedAt'],
     relationships: ['ManyToOne team -> Team', 'ManyToOne castawayPerformance -> CastawayPerformance'],
     listConnections: ['/v1/team-castaways', '/v1/team-castaways/team/{teamId}'],
-    crudReady: false,
+    crudReady: true,
     notes: ['Create/update expects nested relation payloads for team and castawayPerformance.'],
   },
 ];
@@ -451,6 +451,181 @@ export const socialCrudConfigMap: Partial<Record<SocialResourceKey, GenericCrudC
       { key: 'lastAccessedAt', label: 'Last Accessed', render: (item: GroupMemberResponse) => item.lastAccessedAt ?? '' },
     ],
   },
+
+  teams: {
+    title: 'Admin Social',
+    subtitle: 'Team management',
+    entityName: 'Team',
+    idKey: 'id',
+    initialFormValues: {},
+    endpoints: {
+      list: '/v1/teams',
+      getById: '/v1/teams',
+      create: '/v1/teams',
+      update: '/v1/teams',
+      remove: '/v1/teams',
+    },
+    fields: [
+      {
+        key: 'teamName',
+        label: 'Team Name',
+        type: 'text',
+        required: true,
+        placeholder: 'Enter team name',
+      },
+      {
+        key: 'groupId',
+        label: 'Group',
+        type: 'association',
+        required: true,
+        createOnly: true,
+        placeholder: 'Select group',
+        association: {
+          endpoint: '/v1/groups',
+          valuePath: 'id',
+          labelPath: 'name',
+        },
+      },
+      {
+        key: 'userId',
+        label: 'User',
+        type: 'association',
+        required: true,
+        createOnly: true,
+        placeholder: 'Select user',
+        association: {
+          endpoint: '/v1/users',
+          valuePath: 'id',
+          labelPath: 'username',
+        },
+      },
+    ],
+    customCreate: async (values) => {
+      const teamName = String(values.teamName ?? '').trim();
+      const groupId = Number(values.groupId);
+      const userId = Number(values.userId);
+      if (!teamName) throw new Error('Team name is required.');
+      if (Number.isNaN(groupId) || groupId <= 0) throw new Error('Valid Group is required.');
+      if (Number.isNaN(userId) || userId <= 0) throw new Error('Valid User is required.');
+      await apiService.post('/v1/teams', {
+        teamName,
+        group: { id: groupId },
+        user: { id: userId },
+      });
+    },
+    customUpdate: async (item: TeamResponse, values) => {
+      const teamName = String(values.teamName ?? '').trim();
+      if (!teamName) throw new Error('Team name is required.');
+      await apiService.put('/v1/teams', {
+        id: item.id,
+        teamName,
+      });
+    },
+    fromItemToForm: (item: TeamResponse) => ({
+      teamName: item.teamName,
+      groupId: '',
+      userId: '',
+    }),
+    tableColumns: [
+      { key: 'id', label: 'ID' },
+      { key: 'teamName', label: 'Team Name' },
+      { key: 'totalPoints', label: 'Points', render: (item: TeamResponse) => String(item.totalPoints ?? 0) },
+      { key: 'roster', label: 'Roster Size', render: (item: TeamResponse) => String(item.roster?.length ?? 0) },
+      { key: 'createdAt', label: 'Created At', render: (item: TeamResponse) => String(item.createdAt ?? '') },
+    ],
+  } as GenericCrudConfig<TeamResponse>,
+
+  'team-castaways': {
+    title: 'Admin Social',
+    subtitle: 'Team castaway drafts',
+    entityName: 'Team Castaway',
+    idKey: 'id',
+    initialFormValues: { draftOrder: 1 },
+    endpoints: {
+      list: '/v1/team-castaways',
+      getById: '/v1/team-castaways',
+      create: '/v1/team-castaways',
+      update: '/v1/team-castaways',
+      remove: '/v1/team-castaways',
+    },
+    fields: [
+      {
+        key: 'teamId',
+        label: 'Team',
+        type: 'association',
+        required: true,
+        placeholder: 'Select team',
+        association: {
+          endpoint: '/v1/teams',
+          valuePath: 'id',
+          labelPath: 'teamName',
+        },
+      },
+      {
+        key: 'castawayPerformanceId',
+        label: 'Castaway Performance',
+        type: 'association',
+        required: true,
+        createOnly: true,
+        placeholder: 'Select castaway performance',
+        association: {
+          endpoint: '/v1/castaway-performances',
+          valuePath: 'id',
+          labelPath: 'id',
+        },
+      },
+      {
+        key: 'draftOrder',
+        label: 'Draft Order',
+        type: 'number',
+        required: true,
+      },
+    ],
+    customCreate: async (values) => {
+      const teamId = Number(values.teamId);
+      const castawayPerformanceId = Number(values.castawayPerformanceId);
+      const draftOrder = Number(values.draftOrder);
+      if (Number.isNaN(teamId) || teamId <= 0) throw new Error('Valid Team is required.');
+      if (Number.isNaN(castawayPerformanceId) || castawayPerformanceId <= 0) throw new Error('Valid Castaway Performance is required.');
+      await apiService.post('/v1/team-castaways', {
+        team: { id: teamId },
+        castawayPerformance: { id: castawayPerformanceId },
+        draftOrder: Number.isNaN(draftOrder) ? 1 : draftOrder,
+      });
+    },
+    customUpdate: async (item: TeamCastawayResponse, values) => {
+      const teamId = Number(values.teamId);
+      const draftOrder = Number(values.draftOrder);
+      if (Number.isNaN(teamId) || teamId <= 0) throw new Error('Valid Team is required.');
+      await apiService.put('/v1/team-castaways', {
+        id: item.id,
+        team: { id: teamId },
+        castawayPerformance: { id: item.castawayPerformance?.id },
+        draftOrder: Number.isNaN(draftOrder) ? item.draftOrder : draftOrder,
+      });
+    },
+    fromItemToForm: (item: TeamCastawayResponse) => ({
+      teamId: '',
+      castawayPerformanceId: item.castawayPerformance?.id ?? '',
+      draftOrder: item.draftOrder ?? 1,
+    }),
+    tableColumns: [
+      { key: 'id', label: 'ID' },
+      {
+        key: 'castaway',
+        label: 'Castaway',
+        render: (item: TeamCastawayResponse) => item.castawayPerformance?.castaway?.full_name ?? String(item.castawayPerformance?.id ?? ''),
+      },
+      {
+        key: 'season',
+        label: 'Season',
+        render: (item: TeamCastawayResponse) => String(item.castawayPerformance?.seasonId ?? ''),
+      },
+      { key: 'draftOrder', label: 'Draft Order', render: (item: TeamCastawayResponse) => String(item.draftOrder ?? '') },
+      { key: 'points', label: 'Points', render: (item: TeamCastawayResponse) => String(item.points ?? 0) },
+      { key: 'draftedAt', label: 'Drafted At', render: (item: TeamCastawayResponse) => String(item.draftedAt ?? '') },
+    ],
+  } as GenericCrudConfig<TeamCastawayResponse>,
 };
 
 export const getSocialObjectSpec = (resource: string) =>

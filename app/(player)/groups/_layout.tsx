@@ -1,102 +1,42 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { Stack, useRouter } from "expo-router";
-import { TouchableOpacity } from "react-native";
-import { Colors, Spacing } from "../../../constants/theme";
+import { Stack } from "expo-router";
+import BackButton from "../../../components/shared/BackButton";
+
+const HEADER_BASE = {
+  animation: 'none' as const,
+  headerTitleAlign: 'left' as const,
+  headerTitleStyle: { fontSize: 28, fontWeight: 'bold' as const },
+};
 
 export default function GroupsLayout() {
-  const router = useRouter();
-
-  const handleBack = (fallbackRoute: string) => {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-
-    router.replace(fallbackRoute);
-  };
-
-  const renderBackButton = (fallbackRoute: string) => (
-    <TouchableOpacity
-      onPress={() => handleBack(fallbackRoute)}
-      accessibilityRole="button"
-      accessibilityLabel="Go back"
-      style={{ paddingRight: Spacing.sm }}
-    >
-      <Ionicons name="chevron-back" size={24} color={Colors.text} />
-    </TouchableOpacity>
-  );
-
   return (
     <Stack screenOptions={{ animation: 'none' }}>
       <Stack.Screen
         name="select"
-        options={{
-          animation: 'none',
-          title: "Select Group",
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-          headerLeft: () => renderBackButton("/(player)/group"),
-        }}
+        options={{ ...HEADER_BASE, title: "Select Group", headerLeft: () => <BackButton fallbackRoute="/(player)/group" /> }}
       />
       <Stack.Screen
         name="create"
-        options={{
-          animation: 'none',
-          title: "Create Group",
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-          headerLeft: () => renderBackButton("/(player)/groups/select"),
-        }}
+        options={{ ...HEADER_BASE, title: "Create Group", headerLeft: () => <BackButton fallbackRoute="/(player)/groups/select" /> }}
       />
       <Stack.Screen
         name="details"
-        options={{
-          animation: 'none',
-          title: "Group Details",
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-          headerLeft: () => renderBackButton("/(player)/group"),
-        }}
+        options={{ ...HEADER_BASE, title: "Group Details", headerLeft: () => <BackButton fallbackRoute="/(player)/group" /> }}
       />
       <Stack.Screen
         name="edit-team"
-        options={{
-          animation: 'none',
-          title: "Edit Team",
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-          headerLeft: () => renderBackButton("/(player)/team"),
-        }}
+        options={{ ...HEADER_BASE, title: "Edit Team", headerLeft: () => <BackButton fallbackRoute="/(player)/team" /> }}
       />
       <Stack.Screen
         name="manage"
-        options={{
-          animation: 'none',
-          title: "Manage Groups",
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-          headerLeft: () => renderBackButton("/(player)/group"),
-        }}
+        options={{ ...HEADER_BASE, title: "Manage Groups", headerLeft: () => <BackButton fallbackRoute="/(player)/group" /> }}
       />
       <Stack.Screen
         name="manage/[id]"
-        options={{
-          animation: 'none',
-          title: "Edit Group",
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-          headerLeft: () => renderBackButton("/(player)/groups/manage"),
-        }}
+        options={{ ...HEADER_BASE, title: "Edit Group", headerLeft: () => <BackButton fallbackRoute="/(player)/groups/manage" /> }}
       />
       <Stack.Screen
         name="invitations"
-        options={{
-          animation: 'none',
-          title: "Invitations",
-          headerTitleAlign: "left",
-          headerTitleStyle: { fontSize: 28, fontWeight: "bold" },
-          headerLeft: () => renderBackButton("/(player)/group"),
-        }}
+        options={{ ...HEADER_BASE, title: "Invitations", headerLeft: () => <BackButton fallbackRoute="/(player)/group" /> }}
       />
     </Stack>
   );

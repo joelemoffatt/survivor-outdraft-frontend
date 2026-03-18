@@ -49,7 +49,7 @@ export default function ProfileScreen() {
         <MenuItem
           icon="create-outline"
           label="Edit Profile"
-          onPress={() => router.push('/(player)/profile/edit')}
+          onPress={() => router.push('/profile/edit')}
           showChevron
         />
       </Card>
@@ -60,14 +60,14 @@ export default function ProfileScreen() {
         <MenuItem
           icon="notifications-outline"
           label="Notifications"
-          onPress={() => router.push('/(player)/settings/notifications')}
+          onPress={() => router.push('/settings/notifications')}
           showChevron
           style={styles.menuItemBorder}
         />
         <MenuItem
           icon="settings-outline"
           label="Preferences"
-          onPress={() => router.push('/(player)/settings/preferences')}
+          onPress={() => router.push('/settings/preferences')}
           showChevron
         />
       </Card>

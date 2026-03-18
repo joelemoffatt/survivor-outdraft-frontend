@@ -46,6 +46,7 @@ function RootLayoutNav() {
     }}>
       <Stack.Screen name="(public)" options={{ animation: 'none' }} />
       <Stack.Screen name="(player)" options={{ animation: 'none' }} />
+      <Stack.Screen name="(shared)" options={{ animation: 'none' }} />
       <Stack.Screen name="admin" options={{ animation: 'none' }} />
     </Stack>
   );
