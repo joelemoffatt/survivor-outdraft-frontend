@@ -326,31 +326,7 @@ const normalizeHexColor = (value?: string | null) => {
   return Colors.lightBackground;
 };
 
-const EpisodeEventRow = ({
-  episode,
-  seasonId,
-  onEpisodePress,
-}: {
-  episode: EpisodeEventSummary;
-  seasonId: number;
-  onEpisodePress: (seasonId: number, episodeNumber: number) => void;
-}) => (
-  <View style={styles.scoreEventRow}>
-    <View style={styles.scoreEventLeft}>
-      <Pressable onPress={() => onEpisodePress(seasonId, episode.episodeNumber)}>
-        <Text style={styles.scoreEventEpisodeLink}>{`Ep ${episode.episodeNumber}`}</Text>
-      </Pressable>
-      <View style={styles.scoreEventBody}>
-        <Text style={styles.scoreEventTitle}>{episode.episodeTitle}</Text>
-        {episode.events.map((event, index) => (
-          <Text key={`${episode.episodeNumber}-${index}`} style={styles.scoreEventLabel}>
-            {event}
-          </Text>
-        ))}
-      </View>
-    </View>
-  </View>
-);
+import EpisodeEventsModal, { EpisodeBlock } from '../shared/EpisodeEventsModal';
 
 export default function CastawayPerformanceAggregateCards({
   performances,
@@ -851,20 +827,23 @@ export default function CastawayPerformanceAggregateCards({
               {selected?.aggregate.seasonName} • {selected?.aggregate.version}
             </Text>
 
-            <ScrollView style={styles.modalList}>
-              {selected && selected.aggregate.metricEpisodeEvents[selected.metric.key].length > 0 ? (
-                selected.aggregate.metricEpisodeEvents[selected.metric.key].map((episode) => (
-                  <EpisodeEventRow
-                    key={`${selected.aggregate.performanceId}-${selected.metric.key}-${episode.episodeNumber}`}
-                    episode={episode}
-                    seasonId={selected.aggregate.seasonId}
-                    onEpisodePress={handleOpenEpisode}
-                  />
-                ))
-              ) : (
-                <Text style={styles.emptyText}>No events found for this category.</Text>
-              )}
-            </ScrollView>
+            <EpisodeEventsModal
+              visible={isModalVisible}
+              onClose={closeModal}
+              title={selected?.metric.label ?? undefined}
+              subtitle={selected ? `${selected.aggregate.seasonName} • ${selected.aggregate.version}` : undefined}
+              seasonId={selected?.aggregate.seasonId ?? null}
+              onEpisodePress={handleOpenEpisode}
+              episodes={
+                selected
+                  ? selected.aggregate.metricEpisodeEvents[selected.metric.key].map((ep) => ({
+                      episodeNumber: ep.episodeNumber ?? null,
+                      episodeTitle: ep.episodeTitle ?? null,
+                      events: ep.events.map((label, idx) => ({ id: `${ep.episodeNumber}-${idx}`, label })),
+                    }))
+                  : []
+              }
+            />
 
             <TouchableOpacity style={styles.modalClose} onPress={() => closeModal()}>
               <Text style={styles.modalCloseText}>Close</Text>

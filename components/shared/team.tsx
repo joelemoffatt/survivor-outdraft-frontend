@@ -7,6 +7,7 @@ import { apiService, CastawayScoreBreakdown, GroupResponse, ScoreBreakdownRespon
 import { formatAdvantageMovement } from '../../services/textFormatter';
 import { getImportedCastawayImageSource } from '../../utils/castawayImages';
 import Card from './Card';
+import EpisodeEventsModal from './EpisodeEventsModal';
 
 interface TeamViewProps {
   team: TeamResponse;
@@ -23,12 +24,24 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
   const router = useRouter();
   const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
   const [selectedCastaway, setSelectedCastaway] = useState<CastawayScoreBreakdown | null>(null);
+  const [selectedCastawayEpisodes, setSelectedCastawayEpisodes] = useState<{
+    episodeNumber: number | null;
+    episodeTitle?: string | null;
+    events: { id?: number | string; label: string; points?: number | null }[];
+  }[]>([]);
+  const [selectedCastawaySeasonId, setSelectedCastawaySeasonId] = useState<number | null>(null);
   const [advantageTextByEpisode, setAdvantageTextByEpisode] = useState<Record<number, string[]>>({});
   const [loadingCastawayBreakdownId, setLoadingCastawayBreakdownId] = useState<number | null>(null);
   const modalRequestIdRef = useRef(0);
 
   const loadAdvantageTextForBreakdown = async (breakdown: CastawayScoreBreakdown) => {
-    const seasonId = group?.season?.id ?? null;
+    let seasonId =
+      group?.season?.id ??
+      team.roster?.find((r) => r.id === breakdown.teamCastawayId)?.castawayPerformance?.seasonId ??
+      null;
+    if (!seasonId && team.roster && team.roster.length > 0) {
+      seasonId = team.roster[0].castawayPerformance?.seasonId ?? null;
+    }
     if (!seasonId) {
       return {} as Record<number, string[]>;
     }
@@ -118,6 +131,7 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
     setIsScoreModalVisible(false);
     setSelectedCastaway(null);
     setAdvantageTextByEpisode({});
+    setSelectedCastawaySeasonId(null);
   };
 
   const navigateToEpisodeFromModal = (seasonId: number, episodeNumber: number) => {
@@ -249,6 +263,91 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                         }
 
                         setAdvantageTextByEpisode(loadedAdvantageTextByEpisode);
+
+                        // Build episodes with titles (if possible) and events with points
+                        let seasonId =
+                          group?.season?.id ??
+                          team.roster?.find((r) => r.id === breakdown.teamCastawayId)?.castawayPerformance?.seasonId ??
+                          null;
+                        if (!seasonId && team.roster && team.roster.length > 0) {
+                          seasonId = team.roster[0].castawayPerformance?.seasonId ?? null;
+                        }
+                        const uniqueEpisodeNumbers = Array.from(
+                          new Set((breakdown.scoreEvents ?? []).map((e) => e.episodeNumber ?? null)),
+                        ).filter((n) => n != null) as number[];
+
+                        let episodesPrepared: typeof selectedCastawayEpisodes = [];
+                        if (seasonId && uniqueEpisodeNumbers.length > 0) {
+                          try {
+                            const episodesList = await apiService.getEpisodes(seasonId);
+                            const titleByEp = new Map<number, string>(
+                              episodesList.map((d) => [d.episodeNumber, d.episodeTitle]),
+                            );
+
+                            const groups = new Map<number | null, typeof breakdown.scoreEvents>();
+                            (breakdown.scoreEvents ?? [])
+                              .slice()
+                              .sort((a, b) => (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0))
+                              .forEach((ev) => {
+                                const key = ev.episodeNumber ?? null;
+                                const arr = groups.get(key) ?? [];
+                                arr.push(ev);
+                                groups.set(key, arr);
+                              });
+
+                            episodesPrepared = Array.from(groups.entries())
+                              .sort((a, b) => (a[0] ?? -1) - (b[0] ?? -1))
+                              .map(([episodeNumber, events]) => ({
+                                episodeNumber: episodeNumber ?? null,
+                                episodeTitle: episodeNumber != null ? titleByEp.get(episodeNumber) ?? undefined : undefined,
+                                events: events.map((ev) => ({ id: ev.id, label: getScoreEventLabel(ev.eventLabel, ev.episodeNumber), points: ev.totalPoints })),
+                              }));
+                          } catch (err) {
+                            // fallback: build without titles
+                            const groups = new Map<number | null, typeof breakdown.scoreEvents>();
+                            (breakdown.scoreEvents ?? [])
+                              .slice()
+                              .sort((a, b) => (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0))
+                              .forEach((ev) => {
+                                const key = ev.episodeNumber ?? null;
+                                const arr = groups.get(key) ?? [];
+                                arr.push(ev);
+                                groups.set(key, arr);
+                              });
+
+                            episodesPrepared = Array.from(groups.entries())
+                              .sort((a, b) => (a[0] ?? -1) - (b[0] ?? -1))
+                              .map(([episodeNumber, events]) => ({
+                                episodeNumber: episodeNumber ?? null,
+                                episodeTitle: undefined,
+                                events: events.map((ev) => ({ id: ev.id, label: getScoreEventLabel(ev.eventLabel, ev.episodeNumber), points: ev.totalPoints })),
+                              }));
+                          }
+                        } else {
+                          // no season or no episode numbers
+                          const groups = new Map<number | null, typeof breakdown.scoreEvents>();
+                          (breakdown.scoreEvents ?? [])
+                            .slice()
+                            .sort((a, b) => (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0))
+                            .forEach((ev) => {
+                              const key = ev.episodeNumber ?? null;
+                              const arr = groups.get(key) ?? [];
+                              arr.push(ev);
+                              groups.set(key, arr);
+                            });
+
+                          episodesPrepared = Array.from(groups.entries())
+                            .sort((a, b) => (a[0] ?? -1) - (b[0] ?? -1))
+                            .map(([episodeNumber, events]) => ({
+                              episodeNumber: episodeNumber ?? null,
+                              episodeTitle: undefined,
+                              events: events.map((ev) => ({ id: ev.id, label: getScoreEventLabel(ev.eventLabel, ev.episodeNumber), points: ev.totalPoints })),
+                            }));
+                        }
+
+                        setSelectedCastawayEpisodes(episodesPrepared);
+                        setSelectedCastawaySeasonId(seasonId ?? null);
+
                         setSelectedCastaway(breakdown);
                         setIsScoreModalVisible(true);
                         setLoadingCastawayBreakdownId(null);
@@ -274,56 +373,15 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
 
     </ScrollView>
 
-    {/* Score events modal */}
-    <Modal
+    <EpisodeEventsModal
       visible={isScoreModalVisible}
-      animationType="none"
-      transparent
-      onRequestClose={() => closeScoreModal()}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>{selectedCastaway?.castawayName}</Text>
-          <Text style={styles.modalSubtitle}>{selectedCastaway?.totalPoints} pts total</Text>
-          <ScrollView style={styles.modalList}>
-            {selectedCastaway?.scoreEvents && selectedCastaway.scoreEvents.length > 0 ? (
-              selectedCastaway.scoreEvents
-                .slice()
-                .sort((a, b) => (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0))
-                .map((event) => (
-                  <View key={event.id} style={styles.scoreEventRow}>
-                    <View style={styles.scoreEventLeft}>
-                      {event.episodeNumber != null && group?.season?.id ? (
-                        <Pressable
-                          onPress={() =>
-                            navigateToEpisodeFromModal(group.season.id, event.episodeNumber as number)
-                          }
-                        >
-                          <Text style={styles.scoreEventEpisodeLink}>{`Ep ${event.episodeNumber}`}</Text>
-                        </Pressable>
-                      ) : (
-                        <Text style={styles.scoreEventEpisode}>—</Text>
-                      )}
-                      <Text style={styles.scoreEventLabel}>{getScoreEventLabel(event.eventLabel, event.episodeNumber)}</Text>
-                    </View>
-                    <Text style={styles.scoreEventPoints}>
-                      +{event.totalPoints}
-                    </Text>
-                  </View>
-                ))
-            ) : (
-              <Text style={styles.emptyText}>No scoring events yet</Text>
-            )}
-          </ScrollView>
-          <TouchableOpacity
-            style={styles.modalClose}
-            onPress={() => closeScoreModal()}
-          >
-            <Text style={styles.modalCloseText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+      onClose={() => closeScoreModal()}
+      title={selectedCastaway?.castawayName ?? undefined}
+      subtitle={selectedCastaway ? `${selectedCastaway.totalPoints} pts total` : undefined}
+      seasonId={selectedCastawaySeasonId}
+      onEpisodePress={(seasonId, episodeNumber) => navigateToEpisodeFromModal(seasonId, episodeNumber)}
+      episodes={selectedCastawayEpisodes}
+    />
 
     </>
   );
@@ -343,6 +401,12 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  scoreEventRowInner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: Spacing.xs,
   },
   headerCard: {
     marginBottom: Spacing.lg,
