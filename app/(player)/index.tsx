@@ -1,16 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext';
-import { useGroup } from '../../contexts/GroupContext';
-import { BorderRadius, Colors, FontSizes, Spacing } from '../../constants/theme';
-import apiService, { GroupResponse, TeamResponse } from '../../services/api';
+import { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useAuth } from "../../contexts/AuthContext";
+import { useGroup } from "../../contexts/GroupContext";
+import {
+  BorderRadius,
+  Colors,
+  FontSizes,
+  Spacing,
+} from "../../constants/theme";
+import apiService, { GroupResponse, TeamResponse } from "../../services/api";
 import {
   GroupRankingItem,
   LastEpisodeWidget,
   TeamPointsWidget,
-} from '../../components/player/HomeWidgets';
-import LeaderboardSection from '../../components/player/LeaderboardSection';
+} from "../../components/player/HomeWidgets";
+import LeaderboardSection from "../../components/player/LeaderboardSection";
+import Button from "../../components/shared/Button";
 
 const responsiveMinHeight = 280;
 
@@ -18,7 +31,7 @@ export default function PlayerHome() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const { selectedGroupId } = useGroup();
+  const { selectedGroupId, groupsLoaded, userHasGroups } = useGroup();
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [groupRankings, setGroupRankings] = useState<GroupRankingItem[]>([]);
@@ -56,7 +69,7 @@ export default function PlayerHome() {
             return {
               rank: index + 1,
               teamName: teamItem.teamName,
-              username: teamItem.teamName.replace('Team ', ''),
+              username: teamItem.teamName.replace("Team ", ""),
               points: teamItem.totalPoints,
               isYourTeam: teamItem.id === userTeam.id,
               teamId: teamItem.id,
@@ -65,8 +78,12 @@ export default function PlayerHome() {
 
         setGroupRankings(rankings);
       } catch (loadError) {
-        console.error('Failed to load home page data:', loadError);
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load home data');
+        console.error("Failed to load home page data:", loadError);
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load home data",
+        );
       } finally {
         setLoading(false);
       }
@@ -85,11 +102,12 @@ export default function PlayerHome() {
   }, [group]);
 
   const lastEpisodeNumber = group?.latestEpisodeWatched?.episodeNumber ?? null;
-  const hasLastEpisode = displaySeasonNumber != null && lastEpisodeNumber != null;
+  const hasLastEpisode =
+    displaySeasonNumber != null && lastEpisodeNumber != null;
 
   const lastEpisodeLabel = hasLastEpisode
     ? `S${displaySeasonNumber} EP${lastEpisodeNumber}`
-    : '--';
+    : "--";
 
   const isWideDashboard = width >= 1100;
 
@@ -99,7 +117,7 @@ export default function PlayerHome() {
     }
 
     router.push({
-      pathname: '/(player)/history/season/[season]/episode/[episode]',
+      pathname: "/(player)/history/season/[season]/episode/[episode]",
       params: {
         season: String(group.season.id),
         episode: String(group.latestEpisodeWatched.episodeNumber),
@@ -109,12 +127,12 @@ export default function PlayerHome() {
 
   const handleOpenTeam = (teamId: number, isYourTeam?: boolean) => {
     if (isYourTeam) {
-      router.push('/(player)/team');
+      router.push("/(player)/team");
       return;
     }
 
     router.push({
-      pathname: '/(player)/teams/[teamId]',
+      pathname: "/(player)/teams/[teamId]",
       params: {
         teamId: String(teamId),
       },
@@ -122,9 +140,39 @@ export default function PlayerHome() {
   };
 
   if (!selectedGroupId) {
+    if (!groupsLoaded) {
+      return (
+        <View style={styles.centerContainer}>
+          <Text style={styles.centerText}>
+            Select a group to see your live home dashboard.
+          </Text>
+        </View>
+      );
+    }
+
+    if (groupsLoaded && !userHasGroups) {
+      return (
+        <View style={styles.centerContainer}>
+          <Text style={styles.centerText}>
+            Select a group to view live standings.
+          </Text>
+          <Button
+            label="Select Group"
+            variant="outline"
+            size="md"
+            onPress={() => router.push("/(player)/groups/select")}
+            style={styles.centerButton}
+            icon="swap-horizontal-outline"
+          />
+        </View>
+      );
+    }
+
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.centerText}>Select a group to see your live home dashboard.</Text>
+        <Text style={styles.centerText}>
+          Select a group to see your live home dashboard.
+        </Text>
       </View>
     );
   }
@@ -141,7 +189,9 @@ export default function PlayerHome() {
   if (error || !group || !team) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error ?? 'Failed to load home data.'}</Text>
+        <Text style={styles.errorText}>
+          {error ?? "Failed to load home data."}
+        </Text>
       </View>
     );
   }
@@ -150,19 +200,28 @@ export default function PlayerHome() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.headerCard}>
         <Text style={styles.pageTitle}>Home</Text>
-        <Text style={styles.pageSubtitle}>Welcome back{user?.username ? `, ${user.username}` : ''}.</Text>
+        <Text style={styles.pageSubtitle}>
+          Welcome back{user?.username ? `, ${user.username}` : ""}.
+        </Text>
       </View>
 
       <View style={[isWideDashboard && styles.dashboardLayoutWide]}>
-        <View style={[styles.widgetsColumn, isWideDashboard && styles.widgetsColumnWide]}>
+        <View
+          style={[
+            styles.widgetsColumn,
+            isWideDashboard && styles.widgetsColumnWide,
+          ]}
+        >
           <LastEpisodeWidget
             label={lastEpisodeLabel}
             onPress={hasLastEpisode ? handleOpenLastEpisode : undefined}
-            style={isWideDashboard ? styles.stackedWidget : styles.topWidgetLeft}
+            style={
+              isWideDashboard ? styles.stackedWidget : styles.topWidgetLeft
+            }
           />
           <TeamPointsWidget
             totalPoints={team.totalPoints}
-            onPress={() => router.push('/(player)/team')}
+            onPress={() => router.push("/(player)/team")}
             style={isWideDashboard ? styles.stackedWidget : styles.topWidget}
           />
         </View>
@@ -171,7 +230,10 @@ export default function PlayerHome() {
           title="Leaderboard"
           rankings={groupRankings}
           onTeamPress={handleOpenTeam}
-          style={[styles.leaderboardSection, isWideDashboard && styles.leaderboardSectionWide]}
+          style={[
+            styles.leaderboardSection,
+            isWideDashboard && styles.leaderboardSectionWide,
+          ]}
           titleStyle={isWideDashboard ? styles.leaderboardTitleWide : undefined}
         />
       </View>
@@ -190,22 +252,24 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.lg,
   },
   centerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: Colors.secondaryBackground,
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: Spacing.lg,
   },
   centerText: {
     color: Colors.textSecondary,
     fontSize: FontSizes.medium,
-    marginTop: Spacing.sm,
-    textAlign: 'center',
+    textAlign: "center",
+  },
+  centerButton: {
+    marginTop: Spacing.md,
   },
   errorText: {
     color: Colors.warning,
     fontSize: FontSizes.medium,
-    textAlign: 'center',
+    textAlign: "center",
   },
   headerCard: {
     backgroundColor: Colors.background,
@@ -219,7 +283,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     color: Colors.text,
     fontSize: FontSizes.xlarge,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   pageSubtitle: {
     color: Colors.textSecondary,
@@ -227,16 +291,16 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   dashboardLayoutWide: {
-    alignItems: 'stretch',
-    flexDirection: 'row',
+    alignItems: "stretch",
+    flexDirection: "row",
   },
   widgetsColumn: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: Spacing.md,
   },
   widgetsColumnWide: {
-    alignSelf: 'flex-start',
-    flexDirection: 'column',
+    alignSelf: "flex-start",
+    flexDirection: "column",
     flexShrink: 0,
     marginBottom: 0,
     width: 280,
@@ -250,13 +314,13 @@ const styles = StyleSheet.create({
   },
   stackedWidget: {
     marginBottom: Spacing.md,
-    width: '100%',
+    width: "100%",
   },
   leaderboardSection: {
-    width: '100%',
+    width: "100%",
   },
   leaderboardSectionWide: {
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
     flex: 1,
   },
   leaderboardTitleWide: {

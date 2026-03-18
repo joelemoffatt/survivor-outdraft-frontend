@@ -1,55 +1,57 @@
-import { Alert, View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
-import { useEffect, useState } from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
-import { useResponsive, BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
-import { useAuth } from '../../contexts/AuthContext';
-import { useGroup } from '../../contexts/GroupContext';
-import apiService, { TeamResponse, GroupResponse, ScoreBreakdownResponse } from '../../services/api';
-import DraftScreen from '../../components/player/DraftScreen';
-import Card from '../../components/shared/Card';
-import Button from '../../components/shared/Button';
-import TeamView from '../../components/shared/team';
+import {
+  Alert,
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
+import { useEffect, useState } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useRouter } from "expo-router";
+import {
+  useResponsive,
+  BorderRadius,
+  Colors,
+  FontSizes,
+  Shadow,
+  Spacing,
+} from "../../constants/theme";
+import { useAuth } from "../../contexts/AuthContext";
+import { useGroup } from "../../contexts/GroupContext";
+import apiService, {
+  TeamResponse,
+  GroupResponse,
+  ScoreBreakdownResponse,
+} from "../../services/api";
+import DraftScreen from "../../components/player/DraftScreen";
+import Card from "../../components/shared/Card";
+import Button from "../../components/shared/Button";
+import TeamView from "../../components/shared/team";
 
 export default function TeamScreen() {
   const router = useRouter();
   const responsive = useResponsive();
   const { user } = useAuth();
-  const { selectedGroupId, setSelectedGroupId } = useGroup();
+  const { selectedGroupId, setSelectedGroupId, groupsLoaded, userHasGroups } =
+    useGroup();
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<string>('');
+  const [countdown, setCountdown] = useState<string>("");
   const [startingDraft, setStartingDraft] = useState(false);
   const [startDraftError, setStartDraftError] = useState<string | null>(null);
   const [draftComplete, setDraftComplete] = useState(false);
   const [selectingGroup, setSelectingGroup] = useState(false);
-  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdownResponse | null>(null);
-  const isGroupLeader = user ? Number(user.id) === Number(group?.admin?.id) : false;
+  const [scoreBreakdown, setScoreBreakdown] =
+    useState<ScoreBreakdownResponse | null>(null);
+  const isGroupLeader = user
+    ? Number(user.id) === Number(group?.admin?.id)
+    : false;
 
-  // Auto-select first group if none selected
-  useEffect(() => {
-    if (selectedGroupId || !user || selectingGroup) {
-      return;
-    }
-
-    setSelectingGroup(true);
-    const autoSelectGroup = async () => {
-      try {
-        const userGroups = await apiService.getUserGroups(user.id);
-        if (userGroups.length > 0) {
-          setSelectedGroupId(userGroups[0].id);
-        }
-      } catch (err) {
-        console.error('Failed to auto-select group:', err);
-      } finally {
-        setSelectingGroup(false);
-      }
-    };
-
-    autoSelectGroup();
-  }, [user, selectedGroupId, selectingGroup, setSelectedGroupId]);
+  // Note: group auto-selection is handled centrally in GroupContext
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,22 +63,25 @@ export default function TeamScreen() {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Fetch group info
         const groupData = await apiService.getGroupById(selectedGroupId);
         setGroup(groupData);
-        
+
         // Fetch team data
-        const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
+        const teamData = await apiService.getTeamByGroupAndUser(
+          selectedGroupId,
+          user.id,
+        );
         setTeam(teamData);
 
         // Reset draftComplete if draft is still in progress
-        if (groupData.status === 'DRAFTING') {
+        if (groupData.status === "DRAFTING") {
           setDraftComplete(false);
         }
       } catch (err: any) {
-        console.error('Failed to fetch data:', err);
-        setError(err?.message || 'Failed to load data');
+        console.error("Failed to fetch data:", err);
+        setError(err?.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
@@ -93,7 +98,7 @@ export default function TeamScreen() {
         const breakdown = await apiService.getTeamScoreBreakdown(team.id);
         setScoreBreakdown(breakdown);
       } catch (err) {
-        console.debug('Score breakdown not available yet:', err);
+        console.debug("Score breakdown not available yet:", err);
         setScoreBreakdown(null);
       }
     };
@@ -103,8 +108,8 @@ export default function TeamScreen() {
   // Countdown timer for draft start
   useEffect(() => {
     const scheduledAt = group?.draft?.scheduledAt;
-    if (!group || !scheduledAt || group.status !== 'PENDING') {
-      setCountdown('');
+    if (!group || !scheduledAt || group.status !== "PENDING") {
+      setCountdown("");
       return;
     }
 
@@ -114,7 +119,7 @@ export default function TeamScreen() {
       const diff = startTime.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setCountdown('Draft should start soon!');
+        setCountdown("Draft should start soon!");
         return;
       }
 
@@ -130,21 +135,21 @@ export default function TeamScreen() {
 
   // Poll for draft status changes while draft is PENDING
   useEffect(() => {
-    if (!group || group.status !== 'PENDING' || !selectedGroupId) {
+    if (!group || group.status !== "PENDING" || !selectedGroupId) {
       return;
     }
 
     const pollDraftStatus = async () => {
       try {
         const updatedGroup = await apiService.getGroupById(selectedGroupId);
-        
+
         // If status changed from PENDING to DRAFTING, update state
-        if (updatedGroup.status !== 'PENDING' && group.status === 'PENDING') {
+        if (updatedGroup.status !== "PENDING" && group.status === "PENDING") {
           setGroup(updatedGroup);
         }
       } catch (err) {
         // Silently handle polling errors to avoid spam in console
-        console.debug('Draft status poll failed:', err);
+        console.debug("Draft status poll failed:", err);
       }
     };
 
@@ -155,29 +160,34 @@ export default function TeamScreen() {
 
   const handleStartDraft = async () => {
     if (!selectedGroupId) return;
-    
+
     try {
       setStartingDraft(true);
       setStartDraftError(null);
       await apiService.startDraft(selectedGroupId);
-      
+
       // Refresh group data
       const groupData = await apiService.getGroupById(selectedGroupId);
       setGroup(groupData);
     } catch (err: any) {
-      console.error('Failed to start draft:', err);
-      const rawMessage = err?.message || 'Unknown error';
-      const isUnsafeDraftConfig = rawMessage.includes('Unsafe draft configuration');
+      console.error("Failed to start draft:", err);
+      const rawMessage = err?.message || "Unknown error";
+      const isUnsafeDraftConfig = rawMessage.includes(
+        "Unsafe draft configuration",
+      );
 
       if (isUnsafeDraftConfig) {
         const friendlyMessage =
-          'This draft setup can leave someone with no legal pick. ' +
-          'Try lowering team size or choosing a less advanced watched episode.';
+          "This draft setup can leave someone with no legal pick. " +
+          "Try lowering team size or choosing a less advanced watched episode.";
         setStartDraftError(friendlyMessage);
-        Alert.alert('Cannot Start Draft', `${friendlyMessage}\n\nDetails: ${rawMessage}`);
+        Alert.alert(
+          "Cannot Start Draft",
+          `${friendlyMessage}\n\nDetails: ${rawMessage}`,
+        );
       } else {
         setStartDraftError(rawMessage);
-        Alert.alert('Failed to start draft', rawMessage);
+        Alert.alert("Failed to start draft", rawMessage);
       }
     } finally {
       setStartingDraft(false);
@@ -185,6 +195,33 @@ export default function TeamScreen() {
   };
 
   if (!selectedGroupId) {
+    if (!groupsLoaded) {
+      return (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.infoText}>Loading groups...</Text>
+        </View>
+      );
+    }
+
+    if (groupsLoaded && !userHasGroups) {
+      return (
+        <View style={styles.centerContainer}>
+          <Text style={styles.centerText}>
+            Select a group to view live standings.
+          </Text>
+          <Button
+            label="Select Group"
+            variant="outline"
+            size="md"
+            onPress={() => router.push("/(player)/groups/select")}
+            style={styles.centerButton}
+            icon="swap-horizontal-outline"
+          />
+        </View>
+      );
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -219,28 +256,39 @@ export default function TeamScreen() {
   }
 
   // BEFORE DRAFT - Show countdown
-  if (group.status === 'PENDING') {
+  if (group.status === "PENDING") {
     const isAdmin = isGroupLeader;
-    
+
     return (
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.contentContainer}
+      >
         <Card style={styles.headerCard} shadow="medium">
           <View style={styles.headerTop}>
             <View style={styles.headerText}>
               <Text style={styles.teamName}>{team.teamName}</Text>
               <View style={styles.seasonStatusRow}>
-                <Text style={styles.seasonLabel} numberOfLines={1} ellipsizeMode="tail">
+                <Text
+                  style={styles.seasonLabel}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {group.name}
                 </Text>
               </View>
             </View>
             <TouchableOpacity
               style={styles.detailsIconButton}
-              onPress={() => router.push('/(player)/groups/edit-team')}
+              onPress={() => router.push("/(player)/groups/edit-team")}
               accessibilityRole="button"
               accessibilityLabel="Edit teams"
             >
-              <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
+              <Ionicons
+                name="pencil-outline"
+                size={20}
+                color={Colors.primary}
+              />
             </TouchableOpacity>
           </View>
 
@@ -256,7 +304,7 @@ export default function TeamScreen() {
 
         <Card style={styles.draftInfoCard} shadow="light">
           <Text style={styles.draftInfoTitle}>Draft Coming Soon!</Text>
-          
+
           {group.draft?.scheduledAt && (
             <View style={styles.countdownSection}>
               <Text style={styles.countdownLabel}>Draft starts in:</Text>
@@ -270,7 +318,9 @@ export default function TeamScreen() {
           <View style={styles.draftDetailsSection}>
             <View style={styles.draftDetail}>
               <Text style={styles.draftDetailLabel}>Team Size</Text>
-              <Text style={styles.draftDetailValue}>{group.teamSize || '?'} players</Text>
+              <Text style={styles.draftDetailValue}>
+                {group.teamSize || "?"} players
+              </Text>
             </View>
             <View style={styles.draftDetail}>
               <Text style={styles.draftDetailLabel}>Group</Text>
@@ -289,7 +339,9 @@ export default function TeamScreen() {
                 style={styles.startButton}
               />
               {startDraftError && (
-                <Text style={styles.startDraftErrorText}>{startDraftError}</Text>
+                <Text style={styles.startDraftErrorText}>
+                  {startDraftError}
+                </Text>
               )}
             </>
           )}
@@ -305,7 +357,7 @@ export default function TeamScreen() {
   }
 
   // DURING DRAFT - Show draft UI
-  if (group.status === 'DRAFTING' && !draftComplete) {
+  if (group.status === "DRAFTING" && !draftComplete) {
     return (
       <DraftScreen
         groupId={selectedGroupId}
@@ -317,14 +369,17 @@ export default function TeamScreen() {
             setGroup(groupData);
 
             if (user) {
-              const teamData = await apiService.getTeamByGroupAndUser(selectedGroupId, user.id);
+              const teamData = await apiService.getTeamByGroupAndUser(
+                selectedGroupId,
+                user.id,
+              );
               setTeam(teamData);
             }
 
             setDraftComplete(true);
           } catch (err: any) {
-            console.error('Failed to refresh team after draft complete:', err);
-            setError(err?.message || 'Failed to refresh team data');
+            console.error("Failed to refresh team after draft complete:", err);
+            setError(err?.message || "Failed to refresh team data");
           }
         }}
       />
@@ -332,7 +387,14 @@ export default function TeamScreen() {
   }
 
   // AFTER DRAFT - Show your team and all teams in the group
-  return <TeamView team={team} group={group} scoreBreakdown={scoreBreakdown} isOwnTeam />;
+  return (
+    <TeamView
+      team={team}
+      group={group}
+      scoreBreakdown={scoreBreakdown}
+      isOwnTeam
+    />
+  );
 }
 
 const styles = StyleSheet.create({
@@ -347,8 +409,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.secondaryBackground,
     padding: Spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  centerText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.medium,
+    textAlign: "center",
+  },
+  centerButton: {
+    marginTop: Spacing.md,
   },
   headerCard: {
     marginBottom: Spacing.lg,
@@ -357,30 +427,30 @@ const styles = StyleSheet.create({
     ...Shadow.medium,
   },
   headerTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     marginBottom: Spacing.lg,
   },
   headerText: {
     flex: 1,
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: Spacing.sm,
   },
   teamName: {
     color: Colors.text,
     fontSize: FontSizes.xlarge,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   headerSubtitle: {
     fontSize: FontSizes.medium,
     color: Colors.textSecondary,
   },
   seasonStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: Spacing.sm,
     marginTop: Spacing.xs,
   },
@@ -392,8 +462,8 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.medium,
   },
   detailsIconButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: Spacing.xxs,
     marginLeft: Spacing.md,
   },
@@ -403,48 +473,48 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
   },
   statItem: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   statValue: {
     color: Colors.text,
     fontSize: FontSizes.xxlarge,
-    fontWeight: '800',
+    fontWeight: "800",
     lineHeight: 42,
   },
   statLabel: {
     color: Colors.textSecondary,
     fontSize: FontSizes.medium,
     marginTop: Spacing.xs,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   totalPointsLabel: {
     fontSize: FontSizes.small,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
-    fontWeight: '600',
+    textTransform: "uppercase",
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
   totalPoints: {
     fontSize: FontSizes.title,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.text,
   },
   sectionTitle: {
     color: Colors.text,
     fontSize: FontSizes.medium,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
     marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   membersCard: {
     marginBottom: 0,
   },
   memberRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
@@ -453,48 +523,48 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   memberLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   memberUsername: {
     color: Colors.text,
     fontSize: FontSizes.medium,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   memberPick: {
     color: Colors.textSecondary,
     fontSize: FontSizes.small,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: Spacing.md,
   },
   memberPointsButton: {
-    marginLeft: 'auto',
+    marginLeft: "auto",
     paddingVertical: Spacing.xs,
   },
   memberPoints: {
     color: Colors.primary,
     fontSize: FontSizes.medium,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
     padding: Spacing.lg,
   },
   modalCard: {
     backgroundColor: Colors.background,
     borderRadius: BorderRadius.lg,
     padding: Spacing.xl,
-    maxHeight: '70%',
+    maxHeight: "70%",
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadow.dark,
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.primary,
     marginBottom: 4,
   },
@@ -507,22 +577,22 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   scoreEventRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   scoreEventLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     gap: Spacing.sm,
   },
   scoreEventEpisode: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textSecondary,
     width: 44,
   },
@@ -533,7 +603,7 @@ const styles = StyleSheet.create({
   },
   scoreEventPoints: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.primary,
     marginLeft: Spacing.sm,
   },
@@ -542,13 +612,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.md,
     paddingVertical: Spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
     ...Shadow.light,
   },
   modalCloseText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   castawayInfo: {
     flex: 1,
@@ -557,40 +627,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginBottom: Spacing.xs,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   castawayName: {
     fontSize: FontSizes.medium,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text,
   },
   pointsDisplay: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   points: {
     fontSize: FontSizes.medium,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   pointsLabel: {
     fontSize: 12,
-    color: '#fff',
+    color: "#fff",
     marginTop: 2,
   },
   emptyText: {
     fontSize: 16,
     color: Colors.textSecondary,
-    fontStyle: 'italic',
-    textAlign: 'center',
+    fontStyle: "italic",
+    textAlign: "center",
     paddingVertical: Spacing.lg,
   },
   summarySection: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     marginTop: Spacing.xl,
     paddingTop: Spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: "#e0e0e0",
     gap: Spacing.md,
   },
   summaryCard: {
@@ -598,64 +668,64 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.lightBackground,
     padding: Spacing.lg,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   summaryLabel: {
     fontSize: 12,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
-    fontWeight: '600',
+    textTransform: "uppercase",
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
   summaryValue: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.primary,
   },
   infoText: {
     fontSize: 16,
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   errorText: {
     fontSize: 16,
     color: Colors.warning,
-    textAlign: 'center',
+    textAlign: "center",
   },
   // Draft-specific styles
   draftStatusLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textSecondary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1,
   },
   draftingStatus: {
-    color: '#ff6b35',
+    color: "#ff6b35",
   },
   draftInfoCard: {
     backgroundColor: Colors.infoBackground,
     marginBottom: Spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadow.light,
   },
   draftInfoTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.primary,
     marginBottom: Spacing.lg,
-    textAlign: 'center',
+    textAlign: "center",
   },
   countdownSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: Spacing.xl,
     padding: Spacing.lg,
     backgroundColor: Colors.background,
     borderRadius: BorderRadius.lg,
-    width: '100%',
+    width: "100%",
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadow.light,
@@ -664,12 +734,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   countdownValue: {
     fontSize: FontSizes.title,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.primary,
     marginBottom: Spacing.sm,
   },
@@ -678,15 +748,15 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   draftDetailsSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
     marginTop: Spacing.lg,
     gap: Spacing.md,
   },
   draftDetail: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     padding: Spacing.md,
     backgroundColor: Colors.background,
     borderRadius: BorderRadius.md,
@@ -698,11 +768,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginBottom: Spacing.xs,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   draftDetailValue: {
     fontSize: FontSizes.medium,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.primary,
   },
   startButton: {
@@ -712,7 +782,7 @@ const styles = StyleSheet.create({
   startDraftErrorText: {
     marginTop: Spacing.sm,
     color: Colors.warning,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 14,
     lineHeight: 20,
   },
@@ -720,8 +790,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginTop: Spacing.lg,
-    fontStyle: 'italic',
-    textAlign: 'center',
+    fontStyle: "italic",
+    textAlign: "center",
   },
   groupTeamsSection: {
     marginTop: Spacing.xl,
@@ -730,36 +800,36 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.primary,
   },
   teamCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     borderRadius: 12,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   yourTeamCard: {
-    backgroundColor: '#e8f4f8',
+    backgroundColor: "#e8f4f8",
     borderColor: Colors.primary,
     borderWidth: 2,
   },
   teamCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.md,
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   teamCardName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.primary,
   },
   teamRosterCount: {
     fontSize: 14,
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   teamCardRoster: {
     gap: Spacing.xs,
@@ -770,4 +840,3 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
 });
-

@@ -5,12 +5,16 @@ import { useAuth } from './AuthContext';
 interface GroupContextType {
   selectedGroupId: number | null;
   setSelectedGroupId: (id: number | null) => void;
+  groupsLoaded: boolean;
+  userHasGroups: boolean;
 }
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
 
 export function GroupProvider({ children }: { children: ReactNode }) {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
+  const [userHasGroups, setUserHasGroups] = useState(false);
   const { user, token } = useAuth();
   const autoSelectRequestInFlightRef = useRef(false);
   const autoSelectAttemptedUserIdRef = useRef<number | null>(null);
@@ -58,7 +62,12 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     const autoSelectFirstGroup = async () => {
       try {
         const userGroups = await apiService.getUserGroups(user.id);
-        if (isActive && userGroups.length > 0) {
+        if (!isActive) return;
+
+        setGroupsLoaded(true);
+        setUserHasGroups(userGroups.length > 0);
+
+        if (userGroups.length > 0) {
           updateSelectedGroupId(userGroups[0].id);
         }
       } catch (error) {
@@ -78,7 +87,14 @@ export function GroupProvider({ children }: { children: ReactNode }) {
   }, [user?.id, token, selectedGroupId, updateSelectedGroupId]);
 
   return (
-    <GroupContext.Provider value={{ selectedGroupId, setSelectedGroupId: updateSelectedGroupId }}>
+    <GroupContext.Provider
+      value={{
+        selectedGroupId,
+        setSelectedGroupId: updateSelectedGroupId,
+        groupsLoaded,
+        userHasGroups,
+      }}
+    >
       {children}
     </GroupContext.Provider>
   );
