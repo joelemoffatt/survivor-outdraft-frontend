@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
-import { CastawayScoreBreakdown, GroupResponse, ScoreBreakdownResponse, TeamResponse } from '../../services/api';
+import { apiService, CastawayScoreBreakdown, GroupResponse, ScoreBreakdownResponse, TeamResponse } from '../../services/api';
+import { formatAdvantageMovement } from '../../services/textFormatter';
 import { getImportedCastawayImageSource } from '../../utils/castawayImages';
 import Card from './Card';
 
@@ -15,9 +16,122 @@ interface TeamViewProps {
   isOwnTeam?: boolean;
 }
 
+const BOOTED_EVENT_PATTERN =
+  /(voted\s*-?\s*out(?:\s+with\s+advantage)?|votedout(?:withadvantage)?|med\s*-?\s*evac|medevac|quit(?:ted)?|eject(?:ed|ion)?|eliminat(?:ed|ion)?|removed|lost\s+in\s+fire\s+making)/i;
+
 export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, isOwnTeam = false }: TeamViewProps) {
   const router = useRouter();
+  const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
   const [selectedCastaway, setSelectedCastaway] = useState<CastawayScoreBreakdown | null>(null);
+  const [advantageTextByEpisode, setAdvantageTextByEpisode] = useState<Record<number, string[]>>({});
+  const [loadingCastawayBreakdownId, setLoadingCastawayBreakdownId] = useState<number | null>(null);
+  const modalRequestIdRef = useRef(0);
+
+  const loadAdvantageTextForBreakdown = async (breakdown: CastawayScoreBreakdown) => {
+    const seasonId = group?.season?.id ?? null;
+    if (!seasonId) {
+      return {} as Record<number, string[]>;
+    }
+
+    const castawayName = breakdown.castawayName?.trim().toLowerCase() ?? '';
+    if (!castawayName || !breakdown.scoreEvents?.length) {
+      return {} as Record<number, string[]>;
+    }
+
+    const advantageEpisodeNumbers = breakdown.scoreEvents
+      .filter(
+        (event) =>
+          event.episodeNumber != null &&
+          /advantage/i.test(event.eventLabel) &&
+          /(found|played)/i.test(event.eventLabel),
+      )
+      .map((event) => event.episodeNumber as number);
+
+    const uniqueEpisodeNumbers = Array.from(new Set(advantageEpisodeNumbers));
+    if (uniqueEpisodeNumbers.length === 0) {
+      return {} as Record<number, string[]>;
+    }
+
+    const entries = await Promise.all(
+      uniqueEpisodeNumbers.map(async (episodeNumber) => {
+        const detail = await apiService.getEpisodeDetail(seasonId, episodeNumber);
+        const rows = detail.advantageMovements
+          .filter(
+            (movement) =>
+              movement.castawayName?.trim().toLowerCase() === castawayName &&
+              /found|played/i.test(movement.event ?? ''),
+          )
+          .map((movement) =>
+            formatAdvantageMovement(
+              movement.castawayName,
+              movement.event,
+              movement.advantageType,
+              movement.playedForName,
+              movement.success,
+              movement.votesNullified,
+            ),
+          );
+
+        return [episodeNumber, rows] as const;
+      }),
+    );
+
+    return Object.fromEntries(entries);
+  };
+
+  const getScoreEventLabel = (eventLabel: string, episodeNumber: number | null) => {
+    const castawayPrefix = `${selectedCastaway?.castawayName ?? ''} - `;
+    const labelWithoutName = eventLabel.startsWith(castawayPrefix)
+      ? eventLabel.slice(castawayPrefix.length)
+      : eventLabel;
+
+    if (episodeNumber == null || !/advantage/i.test(eventLabel) || !/(found|played)/i.test(labelWithoutName)) {
+      return labelWithoutName;
+    }
+
+    const candidates = advantageTextByEpisode[episodeNumber] ?? [];
+    if (candidates.length === 0) {
+      return labelWithoutName;
+    }
+
+    const lowerLabel = labelWithoutName.toLowerCase();
+    const desiredPrefix =
+      lowerLabel.includes('found') ? 'found ' : lowerLabel.includes('played') ? 'played ' : null;
+
+    if (!desiredPrefix) {
+      return labelWithoutName;
+    }
+
+    const matched = candidates.find((candidate) => candidate.toLowerCase().startsWith(desiredPrefix));
+    return matched ?? candidates[0];
+  };
+
+  const isBootedCastaway = (breakdown: CastawayScoreBreakdown | undefined) => {
+    if (!breakdown?.scoreEvents?.length) {
+      return false;
+    }
+
+    return breakdown.scoreEvents.some((event) => BOOTED_EVENT_PATTERN.test(event.eventLabel));
+  };
+
+  const closeScoreModal = () => {
+    setIsScoreModalVisible(false);
+    setSelectedCastaway(null);
+    setAdvantageTextByEpisode({});
+  };
+
+  const navigateToEpisodeFromModal = (seasonId: number, episodeNumber: number) => {
+    setIsScoreModalVisible(false);
+    setSelectedCastaway(null);
+    setAdvantageTextByEpisode({});
+    router.push({
+      pathname: '/(player)/history/season/[season]/episode/[episode]',
+      params: {
+        season: String(seasonId),
+        episode: String(episodeNumber),
+      },
+    });
+  };
 
   return (
     <>
@@ -70,12 +184,15 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                 const breakdown = scoreBreakdown?.castaways?.find(
                   (c) => c.teamCastawayId === teamCastaway.id
                 );
+                const isLoadingBreakdown = loadingCastawayBreakdownId === teamCastaway.id;
+                const isBooted = isBootedCastaway(breakdown);
                 const pts = breakdown?.totalPoints ?? teamCastaway.points;
                 return (
                   <View
                     key={teamCastaway.id}
                     style={[
                       styles.memberRow,
+                      isBooted && styles.memberRowBooted,
                       index < roster.length - 1 && styles.memberRowBorder,
                     ]}
                   >
@@ -103,15 +220,48 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                           <Text style={styles.avatarInitial}>{castawayName.trim().charAt(0).toUpperCase()}</Text>
                         )}
                       </View>
-                      <Text style={styles.memberUsername}>{castawayName}</Text>
-                      <Text style={styles.memberPick}>Pick #{teamCastaway.draftOrder ?? index + 1}</Text>
+                      <Text style={[styles.memberUsername, isBooted && styles.memberUsernameBooted]}>{castawayName}</Text>
+                      <Text style={[styles.memberPick, isBooted && styles.memberPickBooted]}>Pick #{teamCastaway.draftOrder ?? index + 1}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.memberPointsButton}
-                      onPress={() => breakdown && setSelectedCastaway(breakdown)}
-                      disabled={!breakdown}
+                      onPress={async () => {
+                        if (!breakdown) {
+                          return;
+                        }
+
+                        const requestId = modalRequestIdRef.current + 1;
+                        modalRequestIdRef.current = requestId;
+                        setLoadingCastawayBreakdownId(breakdown.teamCastawayId);
+
+                        let loadedAdvantageTextByEpisode: Record<number, string[]> = {};
+                        try {
+                          loadedAdvantageTextByEpisode = await loadAdvantageTextForBreakdown(breakdown);
+                        } catch {
+                          loadedAdvantageTextByEpisode = {};
+                        }
+
+                        if (modalRequestIdRef.current !== requestId) {
+                          if (loadingCastawayBreakdownId === breakdown.teamCastawayId) {
+                            setLoadingCastawayBreakdownId(null);
+                          }
+                          return;
+                        }
+
+                        setAdvantageTextByEpisode(loadedAdvantageTextByEpisode);
+                        setSelectedCastaway(breakdown);
+                        setIsScoreModalVisible(true);
+                        setLoadingCastawayBreakdownId(null);
+                      }}
+                      disabled={!breakdown || loadingCastawayBreakdownId != null}
                     >
-                      <Text style={styles.memberPoints}>{pts} pts</Text>
+                      {isLoadingBreakdown ? (
+                        <View style={styles.memberPointsLoadingRow}>
+                          <ActivityIndicator size="small" color={Colors.primary} />
+                        </View>
+                      ) : (
+                        <Text style={[styles.memberPoints, isBooted && styles.memberPointsBooted]}>{pts} pts</Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 );
@@ -126,10 +276,10 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
 
     {/* Score events modal */}
     <Modal
-      visible={selectedCastaway !== null}
-      animationType="fade"
+      visible={isScoreModalVisible}
+      animationType="none"
       transparent
-      onRequestClose={() => setSelectedCastaway(null)}
+      onRequestClose={() => closeScoreModal()}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
@@ -143,10 +293,18 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                 .map((event) => (
                   <View key={event.id} style={styles.scoreEventRow}>
                     <View style={styles.scoreEventLeft}>
-                      <Text style={styles.scoreEventEpisode}>
-                        {event.episodeNumber != null ? `Ep ${event.episodeNumber}` : '—'}
-                      </Text>
-                      <Text style={styles.scoreEventLabel}>{event.eventLabel}</Text>
+                      {event.episodeNumber != null && group?.season?.id ? (
+                        <Pressable
+                          onPress={() =>
+                            navigateToEpisodeFromModal(group.season.id, event.episodeNumber as number)
+                          }
+                        >
+                          <Text style={styles.scoreEventEpisodeLink}>{`Ep ${event.episodeNumber}`}</Text>
+                        </Pressable>
+                      ) : (
+                        <Text style={styles.scoreEventEpisode}>—</Text>
+                      )}
+                      <Text style={styles.scoreEventLabel}>{getScoreEventLabel(event.eventLabel, event.episodeNumber)}</Text>
                     </View>
                     <Text style={styles.scoreEventPoints}>
                       +{event.totalPoints}
@@ -159,7 +317,7 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
           </ScrollView>
           <TouchableOpacity
             style={styles.modalClose}
-            onPress={() => setSelectedCastaway(null)}
+            onPress={() => closeScoreModal()}
           >
             <Text style={styles.modalCloseText}>Close</Text>
           </TouchableOpacity>
@@ -263,6 +421,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
+  memberRowBooted: {
+    opacity: 0.5,
+  },
   memberRowBorder: {
     borderBottomColor: Colors.border,
     borderBottomWidth: 1,
@@ -296,11 +457,17 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.medium,
     fontWeight: '600',
   },
+  memberUsernameBooted: {
+    color: Colors.textSecondary,
+  },
   memberPick: {
     color: Colors.textSecondary,
     fontSize: FontSizes.small,
     fontWeight: '600',
     marginLeft: Spacing.md,
+  },
+  memberPickBooted: {
+    color: Colors.textSecondary,
   },
   memberPointsButton: {
     marginLeft: 'auto',
@@ -310,6 +477,14 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: FontSizes.medium,
     fontWeight: '700',
+  },
+  memberPointsBooted: {
+    color: Colors.textSecondary,
+  },
+  memberPointsLoadingRow: {
+    minWidth: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -357,6 +532,12 @@ const styles = StyleSheet.create({
   scoreEventEpisode: {
     fontSize: 12,
     fontWeight: '600',
+    color: Colors.textSecondary,
+    width: 44,
+  },
+  scoreEventEpisodeLink: {
+    fontSize: 12,
+    fontWeight: '700',
     color: Colors.textSecondary,
     width: 44,
   },

@@ -24,6 +24,14 @@ const splitThreeWords = (value?: string | null) => {
     .filter((word) => word.length > 0);
 };
 
+const capitalizeFirstLetter = (value: string) => {
+  if (!value) {
+    return value;
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
 const formatDate = (value?: string | null) => {
   if (!hasText(value)) {
     return null;
@@ -78,9 +86,8 @@ const DetailItem = ({ label, value }: { label: string; value: string }) => (
 
 export default function CastawayProfileCard({ castaway, imageSource }: CastawayProfileCardProps) {
   const castawayInitial = castaway.name.trim().charAt(0).toUpperCase();
-  const threeWordChips = splitThreeWords(castaway.three_words);
+  const threeWordChips = splitThreeWords(castaway.three_words).map(capitalizeFirstLetter);
   const occupation = displayValue(castaway.occupation);
-  const gender = displayValue(castaway.gender);
   const city = displayValue(castaway.city);
   const state = displayValue(castaway.state);
   const location = city && state ? `${city}, ${state}` : city || state;
@@ -107,8 +114,7 @@ export default function CastawayProfileCard({ castaway, imageSource }: CastawayP
 
           <View style={styles.chipRow}>
             {flooredAge !== null ? <Chip label={`Age ${flooredAge}`} variant="primary" /> : null}
-            {gender ? <Chip label={gender} variant="outline" /> : null}
-            {location ? <Chip label={location} variant="default" /> : null}
+            {location ? <Chip label={location} variant="outline" /> : null}
           </View>
         </View>
       </View>

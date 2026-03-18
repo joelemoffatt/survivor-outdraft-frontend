@@ -83,56 +83,56 @@ export default function MoreScreen() {
           icon: 'calendar',
           onPress: () => router.push('/(player)/history/seasons'),
         },
-        {
-          label: 'Episodes',
-          icon: 'film',
-          onPress: () => router.push('/(player)/history/episodes'),
-        },
+        // {
+        //   label: 'Episodes',
+        //   icon: 'film',
+        //   onPress: () => router.push('/(player)/history/episodes'),
+        // },
         {
           label: 'Castaways',
           icon: 'person-outline',
           onPress: () => router.push('/(player)/history/castaways'),
         },
-        {
-          label: 'Tribes',
-          icon: 'people-outline',
-          onPress: () => router.push('/(player)/history/tribes'),
-        },
-        {
-          label: 'Challenges',
-          icon: 'fitness',
-          onPress: () => router.push('/(player)/history/challenges'),
-        },
-        {
-          label: 'Tribals',
-          icon: 'flame',
-          onPress: () => router.push('/(player)/history/tribals'),
-        },
-        {
-          label: 'Votes',
-          icon: 'checkbox',
-          onPress: () => router.push('/(player)/history/votes'),
-        },
-        {
-          label: 'Advantages',
-          icon: 'star',
-          onPress: () => router.push('/(player)/history/advantages'),
-        },
-        {
-          label: 'Journeys',
-          icon: 'map',
-          onPress: () => router.push('/(player)/history/journeys'),
-        },
-        {
-          label: 'Boots',
-          icon: 'exit',
-          onPress: () => router.push('/(player)/history/boots'),
-        },
-        {
-          label: 'Results',
-          icon: 'trophy',
-          onPress: () => router.push('/(player)/history/results'),
-        },
+        // {
+        //   label: 'Tribes',
+        //   icon: 'people-outline',
+        //   onPress: () => router.push('/(player)/history/tribes'),
+        // },
+        // {
+        //   label: 'Challenges',
+        //   icon: 'fitness',
+        //   onPress: () => router.push('/(player)/history/challenges'),
+        // },
+        // {
+        //   label: 'Tribals',
+        //   icon: 'flame',
+        //   onPress: () => router.push('/(player)/history/tribals'),
+        // },
+        // {
+        //   label: 'Votes',
+        //   icon: 'checkbox',
+        //   onPress: () => router.push('/(player)/history/votes'),
+        // },
+        // {
+        //   label: 'Advantages',
+        //   icon: 'star',
+        //   onPress: () => router.push('/(player)/history/advantages'),
+        // },
+        // {
+        //   label: 'Journeys',
+        //   icon: 'map',
+        //   onPress: () => router.push('/(player)/history/journeys'),
+        // },
+        // {
+        //   label: 'Boots',
+        //   icon: 'exit',
+        //   onPress: () => router.push('/(player)/history/boots'),
+        // },
+        // {
+        //   label: 'Results',
+        //   icon: 'trophy',
+        //   onPress: () => router.push('/(player)/history/results'),
+        // },
       ],
     },
   ];

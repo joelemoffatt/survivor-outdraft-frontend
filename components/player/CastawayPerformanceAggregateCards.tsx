@@ -9,9 +9,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
 import apiService, { CastawayPerformanceDetail } from '../../services/api';
 import { formatAdvantageMovement, isTribalChallenge } from '../../services/textFormatter';
+import { getHistoryCategoryColor, type HistoryCategory } from '../shared/HistoryUI';
 
 interface CastawayPerformanceAggregateCardsProps {
   performances: CastawayPerformanceDetail[];
@@ -21,11 +24,13 @@ interface CastawayPerformanceAggregateCardsProps {
 
 type MetricKey =
   | 'idols'
-  | 'otherAdvantages'
+  | 'advantages'
   | 'individualChallenges'
   | 'teamChallenges'
+  | 'satOut'
   | 'journey'
   | 'votes'
+  | 'votesNullified'
   | 'tribal';
 
 interface EpisodeEventSummary {
@@ -41,6 +46,8 @@ interface PerformanceAggregate {
   version: string;
   tribes: { name: string; color: string; textColor: string }[];
   resultBoot: string | null;
+  votesCastCount: number;
+  votesReceivedCount: number;
   metricCounts: Record<MetricKey, number>;
   metricEpisodeEvents: Record<MetricKey, EpisodeEventSummary[]>;
 }
@@ -48,16 +55,74 @@ interface PerformanceAggregate {
 interface MetricCardDefinition {
   key: MetricKey;
   label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  historyCategory: HistoryCategory;
+  accentColor?: string;
 }
 
 const METRIC_CARD_DEFINITIONS: MetricCardDefinition[] = [
-  { key: 'idols', label: 'Idols' },
-  { key: 'otherAdvantages', label: 'Other Advantages' },
-  { key: 'individualChallenges', label: 'Individual Challenges' },
-  { key: 'teamChallenges', label: 'Team Challenges' },
-  { key: 'journey', label: 'Journey' },
-  { key: 'votes', label: 'Votes' },
-  { key: 'tribal', label: 'Tribal' },
+  {
+    key: 'idols',
+    label: 'Idols',
+    icon: 'diamond-outline',
+    historyCategory: 'advantages',
+  },
+  {
+    key: 'advantages',
+    label: 'Advantages',
+    icon: 'sparkles-outline',
+    historyCategory: 'advantages',
+    accentColor: '#2ECC71',
+  },
+  {
+    key: 'individualChallenges',
+    label: 'Individual Challenges',
+    icon: 'medal-outline',
+    historyCategory: 'challenges',
+  },
+  {
+    key: 'teamChallenges',
+    label: 'Team Challenges',
+    icon: 'people-outline',
+    historyCategory: 'challenges',
+    accentColor: '#3B82F6',
+  },
+  {
+    key: 'satOut',
+    label: 'Sat Out',
+    icon: 'pause-circle-outline',
+    historyCategory: 'boots',
+  },
+  {
+    key: 'journey',
+    label: 'Journey',
+    icon: 'map-outline',
+    historyCategory: 'journeys',
+  },
+  {
+    key: 'votes',
+    label: 'Votes',
+    icon: 'checkmark-done-outline',
+    historyCategory: 'votesCast',
+  },
+  {
+    key: 'votesNullified',
+    label: 'Votes Nullified',
+    icon: 'shield-checkmark-outline',
+    historyCategory: 'votesReceived',
+  },
+];
+
+const MIN_VISIBLE_METRIC_CARDS = 4;
+const METRIC_REMOVAL_PRIORITY: MetricKey[] = [
+  'teamChallenges',
+  'satOut',
+  'journey',
+  'votesNullified',
+  'advantages',
+  'individualChallenges',
+  'votes',
+  'idols',
 ];
 
 const normalize = (value?: string | null) => value?.trim().toLowerCase() ?? '';
@@ -77,11 +142,13 @@ const matchesAlias = (value: string | null | undefined, aliases: Set<string>) =>
 
 const createMetricMap = (): Record<MetricKey, Map<number, EpisodeEventSummary>> => ({
   idols: new Map<number, EpisodeEventSummary>(),
-  otherAdvantages: new Map<number, EpisodeEventSummary>(),
+  advantages: new Map<number, EpisodeEventSummary>(),
   individualChallenges: new Map<number, EpisodeEventSummary>(),
   teamChallenges: new Map<number, EpisodeEventSummary>(),
+  satOut: new Map<number, EpisodeEventSummary>(),
   journey: new Map<number, EpisodeEventSummary>(),
   votes: new Map<number, EpisodeEventSummary>(),
+  votesNullified: new Map<number, EpisodeEventSummary>(),
   tribal: new Map<number, EpisodeEventSummary>(),
 });
 
@@ -109,6 +176,62 @@ const addMetricEvent = (
 
 const mapToSortedEpisodeEvents = (map: Map<number, EpisodeEventSummary>) =>
   [...map.values()].sort((a, b) => a.episodeNumber - b.episodeNumber);
+
+const isZeroMetricCard = (aggregate: PerformanceAggregate, metric: MetricCardDefinition) => {
+  if (metric.key === 'votes') {
+    return aggregate.votesCastCount === 0 && aggregate.votesReceivedCount === 0;
+  }
+
+  return aggregate.metricCounts[metric.key] === 0;
+};
+
+const getVisibleMetricCards = (aggregate: PerformanceAggregate) => {
+  let visible = [...METRIC_CARD_DEFINITIONS];
+
+  if (visible.length > MIN_VISIBLE_METRIC_CARDS) {
+    for (const metricKey of METRIC_REMOVAL_PRIORITY) {
+      if (visible.length <= MIN_VISIBLE_METRIC_CARDS) {
+        break;
+      }
+
+      const removeIndex = visible.findIndex(
+        (metric) => metric.key === metricKey && isZeroMetricCard(aggregate, metric),
+      );
+      if (removeIndex >= 0) {
+        visible.splice(removeIndex, 1);
+      }
+    }
+
+    if (visible.length > MIN_VISIBLE_METRIC_CARDS) {
+      let removableCount = visible.length - MIN_VISIBLE_METRIC_CARDS;
+      visible = visible.filter((metric) => {
+        if (removableCount <= 0) {
+          return true;
+        }
+
+        if (!isZeroMetricCard(aggregate, metric)) {
+          return true;
+        }
+
+        removableCount -= 1;
+        return false;
+      });
+    }
+  }
+
+  for (const metricKey of METRIC_REMOVAL_PRIORITY) {
+    if (visible.length <= MIN_VISIBLE_METRIC_CARDS) {
+      break;
+    }
+
+    const removeIndex = visible.findIndex((metric) => metric.key === metricKey);
+    if (removeIndex >= 0) {
+      visible.splice(removeIndex, 1);
+    }
+  }
+
+  return visible;
+};
 
 const deriveResultBoot = (resultEvents: string[]) => {
   if (resultEvents.length === 0) {
@@ -203,19 +326,28 @@ const normalizeHexColor = (value?: string | null) => {
   return Colors.lightBackground;
 };
 
-const EpisodeEventRow = ({ episode }: { episode: EpisodeEventSummary }) => (
+const EpisodeEventRow = ({
+  episode,
+  seasonId,
+  onEpisodePress,
+}: {
+  episode: EpisodeEventSummary;
+  seasonId: number;
+  onEpisodePress: (seasonId: number, episodeNumber: number) => void;
+}) => (
   <View style={styles.scoreEventRow}>
-    <View style={styles.scoreEventHeader}>
-      <Text style={styles.scoreEventEpisode}>Ep {episode.episodeNumber}</Text>
-      <Text style={styles.scoreEventCount}>{episode.events.length} events</Text>
-    </View>
-    <Text style={styles.scoreEventTitle}>{episode.episodeTitle}</Text>
-    <View style={styles.scoreEventList}>
-      {episode.events.map((event, index) => (
-        <Text key={`${episode.episodeNumber}-${index}`} style={styles.scoreEventLabel}>
-          • {event}
-        </Text>
-      ))}
+    <View style={styles.scoreEventLeft}>
+      <Pressable onPress={() => onEpisodePress(seasonId, episode.episodeNumber)}>
+        <Text style={styles.scoreEventEpisodeLink}>{`Ep ${episode.episodeNumber}`}</Text>
+      </Pressable>
+      <View style={styles.scoreEventBody}>
+        <Text style={styles.scoreEventTitle}>{episode.episodeTitle}</Text>
+        {episode.events.map((event, index) => (
+          <Text key={`${episode.episodeNumber}-${index}`} style={styles.scoreEventLabel}>
+            {event}
+          </Text>
+        ))}
+      </View>
     </View>
   </View>
 );
@@ -225,9 +357,11 @@ export default function CastawayPerformanceAggregateCards({
   castawayName,
   castawayFullName,
 }: CastawayPerformanceAggregateCardsProps) {
+  const router = useRouter();
   const [aggregates, setAggregates] = useState<PerformanceAggregate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [selected, setSelected] = useState<{ aggregate: PerformanceAggregate; metric: MetricCardDefinition } | null>(
     null,
   );
@@ -249,6 +383,23 @@ export default function CastawayPerformanceAggregateCards({
     () => [...performances].sort((a, b) => (a.season?.id ?? 0) - (b.season?.id ?? 0)),
     [performances],
   );
+
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setSelected(null);
+  };
+
+  const handleOpenEpisode = (seasonId: number, episodeNumber: number) => {
+    setIsModalVisible(false);
+    setSelected(null);
+    router.push({
+      pathname: '/(player)/history/season/[season]/episode/[episode]',
+      params: {
+        season: String(seasonId),
+        episode: String(episodeNumber),
+      },
+    });
+  };
 
   useEffect(() => {
     const validPerformances = sortedPerformances.filter((performance) => performance.season?.id);
@@ -279,6 +430,8 @@ export default function CastawayPerformanceAggregateCards({
 
             const encounteredTribes = new Set<string>();
             let resultBootLabel: string | null = null;
+            let votesCastCount = 0;
+            let votesReceivedCount = 0;
             const metricMaps = createMetricMap();
 
             details.forEach((detail) => {
@@ -298,7 +451,40 @@ export default function CastawayPerformanceAggregateCards({
                       ? 'teamChallenges'
                       : 'individualChallenges';
                     const baseLabel = isTribalChallenge(challenge.type) ? 'Team challenge' : 'Individual challenge';
+                    const isIndividualChallenge = metricKey === 'individualChallenges';
+                    const isTeamChallenge = metricKey === 'teamChallenges';
+                    const isImmunityChallenge =
+                      normalize(challenge.type).includes('immunity') ||
+                      normalize(challenge.title).includes('immunity');
+
+                    if (isIndividualChallenge && !row.won) {
+                      return;
+                    }
+
+                    if (isIndividualChallenge && !isImmunityChallenge) {
+                      return;
+                    }
+
+                    if (isTeamChallenge && !row.won) {
+                      return;
+                    }
+
+                    if (isTeamChallenge && !isImmunityChallenge) {
+                      return;
+                    }
+
                     const outcome = row.won ? 'won' : 'participated';
+
+                    if (row.satOut) {
+                      addMetricEvent(
+                        metricMaps,
+                        'satOut',
+                        detail.episodeNumber,
+                        detail.episodeTitle,
+                        `Sat out ${baseLabel.toLowerCase()}: ${challenge.title}`,
+                      );
+                    }
+
                     addMetricEvent(
                       metricMaps,
                       metricKey,
@@ -319,7 +505,7 @@ export default function CastawayPerformanceAggregateCards({
                 }
 
                 const rawType = movement.advantageType?.toLowerCase() || 'advantage';
-                const metricKey: MetricKey = rawType.includes('idol') ? 'idols' : 'otherAdvantages';
+                const metricKey: MetricKey = rawType.includes('idol') ? 'idols' : 'advantages';
                 const description = matchesAlias(movement.castawayName, aliases)
                   ? formatAdvantageMovement(
                       movement.castawayName,
@@ -332,6 +518,18 @@ export default function CastawayPerformanceAggregateCards({
                   : `Received ${rawType} play from ${movement.castawayName}`;
 
                 addMetricEvent(metricMaps, metricKey, detail.episodeNumber, detail.episodeTitle, description);
+
+                if (matchesAlias(movement.castawayName, aliases) && (movement.votesNullified ?? 0) > 0) {
+                  const nullifiedVotes = movement.votesNullified ?? 0;
+                  const advantageLabel = movement.advantageType?.trim() || 'advantage';
+                  addMetricEvent(
+                    metricMaps,
+                    'votesNullified',
+                    detail.episodeNumber,
+                    detail.episodeTitle,
+                    `Nullified ${nullifiedVotes} vote${nullifiedVotes === 1 ? '' : 's'} with ${advantageLabel}`,
+                  );
+                }
               });
 
               detail.journeys.forEach((journey) => {
@@ -388,24 +586,49 @@ export default function CastawayPerformanceAggregateCards({
                 );
 
                 if (votesCast.length > 0) {
+                  votesCastCount += votesCast.length;
+                  const castTargets = votesCast
+                    .map((vote) => vote.votedForName?.trim())
+                    .filter((name): name is string => Boolean(name));
+                  const castLabel =
+                    castTargets.length > 0
+                      ? `${castTargets.length === 1 ? 'Cast vote for' : 'Cast votes for'} ${castTargets.join(', ')}`
+                      : `Cast ${votesCast.length} vote${votesCast.length === 1 ? '' : 's'}`;
+
                   addMetricEvent(
                     metricMaps,
                     'votes',
                     detail.episodeNumber,
                     detail.episodeTitle,
-                    `Cast ${votesCast.length} vote${votesCast.length === 1 ? '' : 's'}`,
+                    castLabel,
                   );
                 }
 
                 if (votesOnCastaway.length > 0) {
+                  votesReceivedCount += votesOnCastaway.length;
+                  const receivedFrom = votesOnCastaway
+                    .map((vote) => vote.voterName?.trim())
+                    .filter((name): name is string => Boolean(name));
                   const nullifiedCount = votesOnCastaway.filter((vote) => vote.nullified).length;
+                  const receivedBase =
+                    receivedFrom.length > 0
+                      ? `${receivedFrom.length === 1 ? 'Received vote from' : 'Received votes from'} ${receivedFrom.join(', ')}`
+                      : `Received ${votesOnCastaway.length} vote${votesOnCastaway.length === 1 ? '' : 's'}`;
                   addMetricEvent(
                     metricMaps,
                     'votes',
                     detail.episodeNumber,
                     detail.episodeTitle,
-                    `Received ${votesOnCastaway.length} vote${votesOnCastaway.length === 1 ? '' : 's'}${nullifiedCount > 0 ? ` (${nullifiedCount} nullified)` : ''}`,
+                    `${receivedBase}${nullifiedCount > 0 ? ` (${nullifiedCount} nullified)` : ''}`,
                   );
+                }
+
+                if (matchesAlias(tribal.votedOutName, aliases) && !resultBootLabel) {
+                  if (typeof tribal.bootOrder === 'number' && tribal.bootOrder > 0) {
+                    resultBootLabel = `Voted out ${formatOrdinal(tribal.bootOrder)}`;
+                  } else {
+                    resultBootLabel = 'Voted Out';
+                  }
                 }
               });
 
@@ -442,6 +665,10 @@ export default function CastawayPerformanceAggregateCards({
               detail.finalThreeRanking.forEach((ranking) => {
                 if (matchesAlias(ranking.castawayName, aliases)) {
                   const placement = normalize(ranking.placement);
+                  if (!placement) {
+                    return;
+                  }
+
                   if (placement === 'first' || placement === '1st' || placement === '1') {
                     resultBootLabel = 'Sole Survivor';
                   } else if (placement === 'second' || placement === '2nd' || placement === '2') {
@@ -461,17 +688,19 @@ export default function CastawayPerformanceAggregateCards({
 
             const metricEpisodeEvents = {
               idols: mapToSortedEpisodeEvents(metricMaps.idols),
-              otherAdvantages: mapToSortedEpisodeEvents(metricMaps.otherAdvantages),
+              advantages: mapToSortedEpisodeEvents(metricMaps.advantages),
               individualChallenges: mapToSortedEpisodeEvents(metricMaps.individualChallenges),
               teamChallenges: mapToSortedEpisodeEvents(metricMaps.teamChallenges),
+              satOut: mapToSortedEpisodeEvents(metricMaps.satOut),
               journey: mapToSortedEpisodeEvents(metricMaps.journey),
               votes: mapToSortedEpisodeEvents(metricMaps.votes),
+              votesNullified: mapToSortedEpisodeEvents(metricMaps.votesNullified),
               tribal: mapToSortedEpisodeEvents(metricMaps.tribal),
             } satisfies Record<MetricKey, EpisodeEventSummary[]>;
 
             const metricCounts = {
               idols: metricEpisodeEvents.idols.reduce((total, episode) => total + episode.events.length, 0),
-              otherAdvantages: metricEpisodeEvents.otherAdvantages.reduce(
+              advantages: metricEpisodeEvents.advantages.reduce(
                 (total, episode) => total + episode.events.length,
                 0,
               ),
@@ -480,8 +709,13 @@ export default function CastawayPerformanceAggregateCards({
                 0,
               ),
               teamChallenges: metricEpisodeEvents.teamChallenges.reduce((total, episode) => total + episode.events.length, 0),
+              satOut: metricEpisodeEvents.satOut.reduce((total, episode) => total + episode.events.length, 0),
               journey: metricEpisodeEvents.journey.reduce((total, episode) => total + episode.events.length, 0),
               votes: metricEpisodeEvents.votes.reduce((total, episode) => total + episode.events.length, 0),
+              votesNullified: metricEpisodeEvents.votesNullified.reduce(
+                (total, episode) => total + episode.events.length,
+                0,
+              ),
               tribal: metricEpisodeEvents.tribal.reduce((total, episode) => total + episode.events.length, 0),
             } satisfies Record<MetricKey, number>;
 
@@ -501,6 +735,8 @@ export default function CastawayPerformanceAggregateCards({
                   };
                 }),
               resultBoot: resultBootLabel,
+              votesCastCount,
+              votesReceivedCount,
               metricCounts,
               metricEpisodeEvents,
             } satisfies PerformanceAggregate;
@@ -521,8 +757,6 @@ export default function CastawayPerformanceAggregateCards({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Performance by Castaway Record</Text>
-
       {loading ? (
         <View style={styles.loadingRow}>
           <ActivityIndicator size="small" color={Colors.primary} />
@@ -543,39 +777,73 @@ export default function CastawayPerformanceAggregateCards({
                 <View style={styles.seasonRow}>
                   <Text style={styles.generalInfoSeason}>{aggregate.seasonName}</Text>
                   {aggregate.resultBoot ? (
-                    <Text style={styles.seasonResultInline}>{aggregate.resultBoot}</Text>
+                    <View style={styles.resultPill}>
+                      <Text style={styles.seasonResultInline}>{aggregate.resultBoot}</Text>
+                    </View>
                   ) : null}
                 </View>
-                <View style={styles.tribeChipsWrap}>
-                  {aggregate.tribes.length > 0 ? (
-                    aggregate.tribes.map((tribe) => (
-                      <View key={tribe.name} style={[styles.tribeChip, { backgroundColor: tribe.color }]}>
-                        <Text style={[styles.tribeChipText, { color: tribe.textColor }]}>{tribe.name}</Text>
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={styles.generalInfoText}>No tribe data</Text>
-                  )}
+                <View style={styles.tribesRow}>
+                  <Text style={styles.tribesLabel}>{aggregate.tribes.length === 1 ? 'Tribe' : 'Tribes'}</Text>
+                  <View style={styles.tribeChipsWrap}>
+                    {aggregate.tribes.length > 0 ? (
+                      aggregate.tribes.map((tribe) => (
+                        <View key={tribe.name} style={[styles.tribeChip, { backgroundColor: tribe.color }]}>
+                          <Text style={[styles.tribeChipText, { color: tribe.textColor }]}>{tribe.name}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.generalInfoText}>No tribe data</Text>
+                    )}
+                  </View>
                 </View>
               </View>
 
               <View style={styles.cardGrid}>
-                {METRIC_CARD_DEFINITIONS.map((metric) => (
-                  <Pressable
-                    key={metric.key}
-                    style={styles.metricCard}
-                    onPress={() => setSelected({ aggregate, metric })}
-                  >
-                    <Text style={styles.metricLabel}>{metric.label}</Text>
-                    <Text style={styles.metricValue}>{aggregate.metricCounts[metric.key]}</Text>
-                  </Pressable>
-                ))}
+                {getVisibleMetricCards(aggregate).map((metric) => {
+                  const accentColor = metric.accentColor ?? getHistoryCategoryColor(metric.historyCategory);
+
+                  return (
+                    <Pressable
+                      key={metric.key}
+                      style={[
+                        styles.metricCard,
+                        {
+                          borderColor: accentColor,
+                        },
+                      ]}
+                      onPress={() => {
+                        setSelected({ aggregate, metric });
+                        setIsModalVisible(true);
+                      }}
+                    >
+                      <View style={styles.metricHeaderRow}>
+                        <View style={[styles.metricIconBadge, { backgroundColor: accentColor }]}> 
+                          <Ionicons name={metric.icon} size={16} color="#fff" />
+                        </View>
+                        <Text style={styles.metricLabel}>{metric.label}</Text>
+                      </View>
+
+                      <View style={styles.metricValueRow}>
+                        <Text style={styles.metricValue}>
+                          {metric.key === 'votes'
+                            ? `${aggregate.votesCastCount} cast / ${aggregate.votesReceivedCount} received`
+                            : aggregate.metricCounts[metric.key]}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           ))
         : null}
 
-      <Modal visible={selected !== null} animationType="fade" transparent onRequestClose={() => setSelected(null)}>
+      <Modal
+        visible={isModalVisible}
+        animationType="none"
+        transparent
+        onRequestClose={() => closeModal()}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{selected?.metric.label}</Text>
@@ -589,6 +857,8 @@ export default function CastawayPerformanceAggregateCards({
                   <EpisodeEventRow
                     key={`${selected.aggregate.performanceId}-${selected.metric.key}-${episode.episodeNumber}`}
                     episode={episode}
+                    seasonId={selected.aggregate.seasonId}
+                    onEpisodePress={handleOpenEpisode}
                   />
                 ))
               ) : (
@@ -596,7 +866,7 @@ export default function CastawayPerformanceAggregateCards({
               )}
             </ScrollView>
 
-            <TouchableOpacity style={styles.modalClose} onPress={() => setSelected(null)}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => closeModal()}>
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -639,7 +909,7 @@ const styles = StyleSheet.create({
   },
   summaryHeader: {
     marginBottom: Spacing.sm,
-    gap: Spacing.xs,
+    gap: Spacing.sm,
   },
   seasonRow: {
     flexDirection: 'row',
@@ -657,15 +927,36 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.small,
     fontWeight: '600',
   },
+  resultPill: {
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.lightBackground,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
   generalInfoText: {
     color: Colors.textSecondary,
     fontSize: FontSizes.small,
   },
+  tribesRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  tribesLabel: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.small,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginTop: Spacing.xs,
+  },
   tribeChipsWrap: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
-    marginTop: Spacing.sm,
   },
   tribeChip: {
     borderRadius: BorderRadius.full,
@@ -685,24 +976,46 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     width: '48%',
-    minHeight: 86,
+    minHeight: 102,
+    borderWidth: 2,
     backgroundColor: Colors.secondaryBackground,
-    borderWidth: 1,
-    borderColor: Colors.border,
     borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  metricHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  metricIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricLabel: {
-    color: Colors.textSecondary,
+    color: Colors.text,
     fontSize: FontSizes.small,
-    fontWeight: '600',
+    fontWeight: '700',
+    flex: 1,
+  },
+  metricValueRow: {
+    justifyContent: 'flex-end',
   },
   metricValue: {
     color: Colors.text,
-    fontSize: FontSizes.large,
+    fontSize: FontSizes.medium,
     fontWeight: '700',
+    lineHeight: 22,
+  },
+  metricHint: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.small,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -734,38 +1047,39 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   scoreEventRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    gap: Spacing.xs,
   },
-  scoreEventHeader: {
+  scoreEventLeft: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flex: 1,
+    gap: Spacing.sm,
   },
-  scoreEventEpisode: {
-    fontSize: 12,
-    fontWeight: '600',
+  scoreEventEpisodeLink: {
     color: Colors.textSecondary,
-  },
-  scoreEventCount: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.primary,
+    width: 44,
+    paddingTop: 1,
+  },
+  scoreEventBody: {
+    flex: 1,
+    gap: 2,
   },
   scoreEventTitle: {
-    color: Colors.text,
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-  },
-  scoreEventList: {
-    gap: Spacing.xs,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
   scoreEventLabel: {
-    fontSize: 14,
+    fontSize: 15,
     color: Colors.text,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   modalClose: {
     marginTop: Spacing.lg,

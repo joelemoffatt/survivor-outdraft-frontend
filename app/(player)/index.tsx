@@ -153,7 +153,7 @@ export default function PlayerHome() {
         <Text style={styles.pageSubtitle}>Welcome back{user?.username ? `, ${user.username}` : ''}.</Text>
       </View>
 
-      <View style={[styles.dashboardLayout, isWideDashboard && styles.dashboardLayoutWide]}>
+      <View style={[isWideDashboard && styles.dashboardLayoutWide]}>
         <View style={[styles.widgetsColumn, isWideDashboard && styles.widgetsColumnWide]}>
           <LastEpisodeWidget
             label={lastEpisodeLabel}
@@ -225,9 +225,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: FontSizes.medium,
     marginTop: Spacing.xs,
-  },
-  dashboardLayout: {
-    gap: Spacing.md,
   },
   dashboardLayoutWide: {
     alignItems: 'stretch',

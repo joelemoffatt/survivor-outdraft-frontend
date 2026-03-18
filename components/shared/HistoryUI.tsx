@@ -30,9 +30,21 @@ type HistorySectionProps = {
   collapsible?: boolean;
   collapsed?: boolean;
   onToggle?: () => void;
-  category?: 'challenges' | 'journeys' | 'advantages' | 'tribals' | 'boots' | 'results' | 'tribe' | 'votesCast' | 'votesReceived' | 'jury';
+  category?: HistoryCategory;
   style?: import('react-native').ViewStyle;
 };
+
+export type HistoryCategory =
+  | 'challenges'
+  | 'journeys'
+  | 'advantages'
+  | 'tribals'
+  | 'boots'
+  | 'results'
+  | 'tribe'
+  | 'votesCast'
+  | 'votesReceived'
+  | 'jury';
 
 type HistoryTextProps = {
   children: ReactNode;
@@ -75,35 +87,8 @@ export const HistorySection = ({
   onToggle,
   style,
 }: HistorySectionProps) => {
-  const getCategoryColor = (cat?: string) => {
-    switch (cat) {
-      case 'challenges':
-        return '#FF6B6B';
-      case 'journeys':
-        return '#4ECDC4';
-      case 'advantages':
-        return '#FFD93D';
-      case 'tribals':
-        return '#6C5CE7';
-      case 'boots':
-        return '#FFA502';
-      case 'results':
-        return '#2ECC71';
-      case 'tribe':
-        return '#00BCD4';
-      case 'votesCast':
-        return '#9B59B6';
-      case 'votesReceived':
-        return '#E17055';
-      case 'jury':
-        return '#1ABC9C';
-      default:
-        return Colors.primary;
-    }
-  };
-
   return (
-    <View style={[styles.sectionBlock, { borderLeftColor: getCategoryColor(category) }, style]}>
+    <View style={[styles.sectionBlock, { borderLeftColor: getHistoryCategoryColor(category) }, style]}>
       {collapsible ? (
         <TouchableOpacity style={styles.sectionHeader} onPress={onToggle}>
           <Text style={styles.sectionTitle}>{title}</Text>
@@ -114,6 +99,33 @@ export const HistorySection = ({
       {!collapsed && children}
     </View>
   );
+};
+
+export const getHistoryCategoryColor = (category?: HistoryCategory) => {
+  switch (category) {
+    case 'challenges':
+      return '#FF6B6B';
+    case 'journeys':
+      return '#4ECDC4';
+    case 'advantages':
+      return '#FFD93D';
+    case 'tribals':
+      return '#6C5CE7';
+    case 'boots':
+      return '#FFA502';
+    case 'results':
+      return '#2ECC71';
+    case 'tribe':
+      return '#00BCD4';
+    case 'votesCast':
+      return '#9B59B6';
+    case 'votesReceived':
+      return '#E17055';
+    case 'jury':
+      return '#1ABC9C';
+    default:
+      return Colors.primary;
+  }
 };
 
 export const HistoryLineGroup = ({ children }: HistoryTextProps) => (

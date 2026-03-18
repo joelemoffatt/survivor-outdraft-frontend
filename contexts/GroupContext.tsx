@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import apiService from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -11,7 +11,9 @@ const GroupContext = createContext<GroupContextType | undefined>(undefined);
 
 export function GroupProvider({ children }: { children: ReactNode }) {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const autoSelectRequestInFlightRef = useRef(false);
+  const autoSelectAttemptedUserIdRef = useRef<number | null>(null);
 
   const updateSelectedGroupId = useCallback((id: number | null) => {
     setSelectedGroupId(id);
@@ -28,15 +30,30 @@ export function GroupProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.id) {
       setSelectedGroupId(null);
+      autoSelectRequestInFlightRef.current = false;
+      autoSelectAttemptedUserIdRef.current = null;
+      return;
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !token) {
       return;
     }
 
-    // Only auto-select if no group is currently selected
-    if (selectedGroupId !== null) {
+    // Only auto-select if no group is currently selected and we haven't already
+    // attempted once for this user in the current app session.
+    if (
+      selectedGroupId !== null ||
+      autoSelectRequestInFlightRef.current ||
+      autoSelectAttemptedUserIdRef.current === user.id
+    ) {
       return;
     }
 
     let isActive = true;
+    autoSelectRequestInFlightRef.current = true;
+    autoSelectAttemptedUserIdRef.current = user.id;
 
     const autoSelectFirstGroup = async () => {
       try {
@@ -46,6 +63,10 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('Failed to auto-select first group:', error);
+      } finally {
+        if (isActive) {
+          autoSelectRequestInFlightRef.current = false;
+        }
       }
     };
 
@@ -54,7 +75,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [user, selectedGroupId, updateSelectedGroupId]);
+  }, [user?.id, token, selectedGroupId, updateSelectedGroupId]);
 
   return (
     <GroupContext.Provider value={{ selectedGroupId, setSelectedGroupId: updateSelectedGroupId }}>

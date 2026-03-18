@@ -82,12 +82,6 @@ export default function Login() {
                 </TouchableOpacity>
               </Link>
             </View>
-
-            <View style={styles.demoCredentials}>
-              <Text style={styles.demoTitle}>Demo Credentials:</Text>
-              <Text style={styles.demoText}>Player: player / player</Text>
-              <Text style={styles.demoText}>Admin: admin / admin</Text>
-            </View>
           </View>
         </View>
       </ScrollView>
