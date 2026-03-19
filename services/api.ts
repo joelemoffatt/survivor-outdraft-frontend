@@ -3,8 +3,8 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  'http://192.168.86.20:8080/api'; // ipconfig getifaddr en0 HOME AXIO
-  // 'http://172.20.10.6:8080/api';
+  // 'http://192.168.86.20:8080/api'; // ipconfig getifaddr en0 HOME AXIO
+  'http://192.168.1.133:8080/api';
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
@@ -137,6 +137,10 @@ class ApiService {
       username,
       password,
     });
+  }
+
+  async validateActiveSession(): Promise<ValidateSessionResponse> {
+    return this.get<ValidateSessionResponse>('/v1/auth/validate');
   }
 
   // Admin user CRUD endpoints
@@ -335,6 +339,10 @@ export interface AuthResponse {
   username: string;
   email: string;
   role: 'USER' | 'ADMIN';
+}
+
+export interface ValidateSessionResponse {
+  id: number;
 }
 
 export interface UserRecord {
