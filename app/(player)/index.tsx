@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGroup } from "../../contexts/GroupContext";
 import {
@@ -26,17 +27,69 @@ import LeaderboardSection from "../../components/player/LeaderboardSection";
 import Button from "../../components/shared/Button";
 
 const responsiveMinHeight = 280;
+const APP_MODE = process.env.EXPO_PUBLIC_APP_MODE ?? "development";
+const SHOW_SESSION_DEBUG = APP_MODE === "development";
 
 export default function PlayerHome() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { user } = useAuth();
+  const { user, isLoggedIn, token, isLoading: authLoading, isAdminView } = useAuth();
   const { selectedGroupId, groupsLoaded, userHasGroups } = useGroup();
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [groupRankings, setGroupRankings] = useState<GroupRankingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sessionDebug, setSessionDebug] = useState({
+    nowIso: "",
+    storedTokenPresent: false,
+    storedUserPresent: false,
+    storedAdminViewValue: "",
+    storedSessionStartedAt: "",
+    sessionAgeSeconds: "",
+  });
+
+  useEffect(() => {
+    const readSessionDebug = async () => {
+      try {
+        const [storedToken, storedUser, storedAdminView, storedSessionStartedAt] =
+          await Promise.all([
+            AsyncStorage.getItem("auth_token"),
+            AsyncStorage.getItem("auth_user"),
+            AsyncStorage.getItem("admin_view_enabled"),
+            AsyncStorage.getItem("session_started_at"),
+          ]);
+
+        const now = new Date();
+        const startedAtMs = storedSessionStartedAt ? Number(storedSessionStartedAt) : NaN;
+        const ageSeconds = Number.isFinite(startedAtMs)
+          ? Math.max(Math.floor((now.getTime() - startedAtMs) / 1000), 0)
+          : null;
+
+        setSessionDebug({
+          nowIso: now.toISOString(),
+          storedTokenPresent: Boolean(storedToken),
+          storedUserPresent: Boolean(storedUser),
+          storedAdminViewValue: storedAdminView ?? "null",
+          storedSessionStartedAt: storedSessionStartedAt ?? "null",
+          sessionAgeSeconds: ageSeconds == null ? "n/a" : String(ageSeconds),
+        });
+      } catch (storageError) {
+        setSessionDebug((previous) => ({
+          ...previous,
+          nowIso: new Date().toISOString(),
+          sessionAgeSeconds: "error",
+        }));
+      }
+    };
+
+    readSessionDebug();
+    const interval = setInterval(readSessionDebug, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isLoggedIn, token, user?.id, isAdminView]);
 
   useEffect(() => {
     const loadHomeData = async () => {
@@ -237,6 +290,27 @@ export default function PlayerHome() {
           titleStyle={isWideDashboard ? styles.leaderboardTitleWide : undefined}
         />
       </View>
+
+      {SHOW_SESSION_DEBUG && (
+        <View style={styles.sessionCard}>
+          <Text style={styles.sessionTitle}>Session Debug (Testing)</Text>
+          <Text style={styles.sessionLine}>isLoggedIn: {String(isLoggedIn)}</Text>
+          <Text style={styles.sessionLine}>authLoading: {String(authLoading)}</Text>
+          <Text style={styles.sessionLine}>isAdminView: {String(isAdminView)}</Text>
+          <Text style={styles.sessionLine}>userId: {user?.id ?? "null"}</Text>
+          <Text style={styles.sessionLine}>username: {user?.username ?? "null"}</Text>
+          <Text style={styles.sessionLine}>tokenPresent: {String(Boolean(token))}</Text>
+          <Text style={styles.sessionLine}>selectedGroupId: {selectedGroupId ?? "null"}</Text>
+          <Text style={styles.sessionLine}>groupsLoaded: {String(groupsLoaded)}</Text>
+          <Text style={styles.sessionLine}>userHasGroups: {String(userHasGroups)}</Text>
+          <Text style={styles.sessionLine}>storedTokenPresent: {String(sessionDebug.storedTokenPresent)}</Text>
+          <Text style={styles.sessionLine}>storedUserPresent: {String(sessionDebug.storedUserPresent)}</Text>
+          <Text style={styles.sessionLine}>storedAdminView: {sessionDebug.storedAdminViewValue}</Text>
+          <Text style={styles.sessionLine}>sessionStartedAt: {sessionDebug.storedSessionStartedAt}</Text>
+          <Text style={styles.sessionLine}>sessionAgeSeconds: {sessionDebug.sessionAgeSeconds}</Text>
+          <Text style={styles.sessionLine}>now: {sessionDebug.nowIso || "n/a"}</Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -325,6 +399,26 @@ const styles = StyleSheet.create({
   },
   leaderboardTitleWide: {
     marginTop: 0,
+  },
+  sessionCard: {
+    backgroundColor: Colors.background,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  sessionTitle: {
+    color: Colors.text,
+    fontSize: FontSizes.medium,
+    fontWeight: "700",
+    marginBottom: Spacing.xs,
+  },
+  sessionLine: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.small,
+    lineHeight: 18,
   },
   rankingBox: {
     minHeight: responsiveMinHeight,

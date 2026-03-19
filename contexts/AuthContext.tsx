@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService, { AuthResponse } from '../services/api';
 
@@ -20,6 +20,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
 const ADMIN_VIEW_KEY = 'admin_view_enabled';
+const SESSION_STARTED_AT_KEY = 'session_started_at';
+const APP_MODE = process.env.EXPO_PUBLIC_APP_MODE ?? 'development';
+
+const parseSessionDurationMs = () => {
+  const configuredMinutes = Number(process.env.EXPO_PUBLIC_SESSION_DURATION_MINUTES);
+  if (Number.isFinite(configuredMinutes) && configuredMinutes > 0) {
+    return configuredMinutes * 60 * 1000;
+  }
+
+  return APP_MODE === 'development'
+    ? 60 * 60 * 1000 // 1 hour for development
+    : 24 * 60 * 60 * 1000; // 24 hours for share or production
+};
+
+const SESSION_DURATION_MS = parseSessionDurationMs();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -27,6 +42,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdminView, setIsAdminView] = useState(false);
+  const sessionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearSessionTimeout = () => {
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
+      sessionTimeoutRef.current = null;
+    }
+  };
+
+  const scheduleSessionExpiration = (sessionStartedAt: number) => {
+    clearSessionTimeout();
+
+    const elapsed = Date.now() - sessionStartedAt;
+    const remainingMs = SESSION_DURATION_MS - elapsed;
+
+    if (remainingMs <= 0) {
+      return false;
+    }
+
+    sessionTimeoutRef.current = setTimeout(() => {
+      void logout();
+    }, remainingMs);
+
+    return true;
+  };
+
+  const logout = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      await AsyncStorage.removeItem(USER_KEY);
+      await AsyncStorage.removeItem(ADMIN_VIEW_KEY);
+      await AsyncStorage.removeItem(SESSION_STARTED_AT_KEY);
+    } catch (error) {
+      console.error('Error clearing storage:', error);
+    }
+
+    clearSessionTimeout();
+
+    apiService.setToken(null);
+    setUser(null);
+    setToken(null);
+    setIsLoggedIn(false);
+    setIsAdminView(false);
+  }, []);
 
   // Check for stored token on app launch
   useEffect(() => {
@@ -35,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
         const storedUser = await AsyncStorage.getItem(USER_KEY);
         const storedAdminView = await AsyncStorage.getItem(ADMIN_VIEW_KEY);
+        const storedSessionStartedAt = await AsyncStorage.getItem(SESSION_STARTED_AT_KEY);
         
         if (storedToken && storedUser) {
           const parsedUser = JSON.parse(storedUser);
@@ -46,6 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await AsyncStorage.removeItem(TOKEN_KEY);
             await AsyncStorage.removeItem(USER_KEY);
             await AsyncStorage.removeItem(ADMIN_VIEW_KEY);
+            await AsyncStorage.removeItem(SESSION_STARTED_AT_KEY);
+            return;
+          }
+
+          const sessionStartedAt = storedSessionStartedAt ? Number(storedSessionStartedAt) : NaN;
+          if (!Number.isFinite(sessionStartedAt) || !scheduleSessionExpiration(sessionStartedAt)) {
+            await logout();
             return;
           }
 
@@ -67,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     checkStoredToken();
-  }, []);
+  }, [logout]);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
@@ -84,6 +151,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.setItem(TOKEN_KEY, response.token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
       await AsyncStorage.removeItem(ADMIN_VIEW_KEY);
+      const sessionStartedAt = Date.now();
+      await AsyncStorage.setItem(SESSION_STARTED_AT_KEY, String(sessionStartedAt));
       
       setToken(response.token);
       setUser(userData);
@@ -92,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Set token in API service for authenticated requests
       apiService.setToken(response.token);
+      scheduleSessionExpiration(sessionStartedAt);
       
       return true;
     } catch (error) {
@@ -115,10 +185,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.setItem(TOKEN_KEY, response.token);
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
       await AsyncStorage.removeItem(ADMIN_VIEW_KEY);
+      const sessionStartedAt = Date.now();
+      await AsyncStorage.setItem(SESSION_STARTED_AT_KEY, String(sessionStartedAt));
       
       setToken(response.token);
       // Set token in API service for authenticated requests
       apiService.setToken(response.token);
+      scheduleSessionExpiration(sessionStartedAt);
       
       setUser(userData);
       setIsAdminView(false);
@@ -131,23 +204,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = async () => {
-    try {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      await AsyncStorage.removeItem(USER_KEY);
-      await AsyncStorage.removeItem(ADMIN_VIEW_KEY);
-    } catch (error) {
-      console.error('Error clearing storage:', error);
-    }
-    
-    
-    // Clear token from API service
-    apiService.setToken(null);
-    setUser(null);
-    setToken(null);
-    setIsLoggedIn(false);
-    setIsAdminView(false);
-  };
+  useEffect(() => {
+    apiService.setAuthFailureHandler(() => {
+      void logout();
+    });
+
+    return () => {
+      apiService.setAuthFailureHandler(null);
+      clearSessionTimeout();
+    };
+  }, [logout]);
 
   const setAdminView = async (enabled: boolean) => {
     const canUseAdminView = Boolean(user?.isAdmin);

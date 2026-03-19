@@ -4,10 +4,15 @@ const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
   // 'http://192.168.86.20:8080/api'; // ipconfig getifaddr en0 HOME AXIO
-  'http://192.168.1.133:8080/api';
+  'http://192.168.200.174:8080/api';
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production
+const configuredApiDelayMs = Number(process.env.EXPO_PUBLIC_API_DELAY_MS);
+const API_DELAY_MS =
+  isDevelopment && Number.isFinite(configuredApiDelayMs) && configuredApiDelayMs > 0
+    ? configuredApiDelayMs
+    : 0;
 
 import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../types/survivor';
 
@@ -17,6 +22,7 @@ import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../ty
 class ApiService {
   private baseUrl: string;
   private token: string | null = null;
+  private authFailureHandler: (() => void) | null = null;
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
@@ -27,6 +33,14 @@ class ApiService {
    */
   setToken(token: string | null) {
     this.token = token;
+  }
+
+  setAuthFailureHandler(handler: (() => void) | null) {
+    this.authFailureHandler = handler;
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -56,6 +70,10 @@ class ApiService {
     }
 
     try {
+      if (API_DELAY_MS > 0) {
+        await this.sleep(API_DELAY_MS);
+      }
+
       const response = await fetch(url, {
         ...options,
         headers,
@@ -64,6 +82,11 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
         console.error('API Error Response:', errorData);
+
+        if (response.status === 401 && this.token && this.authFailureHandler) {
+          this.authFailureHandler();
+        }
+
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
@@ -137,10 +160,6 @@ class ApiService {
       username,
       password,
     });
-  }
-
-  async validateActiveSession(): Promise<ValidateSessionResponse> {
-    return this.get<ValidateSessionResponse>('/v1/auth/validate');
   }
 
   // Admin user CRUD endpoints
@@ -339,10 +358,6 @@ export interface AuthResponse {
   username: string;
   email: string;
   role: 'USER' | 'ADMIN';
-}
-
-export interface ValidateSessionResponse {
-  id: number;
 }
 
 export interface UserRecord {

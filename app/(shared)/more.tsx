@@ -192,6 +192,16 @@ export default function MoreScreen() {
       ],
     },
     {
+      title: 'Developer',
+      items: [
+        {
+          label: 'Session Debug',
+          icon: 'bug',
+          onPress: () => router.push('/settings/session-debug'),
+        },
+      ],
+    },
+    {
       items: [
         {
           label: 'Logout',

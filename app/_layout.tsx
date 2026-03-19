@@ -17,11 +17,15 @@ function RootLayoutNav() {
 
     const inPublicGroup = segments[0] === "(public)";
     const inPlayerGroup = segments[0] === "(player)";
+    const inSharedGroup = segments[0] === "(shared)";
     const inAdminGroup = segments[0] === "admin";
 
     if (!isLoggedIn && inPlayerGroup) {
       // Redirect to landing if trying to access player routes while not logged in
       // router.replace("/landing");
+      router.replace("/login");
+    } else if (!isLoggedIn && inSharedGroup) {
+      // Redirect to login if trying to access shared routes while not logged in
       router.replace("/login");
     } else if (!isLoggedIn && inAdminGroup) {
       // Redirect to login if trying to access admin routes while not logged in
