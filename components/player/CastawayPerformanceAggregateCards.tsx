@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -814,43 +812,23 @@ export default function CastawayPerformanceAggregateCards({
           ))
         : null}
 
-      <Modal
+      <EpisodeEventsModal
         visible={isModalVisible}
-        animationType="none"
-        transparent
-        onRequestClose={() => closeModal()}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{selected?.metric.label}</Text>
-            <Text style={styles.modalSubtitle}>
-              {selected?.aggregate.seasonName} • {selected?.aggregate.version}
-            </Text>
-
-            <EpisodeEventsModal
-              visible={isModalVisible}
-              onClose={closeModal}
-              title={selected?.metric.label ?? undefined}
-              subtitle={selected ? `${selected.aggregate.seasonName} • ${selected.aggregate.version}` : undefined}
-              seasonId={selected?.aggregate.seasonId ?? null}
-              onEpisodePress={handleOpenEpisode}
-              episodes={
-                selected
-                  ? selected.aggregate.metricEpisodeEvents[selected.metric.key].map((ep) => ({
-                      episodeNumber: ep.episodeNumber ?? null,
-                      episodeTitle: ep.episodeTitle ?? null,
-                      events: ep.events.map((label, idx) => ({ id: `${ep.episodeNumber}-${idx}`, label })),
-                    }))
-                  : []
-              }
-            />
-
-            <TouchableOpacity style={styles.modalClose} onPress={() => closeModal()}>
-              <Text style={styles.modalCloseText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={closeModal}
+        title={selected?.metric.label ?? undefined}
+        subtitle={selected ? `${selected.aggregate.seasonName} • ${selected.aggregate.version}` : undefined}
+        seasonId={selected?.aggregate.seasonId ?? null}
+        onEpisodePress={handleOpenEpisode}
+        episodes={
+          selected
+            ? selected.aggregate.metricEpisodeEvents[selected.metric.key].map((ep) => ({
+                episodeNumber: ep.episodeNumber ?? null,
+                episodeTitle: ep.episodeTitle ?? null,
+                events: ep.events.map((label, idx) => ({ id: `${ep.episodeNumber}-${idx}`, label })),
+              }))
+            : []
+        }
+      />
     </View>
   );
 }
