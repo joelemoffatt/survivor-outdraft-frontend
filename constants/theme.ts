@@ -32,6 +32,10 @@ export const Colors = {
   success: '#2ecc71',
   error: '#ff6b6b',
   disabled: '#ccc',
+  medalGold: '#f4c542',
+  medalSilver: '#c0c0c0',
+  medalBronze: '#cd7f32',
+  lostFire: '#d24d2568',
 
   // UI
   border: '#e0e0e0',

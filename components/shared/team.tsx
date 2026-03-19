@@ -17,8 +17,7 @@ interface TeamViewProps {
   isOwnTeam?: boolean;
 }
 
-const BOOTED_EVENT_PATTERN =
-  /(voted\s*-?\s*out(?:\s+with\s+advantage)?|votedout(?:withadvantage)?|med\s*-?\s*evac|medevac|quit(?:ted)?|eject(?:ed|ion)?|eliminat(?:ed|ion)?|removed|lost\s+in\s+fire\s+making)/i;
+type CastawayStatus = 'booted' | 'first' | 'second' | 'third' | 'lostFire';
 
 export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, isOwnTeam = false }: TeamViewProps) {
   const router = useRouter();
@@ -119,13 +118,14 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
     return matched ?? candidates[0];
   };
 
-  const isBootedCastaway = (breakdown: CastawayScoreBreakdown | undefined) => {
-    if (!breakdown?.scoreEvents?.length) {
-      return false;
-    }
-
-    return breakdown.scoreEvents.some((event) => BOOTED_EVENT_PATTERN.test(event.eventLabel));
+  const getCastawayStatus = (
+    backendPlacement?: 'booted' | 'first' | 'second' | 'third' | 'lostFire' | null,
+  ): CastawayStatus | null => {
+    return backendPlacement ?? null;
   };
+
+  const eliminatedCount = (team.roster ?? []).filter((castaway) => castaway.placement != null).length;
+  const castawaysLeft = Math.max(0, (team.roster?.length ?? 0) - eliminatedCount);
 
   const closeScoreModal = () => {
     setIsScoreModalVisible(false);
@@ -178,12 +178,17 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
         <View style={styles.headerStats}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{scoreBreakdown?.totalPoints ?? team.totalPoints}</Text>
-            <Text style={styles.statLabel}>Points Earned</Text>
+            <Text style={styles.statLabel}>Points</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{castawaysLeft}</Text>
+            <Text style={styles.statLabel}>Castaways Left</Text>
           </View>
         </View>
       </Card>
 
-      <Text style={styles.sectionTitle}>Your Roster</Text>
+      <Text style={styles.sectionTitle}>Roster</Text>
       <Card style={styles.membersCard} padding="sm" shadow="light">
         {team.roster && team.roster.length > 0 ? (
           <View>
@@ -199,14 +204,19 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                   (c) => c.teamCastawayId === teamCastaway.id
                 );
                 const isLoadingBreakdown = loadingCastawayBreakdownId === teamCastaway.id;
-                const isBooted = isBootedCastaway(breakdown);
+                const castawayStatus = getCastawayStatus(teamCastaway.placement ?? null);
+                const isBooted = castawayStatus === 'booted';
                 const pts = breakdown?.totalPoints ?? teamCastaway.points;
                 return (
                   <View
                     key={teamCastaway.id}
                     style={[
                       styles.memberRow,
-                      isBooted && styles.memberRowBooted,
+                      castawayStatus === 'booted' && styles.memberRowBooted,
+                      castawayStatus === 'first' && styles.memberRowFirst,
+                      castawayStatus === 'second' && styles.memberRowSecond,
+                      castawayStatus === 'third' && styles.memberRowThird,
+                      castawayStatus === 'lostFire' && styles.memberRowLostFire,
                       index < roster.length - 1 && styles.memberRowBorder,
                     ]}
                   >
@@ -234,8 +244,30 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                           <Text style={styles.avatarInitial}>{castawayName.trim().charAt(0).toUpperCase()}</Text>
                         )}
                       </View>
-                      <Text style={[styles.memberUsername, isBooted && styles.memberUsernameBooted]}>{castawayName}</Text>
-                      <Text style={[styles.memberPick, isBooted && styles.memberPickBooted]}>Pick #{teamCastaway.draftOrder ?? index + 1}</Text>
+                      <Text
+                        style={[
+                          styles.memberUsername,
+                          castawayStatus === 'booted' && styles.memberUsernameBooted,
+                          castawayStatus === 'first' && styles.memberUsernameFirst,
+                          castawayStatus === 'second' && styles.memberUsernameSecond,
+                          castawayStatus === 'third' && styles.memberUsernameThird,
+                          castawayStatus === 'lostFire' && styles.memberUsernameLostFire,
+                        ]}
+                      >
+                        {castawayName}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.memberPick,
+                          castawayStatus === 'booted' && styles.memberPickBooted,
+                          castawayStatus === 'first' && styles.memberPickFirst,
+                          castawayStatus === 'second' && styles.memberPickSecond,
+                          castawayStatus === 'third' && styles.memberPickThird,
+                          castawayStatus === 'lostFire' && styles.memberPickLostFire,
+                        ]}
+                      >
+                        Pick #{teamCastaway.draftOrder ?? index + 1}
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.memberPointsButton}
@@ -359,7 +391,18 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                           <ActivityIndicator size="small" color={Colors.primary} />
                         </View>
                       ) : (
-                        <Text style={[styles.memberPoints, isBooted && styles.memberPointsBooted]}>{pts} pts</Text>
+                        <Text
+                          style={[
+                            styles.memberPoints,
+                            castawayStatus === 'booted' && styles.memberPointsBooted,
+                            castawayStatus === 'first' && styles.memberPointsFirst,
+                            castawayStatus === 'second' && styles.memberPointsSecond,
+                            castawayStatus === 'third' && styles.memberPointsThird,
+                            castawayStatus === 'lostFire' && styles.memberPointsLostFire,
+                          ]}
+                        >
+                          {pts} pts
+                        </Text>
                       )}
                     </TouchableOpacity>
                   </View>
@@ -448,25 +491,27 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.md,
   },
   headerStats: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statItem: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    flex: 1,
   },
   statValue: {
     color: Colors.text,
     fontSize: FontSizes.xxlarge,
     fontWeight: '800',
-    lineHeight: 42,
   },
   statLabel: {
     color: Colors.textSecondary,
-    fontSize: FontSizes.medium,
-    marginTop: Spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    fontSize: FontSizes.small,
+    marginTop: Spacing.xxs,
+  },
+  statDivider: {
+    backgroundColor: Colors.border,
+    height: 32,
+    width: 1,
   },
   sectionTitle: {
     color: Colors.text,
@@ -487,6 +532,19 @@ const styles = StyleSheet.create({
   },
   memberRowBooted: {
     opacity: 0.5,
+    backgroundColor: Colors.lightBackground,
+  },
+  memberRowFirst: {
+    backgroundColor: Colors.medalGold,
+  },
+  memberRowSecond: {
+    backgroundColor: Colors.medalSilver,
+  },
+  memberRowThird: {
+    backgroundColor: Colors.medalBronze,
+  },
+  memberRowLostFire: {
+    backgroundColor: Colors.lostFire,
   },
   memberRowBorder: {
     borderBottomColor: Colors.border,
@@ -524,6 +582,18 @@ const styles = StyleSheet.create({
   memberUsernameBooted: {
     color: Colors.textSecondary,
   },
+  memberUsernameFirst: {
+    color: Colors.text,
+  },
+  memberUsernameSecond: {
+    color: Colors.text,
+  },
+  memberUsernameThird: {
+    color: Colors.background,
+  },
+  memberUsernameLostFire: {
+    color: Colors.warning,
+  },
   memberPick: {
     color: Colors.textSecondary,
     fontSize: FontSizes.small,
@@ -532,6 +602,18 @@ const styles = StyleSheet.create({
   },
   memberPickBooted: {
     color: Colors.textSecondary,
+  },
+  memberPickFirst: {
+    color: Colors.text,
+  },
+  memberPickSecond: {
+    color: Colors.text,
+  },
+  memberPickThird: {
+    color: Colors.background,
+  },
+  memberPickLostFire: {
+    color: Colors.warning,
   },
   memberPointsButton: {
     marginLeft: 'auto',
@@ -544,6 +626,18 @@ const styles = StyleSheet.create({
   },
   memberPointsBooted: {
     color: Colors.textSecondary,
+  },
+  memberPointsFirst: {
+    color: Colors.text,
+  },
+  memberPointsSecond: {
+    color: Colors.text,
+  },
+  memberPointsThird: {
+    color: Colors.background,
+  },
+  memberPointsLostFire: {
+    color: Colors.warning,
   },
   memberPointsLoadingRow: {
     minWidth: 52,

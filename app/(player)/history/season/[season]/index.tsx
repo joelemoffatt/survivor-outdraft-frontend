@@ -16,6 +16,7 @@ export default function SeasonHistory() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // TOOD: Season 46 Episode 7 is an example of team win but individual immunity only to a couplpe people
   useEffect(() => {
     const loadEpisodes = async () => {
       try {
