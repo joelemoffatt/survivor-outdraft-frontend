@@ -8,12 +8,18 @@ import Card from '../../../components/shared/Card';
 import SectionHeader from '../../../components/shared/SectionHeader';
 import MenuItem from '../../../components/shared/MenuItem';
 import Chip from '../../../components/shared/Chip';
+import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const showLoadingSpinner = useDelayedLoader(!user, 200);
 
   if (!user) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />

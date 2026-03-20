@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import apiService, { GroupResponse } from '../../../services/api';
+import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
 export default function ManageGroupsScreen() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function ManageGroupsScreen() {
   const [groups, setGroups] = useState<GroupResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     loadGroups();
@@ -38,6 +40,10 @@ export default function ManageGroupsScreen() {
   };
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />

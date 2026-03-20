@@ -27,6 +27,7 @@ import {
 } from "../../constants/theme";
 import { GroupRankingItem } from "../../components/player/HomeWidgets";
 import LeaderboardSection from "../../components/player/LeaderboardSection";
+import useDelayedLoader from "../../hooks/useDelayedLoader";
 
 interface LeaderboardMember {
   id: number;
@@ -88,6 +89,7 @@ export default function GroupScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMultipleGroups, setHasMultipleGroups] = useState(false);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     const loadGroupData = async () => {
@@ -105,12 +107,13 @@ export default function GroupScreen() {
         setLoading(true);
         setError(null);
 
-        const [groupData, groupMembers, groupTeams, userGroups] = await Promise.all([
-          apiService.getGroupById(selectedGroupId),
-          apiService.getGroupMembers(selectedGroupId),
-          apiService.getTeamsByGroupId(selectedGroupId),
-          user?.id ? apiService.getUserGroups(user.id) : Promise.resolve([]),
-        ]);
+        const [groupData, groupMembers, groupTeams, userGroups] =
+          await Promise.all([
+            apiService.getGroupById(selectedGroupId),
+            apiService.getGroupMembers(selectedGroupId),
+            apiService.getTeamsByGroupId(selectedGroupId),
+            user?.id ? apiService.getUserGroups(user.id) : Promise.resolve([]),
+          ]);
 
         setGroup(groupData);
         setMembers(groupMembers);
@@ -118,7 +121,9 @@ export default function GroupScreen() {
         setHasMultipleGroups(userGroups.length > 1);
       } catch (err) {
         console.error("Failed to load group page data:", err);
-        setError(err instanceof Error ? err.message : "Failed to load group data");
+        setError(
+          err instanceof Error ? err.message : "Failed to load group data",
+        );
       } finally {
         setLoading(false);
       }
@@ -133,7 +138,9 @@ export default function GroupScreen() {
     teams.forEach((team) => {
       // TeamResponse does not expose user in API type; infer by matching known team names later.
       // Build a username->team map from accepted memberships.
-      const matchingMember = members.find((member) => team.teamName === `Team ${member.user.username}`);
+      const matchingMember = members.find(
+        (member) => team.teamName === `Team ${member.user.username}`,
+      );
       if (matchingMember?.user?.id != null) {
         teamByUserId.set(matchingMember.user.id, team);
       }
@@ -156,20 +163,33 @@ export default function GroupScreen() {
   }, [members, teams, user?.id]);
 
   const leaderboardRankings = useMemo<GroupRankingItem[]>(() => {
-    return leaderboardMembers
-      .map((member, index) => ({
-        rank: index + 1,
+    let currentRank = 0;
+    let previousPoints: number | null = null;
+
+    return leaderboardMembers.map((member, index) => {
+      if (previousPoints === null || member.points !== previousPoints) {
+        currentRank = index + 1;
+        previousPoints = member.points;
+      }
+
+      return {
+        rank: currentRank,
         teamName: member.teamName,
         username: member.username,
         points: member.points,
         isYourTeam: member.isYou,
         teamId: member.teamId,
-      }));
+      };
+    });
   }, [leaderboardMembers]);
 
   const statusStyles = getStatusStyles(group?.status);
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -181,7 +201,9 @@ export default function GroupScreen() {
   if (!selectedGroupId) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.centerText}>Select a group to view live standings.</Text>
+        <Text style={styles.centerText}>
+          Select a group to view live standings.
+        </Text>
         <Button
           label="Select Group"
           variant="outline"
@@ -218,11 +240,17 @@ export default function GroupScreen() {
           <View style={styles.headerText}>
             <Text style={styles.groupName}>{group.name}</Text>
             <View style={styles.seasonStatusRow}>
-              <Text style={styles.seasonLabel} numberOfLines={1} ellipsizeMode="tail">
+              <Text
+                style={styles.seasonLabel}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {group.season.seasonName}
               </Text>
               <View style={[styles.statusBadge, statusStyles.badge]}>
-                <Text style={[styles.statusText, statusStyles.text]}>{formatGroupStatus(group.status)}</Text>
+                <Text style={[styles.statusText, statusStyles.text]}>
+                  {formatGroupStatus(group.status)}
+                </Text>
               </View>
             </View>
           </View>
@@ -278,12 +306,15 @@ export default function GroupScreen() {
         rankings={leaderboardRankings}
         onTeamPress={(teamId, isYourTeam) => {
           if (isYourTeam) {
-            router.push('/(player)/team');
+            router.push({
+              pathname: "/(player)/teams/[teamId]",
+              params: { teamId: String(teamId) },
+            });
             return;
           }
 
           router.push({
-            pathname: '/(player)/teams/[teamId]',
+            pathname: "/(player)/teams/[teamId]",
             params: { teamId: String(teamId) },
           });
         }}

@@ -7,6 +7,7 @@ import { Colors, FontSizes, Spacing } from '../../../../constants/theme';
 import apiService, { CastawayPerformanceDetail } from '../../../../services/api';
 import { Castaway } from '../../../../types/survivor';
 import { getImportedCastawayImageSource } from '../../../../utils/castawayImages';
+import useDelayedLoader from '../../../../hooks/useDelayedLoader';
 
 export default function CastawayDetailsScreen() {
   const { id, season: seasonParam, jsonId: jsonIdParam } = useLocalSearchParams<{
@@ -18,6 +19,7 @@ export default function CastawayDetailsScreen() {
   const [performances, setPerformances] = useState<CastawayPerformanceDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     const parsedId = Number(id);
@@ -50,6 +52,10 @@ export default function CastawayDetailsScreen() {
   }, [id]);
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />

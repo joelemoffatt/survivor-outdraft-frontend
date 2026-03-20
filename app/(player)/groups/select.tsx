@@ -6,6 +6,7 @@ import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
 import apiService, { GroupResponse } from '../../../services/api';
+import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
 export default function SelectGroupScreen() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function SelectGroupScreen() {
   const [groups, setGroups] = useState<GroupResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     loadGroups();
@@ -74,6 +76,10 @@ export default function SelectGroupScreen() {
   };
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />

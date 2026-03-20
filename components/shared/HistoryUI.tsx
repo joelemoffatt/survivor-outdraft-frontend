@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
+import useDelayedLoader from '../../hooks/useDelayedLoader';
 
 type HistoryContainerProps = {
   children: ReactNode;
@@ -67,12 +68,20 @@ export const HistoryCard = ({ title, subtitle, onPress }: HistoryCardProps) => (
   </TouchableOpacity>
 );
 
-export const HistoryLoading = ({ label }: HistoryLoadingProps) => (
-  <View style={styles.loadingContainer}>
-    <ActivityIndicator size="large" color={Colors.primary} />
-    <Text style={styles.loadingText}>{label}</Text>
-  </View>
-);
+export const HistoryLoading = ({ label }: HistoryLoadingProps) => {
+  const showLoader = useDelayedLoader(true, 200);
+
+  if (!showLoader) {
+    return <View style={styles.loadingContainer} />;
+  }
+
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={Colors.primary} />
+      <Text style={styles.loadingText}>{label}</Text>
+    </View>
+  );
+};
 
 export const HistoryEmpty = ({ label }: HistoryEmptyProps) => (
   <Text style={styles.emptyText}>{label}</Text>

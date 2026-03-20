@@ -29,6 +29,7 @@ import DraftScreen from "../../components/player/DraftScreen";
 import Card from "../../components/shared/Card";
 import Button from "../../components/shared/Button";
 import TeamView from "../../components/shared/team";
+import useDelayedLoader from "../../hooks/useDelayedLoader";
 
 export default function TeamScreen() {
   const router = useRouter();
@@ -47,6 +48,11 @@ export default function TeamScreen() {
   const [selectingGroup, setSelectingGroup] = useState(false);
   const [scoreBreakdown, setScoreBreakdown] =
     useState<ScoreBreakdownResponse | null>(null);
+  const showDataLoadingSpinner = useDelayedLoader(loading, 200);
+  const showGroupLoadingSpinner = useDelayedLoader(
+    !selectedGroupId && !groupsLoaded,
+    200,
+  );
   const isGroupLeader = user
     ? Number(user.id) === Number(group?.admin?.id)
     : false;
@@ -196,6 +202,10 @@ export default function TeamScreen() {
 
   if (!selectedGroupId) {
     if (!groupsLoaded) {
+      if (!showGroupLoadingSpinner) {
+        return <View style={styles.centerContainer} />;
+      }
+
       return (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -231,6 +241,10 @@ export default function TeamScreen() {
   }
 
   if (loading) {
+    if (!showDataLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />

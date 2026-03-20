@@ -5,12 +5,16 @@ import { GroupProvider } from "../contexts/GroupContext";
 import { View, ActivityIndicator } from "react-native";
 import { useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
+import useDelayedLoader from "../hooks/useDelayedLoader";
+
+const AUTH_LOADER_DELAY_MS = 200
 
 function RootLayoutNav() {
   const { isLoggedIn, user, isLoading } = useAuth();
   const isAdmin = user?.isAdmin || false;
   const router = useRouter();
   const segments = useSegments();
+  const showLoader = useDelayedLoader(isLoading, AUTH_LOADER_DELAY_MS);
 
   useEffect(() => {
     if (isLoading) return;
@@ -33,9 +37,7 @@ function RootLayoutNav() {
     }
   }, [isLoggedIn, isLoading, router, segments]);
 
-  // Wait for auth to load before rendering
-  // TODO: Add a delay before showing the loader to prevent flickering on fast loads
-  if (isLoading) {
+  if (isLoading && showLoader) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#f4511e" />

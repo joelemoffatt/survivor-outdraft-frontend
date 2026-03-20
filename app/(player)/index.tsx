@@ -25,6 +25,7 @@ import {
 } from "../../components/player/HomeWidgets";
 import LeaderboardSection from "../../components/player/LeaderboardSection";
 import Button from "../../components/shared/Button";
+import useDelayedLoader from "../../hooks/useDelayedLoader";
 
 const responsiveMinHeight = 280;
 const APP_MODE = process.env.EXPO_PUBLIC_APP_MODE ?? "development";
@@ -33,13 +34,20 @@ const SHOW_SESSION_DEBUG = APP_MODE === "development";
 export default function PlayerHome() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { user, isLoggedIn, token, isLoading: authLoading, isAdminView } = useAuth();
+  const {
+    user,
+    isLoggedIn,
+    token,
+    isLoading: authLoading,
+    isAdminView,
+  } = useAuth();
   const { selectedGroupId, groupsLoaded, userHasGroups } = useGroup();
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [groupRankings, setGroupRankings] = useState<GroupRankingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
   const [sessionDebug, setSessionDebug] = useState({
     nowIso: "",
     storedTokenPresent: false,
@@ -52,16 +60,22 @@ export default function PlayerHome() {
   useEffect(() => {
     const readSessionDebug = async () => {
       try {
-        const [storedToken, storedUser, storedAdminView, storedSessionStartedAt] =
-          await Promise.all([
-            AsyncStorage.getItem("auth_token"),
-            AsyncStorage.getItem("auth_user"),
-            AsyncStorage.getItem("admin_view_enabled"),
-            AsyncStorage.getItem("session_started_at"),
-          ]);
+        const [
+          storedToken,
+          storedUser,
+          storedAdminView,
+          storedSessionStartedAt,
+        ] = await Promise.all([
+          AsyncStorage.getItem("auth_token"),
+          AsyncStorage.getItem("auth_user"),
+          AsyncStorage.getItem("admin_view_enabled"),
+          AsyncStorage.getItem("session_started_at"),
+        ]);
 
         const now = new Date();
-        const startedAtMs = storedSessionStartedAt ? Number(storedSessionStartedAt) : NaN;
+        const startedAtMs = storedSessionStartedAt
+          ? Number(storedSessionStartedAt)
+          : NaN;
         const ageSeconds = Number.isFinite(startedAtMs)
           ? Math.max(Math.floor((now.getTime() - startedAtMs) / 1000), 0)
           : null;
@@ -115,12 +129,22 @@ export default function PlayerHome() {
         setGroup(groupData);
         setTeam(userTeam);
 
+        let currentRank = 0;
+        let previousPoints: number | null = null;
+
         const rankings = [...teams]
           .sort((first, second) => second.totalPoints - first.totalPoints)
           .map((teamItem, index) => {
+            if (
+              previousPoints === null ||
+              teamItem.totalPoints !== previousPoints
+            ) {
+              currentRank = index + 1;
+              previousPoints = teamItem.totalPoints;
+            }
             const matchingMember = groupData.admin; // This is a placeholder; ideally we'd match via group members
             return {
-              rank: index + 1,
+              rank: currentRank,
               teamName: teamItem.teamName,
               username: teamItem.teamName.replace("Team ", ""),
               points: teamItem.totalPoints,
@@ -180,7 +204,12 @@ export default function PlayerHome() {
 
   const handleOpenTeam = (teamId: number, isYourTeam?: boolean) => {
     if (isYourTeam) {
-      router.push("/(player)/team");
+      router.push({
+        pathname: "/(player)/teams/[teamId]",
+        params: {
+          teamId: String(teamId),
+        },
+      });
       return;
     }
 
@@ -231,6 +260,10 @@ export default function PlayerHome() {
   }
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -294,21 +327,49 @@ export default function PlayerHome() {
       {SHOW_SESSION_DEBUG && (
         <View style={styles.sessionCard}>
           <Text style={styles.sessionTitle}>Session Debug (Testing)</Text>
-          <Text style={styles.sessionLine}>isLoggedIn: {String(isLoggedIn)}</Text>
-          <Text style={styles.sessionLine}>authLoading: {String(authLoading)}</Text>
-          <Text style={styles.sessionLine}>isAdminView: {String(isAdminView)}</Text>
+          <Text style={styles.sessionLine}>
+            isLoggedIn: {String(isLoggedIn)}
+          </Text>
+          <Text style={styles.sessionLine}>
+            authLoading: {String(authLoading)}
+          </Text>
+          <Text style={styles.sessionLine}>
+            isAdminView: {String(isAdminView)}
+          </Text>
           <Text style={styles.sessionLine}>userId: {user?.id ?? "null"}</Text>
-          <Text style={styles.sessionLine}>username: {user?.username ?? "null"}</Text>
-          <Text style={styles.sessionLine}>tokenPresent: {String(Boolean(token))}</Text>
-          <Text style={styles.sessionLine}>selectedGroupId: {selectedGroupId ?? "null"}</Text>
-          <Text style={styles.sessionLine}>groupsLoaded: {String(groupsLoaded)}</Text>
-          <Text style={styles.sessionLine}>userHasGroups: {String(userHasGroups)}</Text>
-          <Text style={styles.sessionLine}>storedTokenPresent: {String(sessionDebug.storedTokenPresent)}</Text>
-          <Text style={styles.sessionLine}>storedUserPresent: {String(sessionDebug.storedUserPresent)}</Text>
-          <Text style={styles.sessionLine}>storedAdminView: {sessionDebug.storedAdminViewValue}</Text>
-          <Text style={styles.sessionLine}>sessionStartedAt: {sessionDebug.storedSessionStartedAt}</Text>
-          <Text style={styles.sessionLine}>sessionAgeSeconds: {sessionDebug.sessionAgeSeconds}</Text>
-          <Text style={styles.sessionLine}>now: {sessionDebug.nowIso || "n/a"}</Text>
+          <Text style={styles.sessionLine}>
+            username: {user?.username ?? "null"}
+          </Text>
+          <Text style={styles.sessionLine}>
+            tokenPresent: {String(Boolean(token))}
+          </Text>
+          <Text style={styles.sessionLine}>
+            selectedGroupId: {selectedGroupId ?? "null"}
+          </Text>
+          <Text style={styles.sessionLine}>
+            groupsLoaded: {String(groupsLoaded)}
+          </Text>
+          <Text style={styles.sessionLine}>
+            userHasGroups: {String(userHasGroups)}
+          </Text>
+          <Text style={styles.sessionLine}>
+            storedTokenPresent: {String(sessionDebug.storedTokenPresent)}
+          </Text>
+          <Text style={styles.sessionLine}>
+            storedUserPresent: {String(sessionDebug.storedUserPresent)}
+          </Text>
+          <Text style={styles.sessionLine}>
+            storedAdminView: {sessionDebug.storedAdminViewValue}
+          </Text>
+          <Text style={styles.sessionLine}>
+            sessionStartedAt: {sessionDebug.storedSessionStartedAt}
+          </Text>
+          <Text style={styles.sessionLine}>
+            sessionAgeSeconds: {sessionDebug.sessionAgeSeconds}
+          </Text>
+          <Text style={styles.sessionLine}>
+            now: {sessionDebug.nowIso || "n/a"}
+          </Text>
         </View>
       )}
     </ScrollView>

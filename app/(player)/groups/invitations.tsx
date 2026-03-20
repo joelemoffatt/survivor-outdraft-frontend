@@ -5,6 +5,7 @@ import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import apiService, { GroupMemberResponse } from '../../../services/api';
 import { useRouter } from 'expo-router';
+import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
 export default function GroupInvitationsScreen() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export default function GroupInvitationsScreen() {
   const [invitations, setInvitations] = useState<GroupMemberResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     loadInvitations();
@@ -86,6 +88,10 @@ export default function GroupInvitationsScreen() {
   };
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />

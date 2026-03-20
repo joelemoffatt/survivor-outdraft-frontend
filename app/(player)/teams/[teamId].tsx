@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import apiService, { TeamResponse, ScoreBreakdownResponse } from '../../../services/api';
 import BackButton from '../../../components/shared/BackButton';
 import TeamView from '../../../components/shared/team';
+import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
 export default function TeamDetailScreen() {
   const { user } = useAuth();
@@ -15,6 +16,7 @@ export default function TeamDetailScreen() {
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdownResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     const loadTeamData = async () => {
@@ -49,6 +51,10 @@ export default function TeamDetailScreen() {
   }, [teamId, user]);
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />

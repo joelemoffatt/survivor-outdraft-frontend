@@ -10,6 +10,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
 import apiService, { GroupResponse } from '../../../services/api';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
+import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
 const draftStyleLabels: Record<string, string> = {
   SNAKE: 'Snake',
@@ -57,6 +58,7 @@ export default function GroupDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     const loadGroup = async () => {
@@ -96,6 +98,15 @@ export default function GroupDetailsScreen() {
   const headerTitle = group?.name ?? 'Group Details';
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return (
+        <>
+          <Stack.Screen options={{ title: headerTitle }} />
+          <View style={styles.centerContainer} />
+        </>
+      );
+    }
+
     return (
       <>
         <Stack.Screen options={{ title: headerTitle }} />

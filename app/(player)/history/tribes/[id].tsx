@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import apiService, { TribeMappingRecord } from '../../../../services/api';
 import { Colors, FontSizes, Spacing } from '../../../../constants/theme';
 import { getImportedCastawayImageSource } from '../../../../utils/castawayImages';
+import useDelayedLoader from '../../../../hooks/useDelayedLoader';
 
 type MemberRecord = {
   castawayId: number;
@@ -97,6 +98,7 @@ export default function TribeDetailsScreen() {
   const [mappings, setMappings] = useState<TribeMappingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
     const parsedId = Number(id);
@@ -126,6 +128,10 @@ export default function TribeDetailsScreen() {
   const groups = useMemo(() => buildRangeGroups(mappings), [mappings]);
 
   if (loading) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerState} />;
+    }
+
     return (
       <View style={styles.centerState}>
         <ActivityIndicator size="large" color={Colors.primary} />

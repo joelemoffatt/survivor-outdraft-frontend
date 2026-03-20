@@ -17,6 +17,7 @@ import { ConfirmDialog } from '../../../../components/shared/ConfirmDialog';
 import apiService, { GroupResponse } from '../../../../services/api';
 import { Episode, Season } from '../../../../types/survivor';
 import GroupRulesEditor, { LocalRule } from '../../../../components/admin/GroupRulesEditor';
+import useDelayedLoader from '../../../../hooks/useDelayedLoader';
 
 const draftStyleOptions: PickerOption[] = [
   { label: 'Snake', value: 'SNAKE' },
@@ -35,6 +36,7 @@ export default function ManageGroupDetailsScreen() {
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [loadingSeasons, setLoadingSeasons] = useState(true);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+  const showLoadingSpinner = useDelayedLoader(loading || loadingSeasons, 200);
 
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -246,6 +248,10 @@ export default function ManageGroupDetailsScreen() {
   };
 
   if (loading || loadingSeasons) {
+    if (!showLoadingSpinner) {
+      return <View style={styles.centerContainer} />;
+    }
+
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.loadingText}>Loading group settings...</Text>
