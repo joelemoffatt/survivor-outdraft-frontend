@@ -225,9 +225,29 @@ export default function DraftScreen({
               .filter((pick) => pick.isPicked && pick.team?.id === myTeamId && !!pick.castawayPerformanceId)
               .forEach((pick) => userDraftedCastawayIds.add(pick.castawayPerformanceId!));
 
+            const maxMeaningfulCap = Math.max(1, draftState.totalParticipants || 1);
+            const teamCap = myParticipant?.maxDraftsPerCastaway || draftState.maxDraftsPerCastaway || 1;
+
+            const countDraftableAtCap = (cap: number) =>
+              draftState.draftCastaways.filter((castaway) => {
+                if (userDraftedCastawayIds.has(castaway.castawayPerformanceId)) {
+                  return false;
+                }
+                const draftedCount = draftedCounts.get(castaway.castawayPerformanceId) || 0;
+                return draftedCount < cap;
+              }).length;
+
+            let effectiveCap = teamCap;
+            while (countDraftableAtCap(effectiveCap) === 0 && effectiveCap < maxMeaningfulCap) {
+              effectiveCap += 1;
+            }
+
             const draftableCastaways = draftState.draftCastaways.filter((castaway) => {
+              if (userDraftedCastawayIds.has(castaway.castawayPerformanceId)) {
+                return false;
+              }
               const draftedCount = draftedCounts.get(castaway.castawayPerformanceId) || 0;
-              return draftedCount < draftState.maxDraftsPerCastaway;
+              return draftedCount < effectiveCap;
             });
 
             if (draftableCastaways.length === 0) {
