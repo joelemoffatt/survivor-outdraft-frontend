@@ -68,11 +68,6 @@ export default function MoreScreen() {
           icon: 'mail',
           onPress: () => router.push('/(player)/groups/invitations'),
         },
-        {
-          label: 'Group Details',
-          icon: 'information-circle',
-          onPress: () => router.push('/(player)/groups/details'),
-        },
       ],
     },
     {

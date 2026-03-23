@@ -3,8 +3,8 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const developmentApiBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
-  // 'http://192.168.86.20:8080/api'; // ipconfig getifaddr en0 HOME AXIO
-  'http://10.255.63.34:8080/api';
+  'http://192.168.86.20:8080/api'; // ipconfig getifaddr en0 HOME AXIO
+  // 'http://10.255.63.34:8080/api';
 const API_BASE_URL = isDevelopment
   ? developmentApiBaseUrl
   : 'https://your-production-url.com/api';  // Production

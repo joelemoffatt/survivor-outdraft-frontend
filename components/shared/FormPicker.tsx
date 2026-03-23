@@ -26,6 +26,7 @@ interface FormPickerProps {
   error?: string;
   required?: boolean;
   searchable?: boolean;
+  disabled?: boolean;
 }
 
 export default function FormPicker({
@@ -37,6 +38,7 @@ export default function FormPicker({
   error,
   required,
   searchable = false,
+  disabled = false,
 }: FormPickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,18 +66,20 @@ export default function FormPicker({
       </View>
       
       <TouchableOpacity
-        style={[styles.picker, error && styles.pickerError]}
-        onPress={() => setModalVisible(true)}
+        style={[styles.picker, error && styles.pickerError, disabled && styles.pickerDisabled]}
+        onPress={() => !disabled && setModalVisible(true)}
+        disabled={disabled}
       >
         <Text
           style={[
             styles.pickerText,
             !selectedOption && styles.placeholderText,
+            disabled && styles.pickerDisabledText,
           ]}
         >
           {displayText}
         </Text>
-        <Ionicons name="chevron-down" size={20} color={Colors.textSecondary} />
+        <Ionicons name="chevron-down" size={20} color={disabled ? Colors.textSecondary : Colors.textSecondary} />
       </TouchableOpacity>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -180,9 +184,16 @@ const styles = StyleSheet.create({
   pickerError: {
     borderColor: Colors.warning,
   },
+  pickerDisabled: {
+    backgroundColor: '#f5f5f5',
+    opacity: 0.6,
+  },
   pickerText: {
     fontSize: FontSizes.medium,
     color: Colors.text,
+  },
+  pickerDisabledText: {
+    color: Colors.textSecondary,
   },
   placeholderText: {
     color: Colors.textSecondary,

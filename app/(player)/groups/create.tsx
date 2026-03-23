@@ -1,110 +1,33 @@
-import { useEffect, useState } from 'react';
-import { 
-  ScrollView, 
-  StyleSheet, 
-  Text, 
-  View, 
-  KeyboardAvoidingView, 
+import { useEffect, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  KeyboardAvoidingView,
   Platform,
   Alert,
   TouchableOpacity,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSizes, Spacing } from '../../../constants/theme';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useGroup } from '../../../contexts/GroupContext';
-import apiService, { GroupResponse } from '../../../services/api';
-import { Episode, Season } from '../../../types/survivor';
-import FormInput from '../../../components/shared/FormInput';
-import FormPicker, { PickerOption } from '../../../components/shared/FormPicker';
-import FormButton from '../../../components/shared/FormButton';
-import InviteMember from '../../../components/shared/InviteMember';
-import GroupRulesEditor, { LocalRule, getDefaultLocalRules } from '../../../components/admin/GroupRulesEditor';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors, FontSizes, Spacing } from "../../../constants/theme";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useGroup } from "../../../contexts/GroupContext";
+import apiService, { GroupResponse } from "../../../services/api";
+import { Episode, Season } from "../../../types/survivor";
+import { PickerOption } from "../../../components/shared/FormPicker";
+import FormButton from "../../../components/shared/FormButton";
+import InviteMember from "../../../components/shared/InviteMember";
+import { LocalRule } from "../../../components/shared/PointRulesInput";
+import { GroupMember } from "../../../components/shared/MembersInput";
+import GroupSettingsForm from "../../../components/shared/GroupSettingsForm";
 
 const draftStyleOptions: PickerOption[] = [
-  { label: 'Snake', value: 'SNAKE' },
-  { label: 'Round Robin', value: 'ROUND_ROBIN' },
-  { label: 'Linear', value: 'LINEAR' },
+  { label: "Snake", value: "SNAKE" },
+  { label: "Round Robin", value: "ROUND_ROBIN" },
+  { label: "Linear", value: "LINEAR" },
 ];
-
-const DEADLOCK_PREVIEW_PARTICIPANTS = 4;
-
-const calculatePosition = (
-  pickNumber: number,
-  numPlayers: number,
-  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR'
-): number => {
-  switch (style) {
-    case 'SNAKE': {
-      const round = Math.floor((pickNumber - 1) / numPlayers);
-      if (round % 2 === 0) {
-        return (pickNumber - 1) % numPlayers;
-      }
-      return numPlayers - 1 - ((pickNumber - 1) % numPlayers);
-    }
-    case 'ROUND_ROBIN':
-    case 'LINEAR':
-    default:
-      return (pickNumber - 1) % numPlayers;
-  }
-};
-
-const isDeadlockSafe = (
-  totalParticipants: number,
-  teamSize: number,
-  totalCastaways: number,
-  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR'
-): boolean => {
-  if (totalParticipants <= 0 || teamSize <= 0 || totalCastaways <= 0) {
-    return false;
-  }
-
-  if (totalCastaways < teamSize) {
-    return false;
-  }
-
-  const totalPicks = totalParticipants * teamSize;
-  const picksMadeByPosition = new Array(totalParticipants).fill(0);
-  const picksMadeByPositionThisCycle = new Array(totalParticipants).fill(0);
-
-  for (let pickNumber = 1; pickNumber <= totalPicks; pickNumber++) {
-    const position = calculatePosition(pickNumber, totalParticipants, style);
-    const picksBeforeThisTurnInCycle = (pickNumber - 1) % totalCastaways;
-    const otherPlayersPicksThisCycle =
-      picksBeforeThisTurnInCycle - picksMadeByPositionThisCycle[position];
-    const guaranteedOptionsRemaining =
-      totalCastaways - picksMadeByPosition[position] - otherPlayersPicksThisCycle;
-
-    if (guaranteedOptionsRemaining <= 0) {
-      return false;
-    }
-
-    picksMadeByPosition[position] += 1;
-    picksMadeByPositionThisCycle[position] += 1;
-
-    if (pickNumber % totalCastaways === 0) {
-      picksMadeByPositionThisCycle.fill(0);
-    }
-  }
-
-  return true;
-};
-
-const findMinimumSafeCastaways = (
-  totalParticipants: number,
-  teamSize: number,
-  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR'
-): number => {
-  const totalPicks = totalParticipants * teamSize;
-  let candidate = Math.max(teamSize, 1);
-
-  while (candidate <= totalPicks && !isDeadlockSafe(totalParticipants, teamSize, candidate, style)) {
-    candidate += 1;
-  }
-
-  return candidate;
-};
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -118,26 +41,50 @@ export default function CreateGroupScreen() {
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [seasonCastawayCount, setSeasonCastawayCount] = useState<number | null>(null);
+  const [seasonCastawayCount, setSeasonCastawayCount] = useState<number | null>(
+    null,
+  );
   const [loadingCastawayStats, setLoadingCastawayStats] = useState(false);
+  const [bootsCount, setBootsCount] = useState<number>(0);
 
   const [formData, setFormData] = useState({
-    name: '',
+    name: "",
     seasonId: null as number | null,
     latestWatchedEpisodeId: null as number | null,
-    firstScoringEpisodeNumber: '1',
-    teamSize: '',
-    style: 'SNAKE' as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR',
-    draftDate: '',
-    pointRules: getDefaultLocalRules() as LocalRule[],
+    firstScoringEpisodeNumber: "1",
+    teamSize: "",
+    style: "SNAKE" as "SNAKE" | "ROUND_ROBIN" | "LINEAR",
+    draftDate: "",
+    pointRules: [] as LocalRule[],
+    groupMembers: [] as GroupMember[],
   });
 
   const [errors, setErrors] = useState({
-    name: '',
-    seasonId: '',
-    firstScoringEpisodeNumber: '',
-    teamSize: '',
+    name: "",
+    seasonId: "",
+    firstScoringEpisodeNumber: "",
+    teamSize: "",
   });
+
+  const getTeamSizeAvailabilityError = (
+    teamSizeValue: string,
+    available: number | null,
+  ): string => {
+    if (!teamSizeValue.trim()) {
+      return "";
+    }
+
+    const teamSizeNum = parseInt(teamSizeValue, 10);
+    if (isNaN(teamSizeNum) || teamSizeNum < 1) {
+      return "Team size must be a positive number";
+    }
+
+    if (available != null && teamSizeNum > available) {
+      return `Team size cannot exceed available castaways (${available})`;
+    }
+
+    return "";
+  };
 
   useEffect(() => {
     loadSeasons();
@@ -155,18 +102,72 @@ export default function CreateGroupScreen() {
         const episodesData = await apiService.getEpisodes(formData.seasonId);
         setEpisodes(episodesData);
       } catch (error) {
-        console.error('Failed to load episodes:', error);
+        console.error("Failed to load episodes:", error);
         // TODO: replace alerts with custom popup
-        Alert.alert('Error', 'Failed to load episodes. Please try again.');
+        Alert.alert("Error", "Failed to load episodes. Please try again.");
         setEpisodes([]);
       } finally {
         setLoadingEpisodes(false);
       }
     };
 
-    setFormData((prev) => ({ ...prev, latestWatchedEpisodeId: null, firstScoringEpisodeNumber: '1' }));
+    setFormData((prev) => ({
+      ...prev,
+      latestWatchedEpisodeId: null,
+      firstScoringEpisodeNumber: "1",
+    }));
     loadEpisodes();
   }, [formData.seasonId]);
+
+  useEffect(() => {
+    const countBootsUpToEpisode = async () => {
+      if (!formData.seasonId || !formData.latestWatchedEpisodeId) {
+        setBootsCount(0);
+        return;
+      }
+
+      try {
+        setLoadingCastawayStats(true);
+        const watchedEpisodeData = episodes.find(
+          (episode) => episode.id === formData.latestWatchedEpisodeId,
+        );
+
+        if (!watchedEpisodeData) {
+          setBootsCount(0);
+          return;
+        }
+
+        // Count boots from all episodes up to and including this one
+        let totalBoots = 0;
+        for (const episode of episodes) {
+          if (episode.episodeNumber <= watchedEpisodeData.episodeNumber) {
+            try {
+              const detail = await apiService.getEpisodeDetail(
+                formData.seasonId,
+                episode.episodeNumber,
+              );
+              totalBoots += detail.boots?.length ?? 0;
+              totalBoots += detail.tribals?.length ?? 0;
+            } catch (error) {
+              console.error(
+                `Failed to load episode ${episode.episodeNumber} details:`,
+                error,
+              );
+            }
+          }
+        }
+
+        setBootsCount(totalBoots);
+      } catch (error) {
+        console.error("Failed to count boots:", error);
+        setBootsCount(0);
+      } finally {
+        setLoadingCastawayStats(false);
+      }
+    };
+
+    countBootsUpToEpisode();
+  }, [formData.seasonId, formData.latestWatchedEpisodeId, episodes]);
 
   useEffect(() => {
     const loadSeasonCastaways = async () => {
@@ -180,7 +181,7 @@ export default function CreateGroupScreen() {
         const castaways = await apiService.getCastaways(formData.seasonId);
         setSeasonCastawayCount(castaways.length);
       } catch (error) {
-        console.error('Failed to load season castaways:', error);
+        console.error("Failed to load season castaways:", error);
         setSeasonCastawayCount(null);
       } finally {
         setLoadingCastawayStats(false);
@@ -196,8 +197,8 @@ export default function CreateGroupScreen() {
       const seasonsData = await apiService.getSeasons();
       setSeasons(seasonsData);
     } catch (error) {
-      console.error('Failed to load seasons:', error);
-      Alert.alert('Error', 'Failed to load seasons. Please try again.');
+      console.error("Failed to load seasons:", error);
+      Alert.alert("Error", "Failed to load seasons. Please try again.");
     } finally {
       setLoadingSeasons(false);
     }
@@ -214,70 +215,98 @@ export default function CreateGroupScreen() {
       value: null,
     },
     ...episodes.map((episode) => ({
-      label: `Episode ${episode.episodeNumber}${episode.episodeTitle ? ` - ${episode.episodeTitle}` : ''}`,
+      label: `Episode ${episode.episodeNumber}${episode.episodeTitle ? ` - ${episode.episodeTitle}` : ""}`,
       value: episode.id,
     })),
   ];
 
-  const parsedTeamSize = parseInt(formData.teamSize, 10);
-  const hasValidTeamSize = !isNaN(parsedTeamSize) && parsedTeamSize > 0;
-  const watchedEpisode = episodes.find((episode) => episode.id === formData.latestWatchedEpisodeId);
-  const assumedEliminations = watchedEpisode?.episodeNumber ?? 0;
+  const watchedEpisode = episodes.find(
+    (episode) => episode.id === formData.latestWatchedEpisodeId,
+  );
   const availableCastaways =
     seasonCastawayCount == null
       ? null
-      : Math.max(seasonCastawayCount - assumedEliminations, 0);
-  const minimumSafeCastaways = hasValidTeamSize
-    ? findMinimumSafeCastaways(DEADLOCK_PREVIEW_PARTICIPANTS, parsedTeamSize, formData.style)
-    : null;
-  const isDeadlockSafePreview =
-    hasValidTeamSize &&
-    availableCastaways != null &&
-    isDeadlockSafe(DEADLOCK_PREVIEW_PARTICIPANTS, parsedTeamSize, availableCastaways, formData.style);
+      : Math.max(seasonCastawayCount - bootsCount, 0);
+  const teamSizeAvailabilityError = getTeamSizeAvailabilityError(
+    formData.teamSize,
+    availableCastaways,
+  );
+  const isTeamSizeAvailable = teamSizeAvailabilityError.length === 0;
+
+  useEffect(() => {
+    if (!formData.teamSize.trim()) {
+      return;
+    }
+
+    const nextTeamSizeError = getTeamSizeAvailabilityError(
+      formData.teamSize,
+      availableCastaways,
+    );
+    if (nextTeamSizeError !== errors.teamSize) {
+      setErrors((prev) => ({ ...prev, teamSize: nextTeamSizeError }));
+    }
+  }, [formData.teamSize, availableCastaways, errors.teamSize]);
 
   const validateForm = (): boolean => {
     const newErrors = {
-      name: '',
-      seasonId: '',
-      firstScoringEpisodeNumber: '',
-      teamSize: '',
+      name: "",
+      seasonId: "",
+      firstScoringEpisodeNumber: "",
+      teamSize: "",
     };
 
     let isValid = true;
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Group name is required';
+      newErrors.name = "Group name is required";
       isValid = false;
     } else if (formData.name.length > 100) {
-      newErrors.name = 'Group name must be less than 100 characters';
+      newErrors.name = "Group name must be less than 100 characters";
       isValid = false;
     }
 
     if (!formData.seasonId) {
-      newErrors.seasonId = 'Please select a season';
+      newErrors.seasonId = "Please select a season";
       isValid = false;
     }
 
     if (!formData.teamSize.trim()) {
-      newErrors.teamSize = 'Team size is required';
+      newErrors.teamSize = "Team size is required";
       isValid = false;
     } else {
       const teamSizeNum = parseInt(formData.teamSize, 10);
       if (isNaN(teamSizeNum) || teamSizeNum < 1) {
-        newErrors.teamSize = 'Team size must be a positive number';
+        newErrors.teamSize = "Team size must be a positive number";
+        isValid = false;
+      } else if (
+        availableCastaways != null &&
+        teamSizeNum > availableCastaways
+      ) {
+        newErrors.teamSize = `Team size cannot exceed available castaways (${availableCastaways})`;
         isValid = false;
       }
     }
 
-    const firstScoringEpisodeNumber = parseInt(formData.firstScoringEpisodeNumber, 10);
+    const firstScoringEpisodeNumber = parseInt(
+      formData.firstScoringEpisodeNumber,
+      10,
+    );
     if (!formData.firstScoringEpisodeNumber.trim()) {
-      newErrors.firstScoringEpisodeNumber = 'First scoring episode is required';
+      newErrors.firstScoringEpisodeNumber = "First scoring episode is required";
       isValid = false;
-    } else if (isNaN(firstScoringEpisodeNumber) || firstScoringEpisodeNumber < 1) {
-      newErrors.firstScoringEpisodeNumber = 'First scoring episode must be 1 or greater';
+    } else if (
+      isNaN(firstScoringEpisodeNumber) ||
+      firstScoringEpisodeNumber < 1
+    ) {
+      newErrors.firstScoringEpisodeNumber =
+        "First scoring episode must be 1 or greater";
       isValid = false;
-    } else if (watchedEpisode && firstScoringEpisodeNumber > watchedEpisode.episodeNumber) {
-      newErrors.firstScoringEpisodeNumber = 'Cannot be greater than latest watched episode number';
+    } else if (
+      watchedEpisode &&
+      firstScoringEpisodeNumber > watchedEpisode.episodeNumber
+    ) {
+      newErrors.firstScoringEpisodeNumber =
+        "Cannot be greater than latest watched episode number";
       isValid = false;
     }
 
@@ -300,7 +329,10 @@ export default function CreateGroupScreen() {
         ...(formData.latestWatchedEpisodeId != null && {
           latestWatchedEpisode: { id: formData.latestWatchedEpisodeId },
         }),
-        firstScoringEpisodeNumber: parseInt(formData.firstScoringEpisodeNumber, 10),
+        firstScoringEpisodeNumber: parseInt(
+          formData.firstScoringEpisodeNumber,
+          10,
+        ),
         teamSize: parseInt(formData.teamSize, 10),
         style: formData.style,
         pointRules: formData.pointRules.map((rule) => ({
@@ -314,17 +346,19 @@ export default function CreateGroupScreen() {
       }
 
       const newGroup = await apiService.createGroup(groupData);
-      
+
       // Set the newly created group as selected
       setSelectedGroupId(newGroup.id);
       setCreatedGroup(newGroup);
-      
+
       setShowSuccess(true);
     } catch (error) {
-      console.error('Failed to create group:', error);
+      console.error("Failed to create group:", error);
       Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to create group. Please try again.'
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "Failed to create group. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -333,7 +367,10 @@ export default function CreateGroupScreen() {
 
   if (showSuccess && createdGroup) {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.successContent}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.successContent}
+      >
         <View style={styles.successHeader}>
           <View style={styles.checkCircle}>
             <Ionicons name="checkmark" size={48} color="#fff" />
@@ -342,13 +379,6 @@ export default function CreateGroupScreen() {
           <Text style={styles.successSubtitle}>
             You are now the admin of {createdGroup.name}
           </Text>
-        </View>
-
-        <View style={styles.inviteSection}>
-          <InviteMember
-            groupId={createdGroup.id}
-            groupName={createdGroup.name}
-          />
         </View>
 
         <View style={styles.successActions}>
@@ -366,7 +396,7 @@ export default function CreateGroupScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         style={styles.scrollView}
@@ -374,131 +404,27 @@ export default function CreateGroupScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.description}>
-          Create a new group to compete with friends! As the group admin, you'll be able to
-          invite members and manage draft settings.
+          Create a new group to compete with friends! As the group admin, you'll
+          be able to invite members and manage draft settings.
         </Text>
 
-        <FormInput
-          label="Group Name"
-          value={formData.name}
-          onChangeText={(name) => setFormData({ ...formData, name })}
-          placeholder="Enter group name"
-          error={errors.name}
-          required
-          maxLength={100}
-        />
-
-        <FormPicker
-          label="Season"
-          value={formData.seasonId}
-          options={seasonOptions}
-          onValueChange={(seasonId) => setFormData({ ...formData, seasonId: seasonId as number })}
-          placeholder={loadingSeasons ? 'Loading seasons...' : 'Select a season'}
-          error={errors.seasonId}
-          required
-          searchable
-        />
-
-        <FormPicker
-          label="Latest Episode Watched (optional)"
-          value={formData.latestWatchedEpisodeId}
-          options={episodeOptions}
-          onValueChange={(latestWatchedEpisodeId) =>
-            setFormData({
-              ...formData,
-              latestWatchedEpisodeId:
-                latestWatchedEpisodeId == null ? null : Number(latestWatchedEpisodeId),
-            })
-          }
-          placeholder={
-            !formData.seasonId
-              ? 'Select a season first'
-              : loadingEpisodes
-                ? 'Loading episodes...'
-                : 'None (all castaways visible)'
-          }
-          searchable
-        />
-
-        <FormInput
-          label="First Scoring Episode Number"
-          value={formData.firstScoringEpisodeNumber}
-          onChangeText={(firstScoringEpisodeNumber) =>
-            setFormData({ ...formData, firstScoringEpisodeNumber })
-          }
-          placeholder="e.g., 1"
-          error={errors.firstScoringEpisodeNumber}
-          keyboardType="number-pad"
-          required
-        />
-
-        <FormInput
-          label="Team Size"
-          value={formData.teamSize}
-          onChangeText={(teamSize) => setFormData({ ...formData, teamSize })}
-          placeholder="e.g., 10"
-          error={errors.teamSize}
-          keyboardType="number-pad"
-          required
-        />
-
-        {formData.seasonId && (
-          <View style={styles.deadlockInfoCard}>
-            <Text style={styles.deadlockInfoTitle}>Deadlock safety preview</Text>
-            <Text style={styles.deadlockInfoText}>
-              Uses a 4-player worst case (you + 3 others) and assumes at least 1 castaway leaves each watched episode.
-            </Text>
-            {loadingCastawayStats ? (
-              <Text style={styles.deadlockInfoText}>Calculating available castaways...</Text>
-            ) : (
-              <>
-                <Text style={styles.deadlockInfoText}>
-                  Available castaways: {availableCastaways ?? 'Unknown'}
-                </Text>
-                <Text style={styles.deadlockInfoText}>
-                  Assumed eliminated from watched episodes: {assumedEliminations}
-                </Text>
-                {minimumSafeCastaways != null && (
-                  <Text style={styles.deadlockInfoText}>
-                    Minimum needed for team size {parsedTeamSize}: {minimumSafeCastaways}
-                  </Text>
-                )}
-                {minimumSafeCastaways != null && availableCastaways != null && (
-                  <Text
-                    style={[
-                      styles.deadlockInfoResult,
-                      isDeadlockSafePreview ? styles.deadlockSafe : styles.deadlockRisk,
-                    ]}
-                  >
-                    {isDeadlockSafePreview
-                      ? 'Looks safe for 4 players.'
-                      : 'Risk: not enough castaways for 4-player worst case.'}
-                  </Text>
-                )}
-              </>
-            )}
-          </View>
-        )}
-
-        <FormPicker
-          label="Draft Style"
-          value={formData.style}
-          options={draftStyleOptions}
-          onValueChange={(style) => setFormData({ ...formData, style: style as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR' })}
-          placeholder="Select draft style"
-          required
-        />
-
-        <FormInput
-          label="Scheduled Start (optional)"
-          value={formData.draftDate}
-          onChangeText={(draftDate) => setFormData({ ...formData, draftDate })}
-          placeholder="YYYY-MM-DDTHH:mm:ss"
-        />
-
-        <GroupRulesEditor
-          rules={formData.pointRules}
-          onChange={(pointRules: LocalRule[]) => setFormData((prev) => ({ ...prev, pointRules }))}
+        <GroupSettingsForm
+          formData={formData}
+          errors={errors}
+          seasonOptions={seasonOptions}
+          episodeOptions={episodeOptions}
+          draftStyleOptions={draftStyleOptions}
+          loadingSeasons={loadingSeasons}
+          loadingEpisodes={loadingEpisodes}
+          onFormChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
+          showDraftDate
+          showSafetyInfo
+          showMembersSection
+          seasonCastawayCount={seasonCastawayCount}
+          bootsCount={bootsCount}
+          availableCastaways={availableCastaways}
+          teamSizeAvailabilityError={teamSizeAvailabilityError}
+          loadingCastawayStats={loadingCastawayStats}
         />
 
         <View style={styles.buttonContainer}>
@@ -506,7 +432,7 @@ export default function CreateGroupScreen() {
             title="Create Group"
             onPress={handleSubmit}
             loading={loading}
-            disabled={loadingSeasons || loadingEpisodes}
+            disabled={loadingSeasons || loadingEpisodes || !isTeamSizeAvailable}
           />
         </View>
       </ScrollView>
@@ -534,6 +460,16 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: Spacing.lg,
   },
+  sectionContainer: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: FontSizes.large,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: Spacing.lg,
+  },
   deadlockInfoCard: {
     marginTop: -Spacing.sm,
     marginBottom: Spacing.lg,
@@ -545,7 +481,7 @@ const styles = StyleSheet.create({
   },
   deadlockInfoTitle: {
     fontSize: FontSizes.medium,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
@@ -554,10 +490,16 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 18,
   },
+  teamSizeErrorText: {
+    marginTop: Spacing.sm,
+    fontSize: FontSizes.small,
+    fontWeight: "600",
+    color: Colors.warning,
+  },
   deadlockInfoResult: {
     marginTop: Spacing.sm,
     fontSize: FontSizes.small,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   deadlockSafe: {
     color: Colors.success,
@@ -569,7 +511,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   successHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: Spacing.xl,
   },
   checkCircle: {
@@ -577,10 +519,10 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     backgroundColor: Colors.success,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: Spacing.md,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -588,14 +530,14 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: FontSizes.xxlarge,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
   successSubtitle: {
     fontSize: FontSizes.medium,
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
   },
   inviteSection: {
     marginBottom: Spacing.xl,
@@ -607,11 +549,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: Spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   doneButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: FontSizes.large,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

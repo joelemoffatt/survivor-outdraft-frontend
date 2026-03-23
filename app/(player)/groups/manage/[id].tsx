@@ -10,13 +10,14 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, FontSizes, Spacing } from '../../../../constants/theme';
-import FormInput from '../../../../components/shared/FormInput';
-import FormPicker, { PickerOption } from '../../../../components/shared/FormPicker';
+import { PickerOption } from '../../../../components/shared/FormPicker';
 import FormButton from '../../../../components/shared/FormButton';
 import { ConfirmDialog } from '../../../../components/shared/ConfirmDialog';
 import apiService, { GroupResponse } from '../../../../services/api';
 import { Episode, Season } from '../../../../types/survivor';
-import GroupRulesEditor, { LocalRule } from '../../../../components/admin/GroupRulesEditor';
+import { LocalRule } from '../../../../components/shared/PointRulesInput';
+import GroupSettingsForm from '../../../../components/shared/GroupSettingsForm';
+import { GroupMember } from '../../../../components/shared/MembersInput';
 import useDelayedLoader from '../../../../hooks/useDelayedLoader';
 
 const draftStyleOptions: PickerOption[] = [
@@ -41,6 +42,7 @@ export default function ManageGroupDetailsScreen() {
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [initialMembers, setInitialMembers] = useState<GroupMember[]>([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -49,7 +51,9 @@ export default function ManageGroupDetailsScreen() {
     firstScoringEpisodeNumber: '1',
     teamSize: '',
     style: 'SNAKE' as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR',
+    draftDate: '',
     pointRules: [] as LocalRule[],
+    groupMembers: [] as GroupMember[],
   });
 
   const [errors, setErrors] = useState({
@@ -94,12 +98,24 @@ export default function ManageGroupDetailsScreen() {
 
     try {
       setLoading(true);
-      const [groupData, seasonsData] = await Promise.all([
+      const [groupData, seasonsData, membersData] = await Promise.all([
         apiService.getGroupById(groupId),
         apiService.getSeasons(),
+        apiService.getGroupMembers(groupId),
       ]);
       setGroup(groupData);
       setSeasons(seasonsData);
+
+      const mappedMembers: GroupMember[] = membersData.map((member) => ({
+        id: `existing-${member.id}`,
+        memberId: member.id,
+        username: member.user.username,
+        status: member.status,
+        isAdmin: member.user.id === groupData.admin.id,
+      }));
+
+      setInitialMembers(mappedMembers);
+
       setFormData({
         name: groupData.name,
         seasonId: groupData.season.id,
@@ -107,10 +123,12 @@ export default function ManageGroupDetailsScreen() {
         firstScoringEpisodeNumber: String(groupData.firstScoringEpisodeNumber ?? 1),
         teamSize: String(groupData.teamSize ?? ''),
         style: groupData.draft?.style ?? 'SNAKE',
+        draftDate: groupData.draft?.scheduledAt ?? '',
         pointRules: (groupData.pointRules ?? []).map((rule) => ({
           ruleType: rule.ruleType as LocalRule['ruleType'],
           points: rule.points,
         })),
+        groupMembers: mappedMembers,
       });
     } catch (error) {
       console.error('Failed to load group settings:', error);
@@ -208,7 +226,40 @@ export default function ManageGroupDetailsScreen() {
         })),
       };
 
+      const deletedMembers = initialMembers.filter(
+        (initialMember) =>
+          !initialMember.isAdmin &&
+          !formData.groupMembers.some(
+            (currentMember) => currentMember.memberId === initialMember.memberId,
+          ),
+      );
+
+      const addedMembers = formData.groupMembers.filter(
+        (member) => !member.memberId,
+      );
+
       const updated = await apiService.updateGroupSettings(groupId, payload);
+
+      for (const member of deletedMembers) {
+        if (member.memberId) {
+          await apiService.cancelInvitation(member.memberId);
+        }
+      }
+
+      for (const member of addedMembers) {
+        await apiService.inviteByUsername(groupId, member.username);
+      }
+
+      const refreshedMembers = await apiService.getGroupMembers(groupId);
+      const mappedMembers: GroupMember[] = refreshedMembers.map((member) => ({
+        id: `existing-${member.id}`,
+        memberId: member.id,
+        username: member.user.username,
+        status: member.status,
+        isAdmin: member.user.id === updated.admin.id,
+      }));
+
+      setInitialMembers(mappedMembers);
       setGroup(updated);
       setFormData((prev) => ({
         ...prev,
@@ -216,6 +267,7 @@ export default function ManageGroupDetailsScreen() {
           ruleType: rule.ruleType as LocalRule['ruleType'],
           points: rule.points,
         })),
+        groupMembers: mappedMembers,
       }));
       Alert.alert('Success', 'Group settings updated. Scores were recalculated.');
     } catch (error) {
@@ -273,93 +325,17 @@ export default function ManageGroupDetailsScreen() {
           Update your group settings. Changes to scoring episodes recalculate points immediately.
         </Text>
 
-        <FormInput
-          label="Group Name"
-          value={formData.name}
-          onChangeText={(name) => setFormData((prev) => ({ ...prev, name }))}
-          placeholder="Enter group name"
-          error={errors.name}
-          required
-          maxLength={100}
-        />
-
-        <FormPicker
-          label="Season"
-          value={formData.seasonId}
-          options={seasonOptions}
-          onValueChange={(seasonId) =>
-            setFormData((prev) => ({
-              ...prev,
-              seasonId: seasonId == null ? null : Number(seasonId),
-              latestWatchedEpisodeId: null,
-            }))
-          }
-          placeholder="Select a season"
-          error={errors.seasonId}
-          required
-          searchable
-        />
-
-        <FormPicker
-          label="Latest Episode Watched (optional)"
-          value={formData.latestWatchedEpisodeId}
-          options={episodeOptions}
-          onValueChange={(latestWatchedEpisodeId) =>
-            setFormData((prev) => ({
-              ...prev,
-              latestWatchedEpisodeId:
-                latestWatchedEpisodeId == null ? null : Number(latestWatchedEpisodeId),
-            }))
-          }
-          placeholder={
-            !formData.seasonId
-              ? 'Select a season first'
-              : loadingEpisodes
-              ? 'Loading episodes...'
-              : 'None (all castaways visible)'
-          }
-          searchable
-        />
-
-        <FormInput
-          label="First Scoring Episode Number"
-          value={formData.firstScoringEpisodeNumber}
-          onChangeText={(firstScoringEpisodeNumber) =>
-            setFormData((prev) => ({ ...prev, firstScoringEpisodeNumber }))
-          }
-          placeholder="e.g., 1"
-          error={errors.firstScoringEpisodeNumber}
-          keyboardType="number-pad"
-          required
-        />
-
-        <FormInput
-          label="Team Size"
-          value={formData.teamSize}
-          onChangeText={(teamSize) => setFormData((prev) => ({ ...prev, teamSize }))}
-          placeholder="e.g., 10"
-          error={errors.teamSize}
-          keyboardType="number-pad"
-          required
-        />
-
-        <FormPicker
-          label="Draft Style"
-          value={formData.style}
-          options={draftStyleOptions}
-          onValueChange={(style) =>
-            setFormData((prev) => ({
-              ...prev,
-              style: (style ?? 'SNAKE') as 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR',
-            }))
-          }
-          placeholder="Select draft style"
-          required
-        />
-
-        <GroupRulesEditor
-          rules={formData.pointRules}
-          onChange={(pointRules: LocalRule[]) => setFormData((prev) => ({ ...prev, pointRules }))}
+        <GroupSettingsForm
+          formData={formData}
+          errors={errors}
+          seasonOptions={seasonOptions}
+          episodeOptions={episodeOptions}
+          draftStyleOptions={draftStyleOptions}
+          loadingSeasons={loadingSeasons}
+          loadingEpisodes={loadingEpisodes}
+          onFormChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
+          lockedFields={['seasonId']}
+          showMembersSection
         />
 
         <View style={styles.buttonContainer}>
