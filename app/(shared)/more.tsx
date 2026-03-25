@@ -1,10 +1,18 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.86.20:8080';
+
+const getAvatarUri = (avatarImage: string | null | undefined): string | null => {
+  if (!avatarImage) return null;
+  if (avatarImage.startsWith('http')) return avatarImage;
+  return `${API_BASE_URL}${avatarImage}`;
+};
 
 interface MenuSection {
   title?: string;
@@ -234,7 +242,11 @@ export default function MoreScreen() {
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.username?.charAt(0)?.toUpperCase() || '?'}</Text>
+            {user?.avatarImage ? (
+              <Image source={{ uri: getAvatarUri(user.avatarImage) }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{user?.username?.charAt(0)?.toUpperCase() || '?'}</Text>
+            )}
           </View>
           <View style={styles.userDetails}>
             <Text style={styles.username}>{user?.username || 'Unknown'}</Text>
@@ -343,6 +355,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xlarge,
     fontWeight: '700',
     color: '#fff',
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   userDetails: {
     flex: 1,

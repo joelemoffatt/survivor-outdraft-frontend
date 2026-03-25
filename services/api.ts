@@ -167,6 +167,10 @@ class ApiService {
     return this.get<UserRecord[]>('/v1/users');
   }
 
+  async getUserById(id: number): Promise<UserRecord> {
+    return this.get<UserRecord>(`/v1/users/${id}`);
+  }
+
   async createUser(data: CreateUserRequest): Promise<void> {
     return this.post<void>('/v1/users', data);
   }
@@ -177,6 +181,39 @@ class ApiService {
 
   async deleteUser(id: number): Promise<void> {
     return this.delete<void>(`/v1/users/${id}`);
+  }
+
+  async uploadUserAvatar(
+    userId: number,
+    file: { uri: string; name: string; type: string } | File,
+  ): Promise<void> {
+    const url = `${this.baseUrl}/v1/users/${userId}/avatar`;
+    const formData = new FormData();
+    if (typeof File !== 'undefined' && file instanceof File) {
+      formData.append('file', file, file.name);
+    } else {
+      formData.append('file', file as any);
+    }
+
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+  }
+
+  async deleteUserAvatar(userId: number): Promise<void> {
+    return this.delete<void>(`/v1/users/${userId}/avatar`);
   }
 
   // Survivor endpoints
@@ -358,6 +395,8 @@ export interface AuthResponse {
   username: string;
   email: string;
   role: 'USER' | 'ADMIN';
+  avatarImage?: string | null;
+  bio?: string | null;
 }
 
 export interface UserRecord {
@@ -366,7 +405,10 @@ export interface UserRecord {
   email: string;
   role: 'USER' | 'ADMIN';
   enabled: boolean;
+  avatarImage?: string | null;
+  bio?: string | null;
   createdAt: string;
+  favoriteCastaways?: Array<{ id: number; name: string }>;
 }
 
 export interface CreateUserRequest {
@@ -384,6 +426,8 @@ export interface UpdateUserRequest {
   password: string;
   role: 'USER' | 'ADMIN';
   enabled: boolean;
+  bio?: string | null;
+  favoriteCastaways?: Array<{ id: number; name?: string }>;
 }
 
 export interface GroupResponse {
@@ -426,6 +470,7 @@ export interface TeamCastawayResponse {
   draftOrder: number;
   points: number;
   draftedAt: string;
+  placement?: 'booted' | 'first' | 'second' | 'third' | 'lostFire' | null;
   castawayPerformance: {
     id: number;
     seasonId?: number | null;

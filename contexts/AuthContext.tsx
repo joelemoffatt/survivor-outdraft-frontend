@@ -4,11 +4,12 @@ import apiService, { AuthResponse } from '../services/api';
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  user: { id: number; username: string; email: string; isAdmin: boolean } | null;
+  user: { id: number; username: string; email: string; isAdmin: boolean; avatarImage?: string | null } | null;
   token: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  updateCurrentUser: (patch: Partial<{ username: string; email: string; avatarImage?: string | null }>) => Promise<void>;
   isLoading: boolean;
   isAdminView: boolean;
   setAdminView: (enabled: boolean) => Promise<void>;
@@ -38,7 +39,7 @@ const SESSION_DURATION_MS = parseSessionDurationMs();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ id: number; username: string; email: string; isAdmin: boolean } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; email: string; isAdmin: boolean; avatarImage?: string | null } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdminView, setIsAdminView] = useState(false);
@@ -145,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         username: response.username,
         email: response.email,
         isAdmin: response.role === 'ADMIN',
+        avatarImage: response.avatarImage ?? null,
       };
       
       // Store token and user data
@@ -179,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         username: response.username,
         email: response.email,
         isAdmin: response.role === 'ADMIN',
+        avatarImage: response.avatarImage ?? null,
       };
       
       // Store token and user data
@@ -203,6 +206,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
   };
+
+  const updateCurrentUser = useCallback(async (patch: Partial<{ username: string; email: string; avatarImage?: string | null }>) => {
+    setUser((currentUser) => {
+      if (!currentUser) {
+        return currentUser;
+      }
+
+      const updatedUser = {
+        ...currentUser,
+        ...patch,
+      };
+
+      void AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
 
   useEffect(() => {
     apiService.setAuthFailureHandler(() => {
@@ -236,7 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, user, token, login, register, logout, isLoading, isAdminView, setAdminView, toggleAdminView }}>
+    <AuthContext.Provider value={{ isLoggedIn, user, token, login, register, logout, updateCurrentUser, isLoading, isAdminView, setAdminView, toggleAdminView }}>
       {children}
     </AuthContext.Provider>
   );
