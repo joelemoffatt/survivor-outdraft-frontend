@@ -333,6 +333,48 @@ class ApiService {
     return this.get<ScoreBreakdownResponse>(`/v1/teams/${teamId}/score-breakdown`);
   }
 
+  async updateTeamProfile(
+    teamId: number,
+    data: {
+      teamName?: string;
+      file?: { uri: string; name: string; type: string } | File;
+    }
+  ): Promise<TeamResponse> {
+    const url = `${this.baseUrl}/v1/teams/${teamId}/profile`;
+    const formData = new FormData();
+
+    if (typeof data.teamName === 'string') {
+      formData.append('teamName', data.teamName);
+    }
+
+    if (data.file) {
+      if (typeof File !== 'undefined' && data.file instanceof File) {
+        formData.append('file', data.file, data.file.name);
+      } else {
+        formData.append('file', data.file as any);
+      }
+    }
+
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const text = await response.text();
+    return text ? (JSON.parse(text) as TeamResponse) : ({} as TeamResponse);
+  }
+
   // Draft endpoints
   async startDraft(groupId: number): Promise<DraftDTO> {
     return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/start`, {});
@@ -486,6 +528,7 @@ export interface TeamCastawayResponse {
 export interface TeamResponse {
   id: number;
   teamName: string;
+  avatarImage?: string | null;
   totalPoints: number;
   createdAt: string;
   roster: TeamCastawayResponse[];
