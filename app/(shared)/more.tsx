@@ -237,13 +237,15 @@ export default function MoreScreen() {
       : []),
   ];
 
+  const avatarUri = getAvatarUri(user?.avatarImage);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.avatar}>
-            {user?.avatarImage ? (
-              <Image source={{ uri: getAvatarUri(user.avatarImage) }} style={styles.avatarImage} />
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
             ) : (
               <Text style={styles.avatarText}>{user?.username?.charAt(0)?.toUpperCase() || '?'}</Text>
             )}

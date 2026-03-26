@@ -27,17 +27,6 @@ export default function SharedLayout() {
           }}>
             <Stack.Screen name="more" options={{ animation: 'none' }} />
             <Stack.Screen
-              name="profile/index"
-              options={{
-                animation: 'none',
-                headerShown: true,
-                title: 'Profile',
-                headerTitleAlign: 'left',
-                headerTitleStyle: { fontSize: 28, fontWeight: 'bold' },
-                headerLeft: () => <BackButton fallbackRoute="/more" />,
-              }}
-            />
-            <Stack.Screen
               name="profile/edit"
               options={{
                 animation: 'none',
@@ -45,7 +34,7 @@ export default function SharedLayout() {
                 title: 'Edit Profile',
                 headerTitleAlign: 'left',
                 headerTitleStyle: { fontSize: 28, fontWeight: 'bold' },
-                headerLeft: () => <BackButton fallbackRoute="/profile" />,
+                headerLeft: () => <BackButton fallbackRoute="/more" />,
               }}
             />
             <Stack.Screen name="settings" options={{ animation: 'none' }} />

@@ -3,7 +3,6 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,11 +12,9 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../../constants/theme';
 import FormButton from '../../../components/shared/FormButton';
 import FormInput from '../../../components/shared/FormInput';
-import { ConfirmDialog } from '../../../components/shared/ConfirmDialog';
 import { useAuth } from '../../../contexts/AuthContext';
 import apiService, { UserRecord } from '../../../services/api';
 import useDelayedLoader from '../../../hooks/useDelayedLoader';
@@ -37,8 +34,7 @@ export default function EditProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
-  const [deleteAvatarVisible, setDeleteAvatarVisible] = useState(false);
-  const [avatarActionsVisible, setAvatarActionsVisible] = useState(false);
+  const [avatarPreviewUri, setAvatarPreviewUri] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserRecord | null>(null);
   const showLoadingSpinner = useDelayedLoader(loading, 200);
 
@@ -162,8 +158,17 @@ export default function EditProfileScreen() {
 
   const refreshAvatar = async (userId: number) => {
     const refreshed = await apiService.getUserById(userId);
-    setProfile(refreshed);
-    await updateCurrentUser({ avatarImage: refreshed.avatarImage ?? null });
+    const resolvedAvatarUri = getAvatarUri(refreshed.avatarImage);
+    const cacheBustedAvatarUri = resolvedAvatarUri
+      ? `${resolvedAvatarUri}${resolvedAvatarUri.includes('?') ? '&' : '?'}t=${Date.now()}`
+      : null;
+
+    setProfile({
+      ...refreshed,
+      avatarImage: cacheBustedAvatarUri,
+    });
+    setAvatarPreviewUri(null);
+    await updateCurrentUser({ avatarImage: cacheBustedAvatarUri });
   };
 
   const uploadAvatar = async (file: { uri: string; name: string; type: string } | File) => {
@@ -171,17 +176,8 @@ export default function EditProfileScreen() {
       return;
     }
 
-    try {
-      setAvatarBusy(true);
-      await apiService.uploadUserAvatar(profile.id, file);
-      await refreshAvatar(profile.id);
-      Alert.alert('Success', 'Avatar updated.');
-    } catch (error) {
-      console.error('Failed to upload avatar:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to upload avatar.');
-    } finally {
-      setAvatarBusy(false);
-    }
+    await apiService.uploadUserAvatar(profile.id, file);
+    await refreshAvatar(profile.id);
   };
 
   const openWebFilePicker = async () => {
@@ -196,21 +192,31 @@ export default function EditProfileScreen() {
       input.accept = 'image/*';
       input.onchange = async () => {
         const file = input.files?.[0];
-        if (file) {
-          await uploadAvatar(file);
+        if (!file) {
+          resolve();
+          return;
         }
-        resolve();
+
+        try {
+          setAvatarBusy(true);
+          await uploadAvatar(file);
+          Alert.alert('Success', 'Avatar updated.');
+        } catch (error) {
+          console.error('Failed to upload avatar:', error);
+          Alert.alert('Error', error instanceof Error ? error.message : 'Failed to upload avatar.');
+        } finally {
+          setAvatarBusy(false);
+          resolve();
+        }
       };
       input.click();
     });
   };
 
   const handlePickAvatar = async () => {
-    if (!profile) {
+    if (!profile || avatarBusy) {
       return;
     }
-
-    setAvatarActionsVisible(false);
 
     if (Platform.OS === 'web') {
       await openWebFilePicker();
@@ -218,6 +224,8 @@ export default function EditProfileScreen() {
     }
 
     try {
+      setAvatarBusy(true);
+
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         Alert.alert('Permission needed', 'Please allow photo library access to update your avatar.');
@@ -225,7 +233,7 @@ export default function EditProfileScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
       });
@@ -238,37 +246,22 @@ export default function EditProfileScreen() {
       const mimeType = asset.mimeType || 'image/jpeg';
       const fileName = asset.fileName || `avatar-${Date.now()}.jpg`;
 
+      setAvatarPreviewUri(asset.uri);
       await uploadAvatar({
         uri: asset.uri,
         name: fileName,
         type: mimeType,
       });
+      Alert.alert('Success', 'Avatar updated.');
     } catch (error) {
-      console.error('Failed to open image picker:', error);
-      Alert.alert('Error', 'Failed to open image picker.');
-    }
-  };
-
-  const handleDeleteAvatar = async () => {
-    if (!profile) {
-      return;
-    }
-
-    try {
-      setAvatarBusy(true);
-      setDeleteAvatarVisible(false);
-      setAvatarActionsVisible(false);
-      await apiService.deleteUserAvatar(profile.id);
-      await refreshAvatar(profile.id);
-      await updateCurrentUser({ avatarImage: null });
-      Alert.alert('Success', 'Avatar deleted.');
-    } catch (error) {
-      console.error('Failed to delete avatar:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to delete avatar.');
+      console.error('Failed to upload avatar:', error);
+      setAvatarPreviewUri(null);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to upload avatar.');
     } finally {
       setAvatarBusy(false);
     }
   };
+
 
   if (loading) {
     if (!showLoadingSpinner) {
@@ -282,6 +275,8 @@ export default function EditProfileScreen() {
     );
   }
 
+  const displayedAvatarUri = avatarPreviewUri || getAvatarUri(profile?.avatarImage);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -294,26 +289,24 @@ export default function EditProfileScreen() {
 
         <View style={styles.avatarSection}>
           <View style={styles.avatarPreview}>
-            {profile?.avatarImage && getAvatarUri(profile.avatarImage) ? (
-              <Image source={{ uri: getAvatarUri(profile.avatarImage)! }} style={styles.avatarImage} />
+            {displayedAvatarUri ? (
+              <Image source={{ uri: displayedAvatarUri }} style={styles.avatarImage} />
             ) : (
               <Text style={styles.avatarLetter}>
                 {(formData.username?.trim().charAt(0) || user?.username?.charAt(0) || '?').toUpperCase()}
               </Text>
             )}
 
-            <TouchableOpacity
-              style={styles.avatarEditButton}
-              onPress={() => setAvatarActionsVisible(true)}
-              disabled={avatarBusy || saving}
-              accessibilityRole="button"
-              accessibilityLabel="Edit avatar"
-            >
-              <Ionicons name="pencil" size={14} color="#fff" />
-            </TouchableOpacity>
           </View>
-
-          {avatarBusy && <Text style={styles.avatarBusyText}>Updating avatar...</Text>}
+          <TouchableOpacity
+            style={[styles.avatarActionButton, avatarBusy && styles.avatarActionButtonDisabled]}
+            onPress={handlePickAvatar}
+            disabled={avatarBusy || saving}
+          >
+            <Text style={styles.avatarActionButtonText}>
+              {avatarBusy ? 'Updating Avatar...' : 'Change Avatar'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <FormInput
@@ -363,61 +356,6 @@ export default function EditProfileScreen() {
           />
         </View>
       </ScrollView>
-
-      <ConfirmDialog
-        visible={deleteAvatarVisible}
-        title="Delete Avatar"
-        message="Are you sure you want to delete your avatar?"
-        confirmText="Delete"
-        cancelText="Cancel"
-        confirmVariant="danger"
-        onCancel={() => setDeleteAvatarVisible(false)}
-        onConfirm={handleDeleteAvatar}
-      />
-
-      <Modal
-        visible={avatarActionsVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAvatarActionsVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.avatarModalCard}>
-            <Text style={styles.avatarModalTitle}>Avatar</Text>
-
-            <TouchableOpacity
-              style={styles.avatarModalAction}
-              onPress={handlePickAvatar}
-              disabled={avatarBusy}
-            >
-              <Text style={styles.avatarModalActionText}>
-                {profile?.avatarImage ? 'Change Avatar' : 'Upload Avatar'}
-              </Text>
-            </TouchableOpacity>
-
-            {profile?.avatarImage ? (
-              <TouchableOpacity
-                style={styles.avatarModalAction}
-                onPress={() => {
-                  setAvatarActionsVisible(false);
-                  setDeleteAvatarVisible(true);
-                }}
-                disabled={avatarBusy}
-              >
-                <Text style={styles.avatarModalDeleteText}>Delete Avatar</Text>
-              </TouchableOpacity>
-            ) : null}
-
-            <TouchableOpacity
-              style={[styles.avatarModalAction, styles.avatarModalCancelAction]}
-              onPress={() => setAvatarActionsVisible(false)}
-              disabled={avatarBusy}
-            >
-              <Text style={styles.avatarModalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -470,23 +408,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
-  avatarEditButton: {
-    position: 'absolute',
-    right: -4,
-    bottom: -4,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  avatarActionButton: {
+    alignSelf: 'center',
     backgroundColor: Colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
   },
-  avatarBusyText: {
-    textAlign: 'center',
-    color: Colors.textSecondary,
+  avatarActionButtonDisabled: {
+    opacity: 0.7,
+  },
+  avatarActionButtonText: {
+    color: '#fff',
     fontSize: FontSizes.small,
+    fontWeight: '700',
   },
   buttonContainer: {
     marginTop: Spacing.lg,
@@ -502,53 +437,5 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: FontSizes.medium,
     color: Colors.textSecondary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Colors.overlay,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.lg,
-  },
-  avatarModalCard: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: '#fff',
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  avatarModalTitle: {
-    fontSize: FontSizes.large,
-    color: Colors.text,
-    fontWeight: '700',
-    marginBottom: Spacing.xs,
-  },
-  avatarModalAction: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.secondaryBackground,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  avatarModalActionText: {
-    color: Colors.text,
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-  },
-  avatarModalDeleteText: {
-    color: Colors.warning,
-    fontSize: FontSizes.medium,
-    fontWeight: '700',
-  },
-  avatarModalCancelAction: {
-    marginTop: Spacing.xs,
-    backgroundColor: '#fff',
-  },
-  avatarModalCancelText: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
   },
 });
