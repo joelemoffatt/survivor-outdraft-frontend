@@ -16,17 +16,9 @@ import { Colors, FontSizes, Spacing, BorderRadius } from '../../../constants/the
 import FormButton from '../../../components/shared/FormButton';
 import FormInput from '../../../components/shared/FormInput';
 import { useAuth } from '../../../contexts/AuthContext';
-import apiService, { UserRecord } from '../../../services/api';
+import apiService, { getApiAssetUri, UserRecord } from '../../../services/api';
 import useDelayedLoader from '../../../hooks/useDelayedLoader';
 import FavoriteCastawaysInput, { FavoriteCastaway } from '../../../components/shared/FavoriteCastawaysInput';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.86.20:8080';
-
-const getAvatarUri = (avatarImage: string | null | undefined): string | null => {
-  if (!avatarImage) return null;
-  if (avatarImage.startsWith('http')) return avatarImage;
-  return `${API_BASE_URL}${avatarImage}`;
-};
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -158,7 +150,7 @@ export default function EditProfileScreen() {
 
   const refreshAvatar = async (userId: number) => {
     const refreshed = await apiService.getUserById(userId);
-    const resolvedAvatarUri = getAvatarUri(refreshed.avatarImage);
+    const resolvedAvatarUri = getApiAssetUri(refreshed.avatarImage);
     const cacheBustedAvatarUri = resolvedAvatarUri
       ? `${resolvedAvatarUri}${resolvedAvatarUri.includes('?') ? '&' : '?'}t=${Date.now()}`
       : null;
@@ -275,7 +267,7 @@ export default function EditProfileScreen() {
     );
   }
 
-  const displayedAvatarUri = avatarPreviewUri || getAvatarUri(profile?.avatarImage);
+  const displayedAvatarUri = avatarPreviewUri || getApiAssetUri(profile?.avatarImage);
 
   return (
     <KeyboardAvoidingView

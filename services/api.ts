@@ -1,20 +1,36 @@
+import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../types/survivor';
+
 // API Configuration
 const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-const developmentApiBaseUrl =
-  process.env.EXPO_PUBLIC_API_BASE_URL ||
-  process.env.API_BASE_URL ||
-  'http://192.168.86.20:8080/api'; // ipconfig getifaddr en0 HOME AXIO
-  // 'http://10.255.63.34:8080/api';
-const API_BASE_URL = isDevelopment
-  ? developmentApiBaseUrl
-  : 'https://your-production-url.com/api';  // Production
+
+const normalizeBaseUrl = (value: string): string => value.trim().replace(/\/+$/, '');
+
+const PRODUCTION_API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
+
+export const API_BASE_URL = isDevelopment
+  ? 'http://localhost:8080/api'
+  : normalizeBaseUrl(PRODUCTION_API_BASE_URL || 'https://your-production-url.com/api');
+
+export const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE_URL).origin;
+  } catch {
+    return API_BASE_URL.replace(/\/api\/?$/, '');
+  }
+})();
+
+export const getApiAssetUri = (path?: string | null): string | null => {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_ORIGIN}${normalizedPath}`;
+};
+
 const configuredApiDelayMs = Number(process.env.EXPO_PUBLIC_API_DELAY_MS);
 const API_DELAY_MS =
   isDevelopment && Number.isFinite(configuredApiDelayMs) && configuredApiDelayMs > 0
     ? configuredApiDelayMs
     : 0;
-
-import { Season, Episode, Challenge, Vote, Castaway, EpisodeDetail } from '../types/survivor';
 
 /**
  * Base API client for Survivor OutDraft backend
@@ -80,14 +96,26 @@ class ApiService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: response.statusText || `HTTP error! status: ${response.status}` }));
         console.error('API Error Response:', errorData);
 
-        if (response.status === 401 && this.token && this.authFailureHandler) {
+        if ((response.status === 401 || response.status === 403) && this.authFailureHandler) {
           this.authFailureHandler();
         }
 
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        const resolvedMessage =
+          (typeof errorData?.message === 'string' && errorData.message.trim().length > 0
+            ? errorData.message.trim()
+            : null) ||
+          (typeof errorData?.error === 'string' && errorData.error.trim().length > 0
+            ? errorData.error.trim()
+            : null) ||
+          response.statusText ||
+          `HTTP error! status: ${response.status}`;
+
+        throw new Error(resolvedMessage);
       }
 
       // Handle empty responses (e.g., 204 No Content or endpoints that return nothing)
@@ -529,6 +557,8 @@ export interface TeamResponse {
   id: number;
   teamName: string;
   avatarImage?: string | null;
+  userId?: number;
+  username?: string;
   totalPoints: number;
   createdAt: string;
   roster: TeamCastawayResponse[];

@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
-import { apiService, CastawayScoreBreakdown, GroupResponse, ScoreBreakdownResponse, TeamResponse } from '../../services/api';
+import { apiService, CastawayScoreBreakdown, getApiAssetUri, GroupResponse, ScoreBreakdownResponse, TeamResponse } from '../../services/api';
 import { formatAdvantageMovement } from '../../services/textFormatter';
 import { getImportedCastawayImageSource } from '../../utils/castawayImages';
+import AvatarCircle from './AvatarCircle';
 import Card from './Card';
 import EpisodeEventsModal from './EpisodeEventsModal';
 
@@ -153,15 +154,23 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
         {/* Your Team */}
         <Card style={styles.headerCard} shadow="medium">
         <View style={styles.headerTop}>
-          <View style={styles.headerText}>
-            <Text style={styles.teamName}>{team.teamName}</Text>
-            {group && (
-              <View style={styles.seasonStatusRow}>
-                <Text style={styles.seasonLabel} numberOfLines={1} ellipsizeMode="tail">
-                  {group.name}
-                </Text>
-              </View>
-            )}
+          <View style={styles.headerIdentity}>
+            <AvatarCircle
+              size={46}
+              uri={getApiAssetUri(team.avatarImage)}
+              fallbackText={team.teamName}
+              style={styles.teamAvatarCircle}
+            />
+            <View style={styles.headerText}>
+              <Text style={styles.teamName}>{team.teamName}</Text>
+              {group && (
+                <View style={styles.seasonStatusRow}>
+                  <Text style={styles.seasonLabel} numberOfLines={1} ellipsizeMode="tail">
+                    {group.name}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
           {isOwnTeam && (
             <TouchableOpacity
@@ -237,13 +246,12 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                       accessibilityRole="button"
                       accessibilityLabel={`View ${castawayName} details`}
                     >
-                      <View style={styles.avatarCircle}>
-                        {castawayImageSource ? (
-                          <Image source={castawayImageSource} style={styles.avatarImage} resizeMode="cover" />
-                        ) : (
-                          <Text style={styles.avatarInitial}>{castawayName.trim().charAt(0).toUpperCase()}</Text>
-                        )}
-                      </View>
+                      <AvatarCircle
+                        size={32}
+                        source={castawayImageSource}
+                        fallbackText={castawayName}
+                        style={styles.avatarCircle}
+                      />
                       <Text
                         style={[
                           styles.memberUsername,
@@ -463,6 +471,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: Spacing.lg,
   },
+  headerIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  teamAvatarCircle: {
+    marginRight: Spacing.sm,
+  },
   headerText: {
     flex: 1,
   },
@@ -556,23 +572,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: Spacing.sm,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarInitial: {
-    color: Colors.background,
-    fontSize: FontSizes.small,
-    fontWeight: '700',
   },
   memberUsername: {
     color: Colors.text,

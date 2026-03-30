@@ -5,14 +5,7 @@ import { Colors, FontSizes, Spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.86.20:8080';
-
-const getAvatarUri = (avatarImage: string | null | undefined): string | null => {
-  if (!avatarImage) return null;
-  if (avatarImage.startsWith('http')) return avatarImage;
-  return `${API_BASE_URL}${avatarImage}`;
-};
+import { getApiAssetUri } from '../../services/api';
 
 interface MenuSection {
   title?: string;
@@ -237,7 +230,7 @@ export default function MoreScreen() {
       : []),
   ];
 
-  const avatarUri = getAvatarUri(user?.avatarImage);
+  const avatarUri = getApiAssetUri(user?.avatarImage);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

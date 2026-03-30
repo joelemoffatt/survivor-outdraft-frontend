@@ -7,9 +7,9 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   useResponsive,
   BorderRadius,
@@ -57,59 +57,57 @@ export default function TeamScreen() {
     ? Number(user.id) === Number(group?.admin?.id)
     : false;
 
-  // Note: group auto-selection is handled centrally in GroupContext
+  const fetchTeamAndGroupData = useCallback(async () => {
+    if (!user || !selectedGroupId) {
+      setLoading(false);
+      setScoreBreakdown(null);
+      return;
+    }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user || !selectedGroupId) {
-        setLoading(false);
-        return;
-      }
+    try {
+      setLoading(true);
+      setError(null);
+
+      const groupData = await apiService.getGroupById(selectedGroupId);
+      setGroup(groupData);
+
+      const teamData = await apiService.getTeamByGroupAndUser(
+        selectedGroupId,
+        user.id,
+      );
+      setTeam(teamData);
 
       try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch group info
-        const groupData = await apiService.getGroupById(selectedGroupId);
-        setGroup(groupData);
-
-        // Fetch team data
-        const teamData = await apiService.getTeamByGroupAndUser(
-          selectedGroupId,
-          user.id,
-        );
-        setTeam(teamData);
-
-        // Reset draftComplete if draft is still in progress
-        if (groupData.status === "DRAFTING") {
-          setDraftComplete(false);
-        }
-      } catch (err: any) {
-        console.error("Failed to fetch data:", err);
-        setError(err?.message || "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user, selectedGroupId]);
-
-  // Fetch score breakdown when team is available
-  useEffect(() => {
-    if (!team) return;
-    const fetchBreakdown = async () => {
-      try {
-        const breakdown = await apiService.getTeamScoreBreakdown(team.id);
+        const breakdown = await apiService.getTeamScoreBreakdown(teamData.id);
         setScoreBreakdown(breakdown);
       } catch (err) {
         console.debug("Score breakdown not available yet:", err);
         setScoreBreakdown(null);
       }
-    };
-    fetchBreakdown();
-  }, [team]);
+
+      if (groupData.status === "DRAFTING") {
+        setDraftComplete(false);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch data:", err);
+      setError(err?.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedGroupId, user]);
+
+  // Note: group auto-selection is handled centrally in GroupContext
+
+  useEffect(() => {
+    fetchTeamAndGroupData();
+  }, [fetchTeamAndGroupData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchTeamAndGroupData();
+      return undefined;
+    }, [fetchTeamAndGroupData]),
+  );
 
   // Countdown timer for draft start
   useEffect(() => {

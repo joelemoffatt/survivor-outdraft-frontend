@@ -126,6 +126,8 @@ export default function PlayerHome() {
           apiService.getTeamsByGroupId(selectedGroupId),
         ]);
 
+        const groupMembers = await apiService.getGroupMembers(selectedGroupId);
+
         setGroup(groupData);
         setTeam(userTeam);
 
@@ -142,11 +144,14 @@ export default function PlayerHome() {
               currentRank = index + 1;
               previousPoints = teamItem.totalPoints;
             }
-            const matchingMember = groupData.admin; // This is a placeholder; ideally we'd match via group members
+            const matchingMember = groupMembers.find(
+              (member) => member.status === "ACCEPTED" && teamItem.userId === member.user.id,
+            );
             return {
               rank: currentRank,
               teamName: teamItem.teamName,
-              username: teamItem.teamName.replace("Team ", ""),
+              username: matchingMember?.user.username ?? teamItem.username ?? teamItem.teamName.replace("Team ", ""),
+              avatarImage: teamItem.avatarImage,
               points: teamItem.totalPoints,
               isYourTeam: teamItem.id === userTeam.id,
               teamId: teamItem.id,

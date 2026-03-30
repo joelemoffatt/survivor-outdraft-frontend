@@ -1,6 +1,7 @@
-import { Image, ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
+import { ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import Card from '../shared/Card';
 import Chip from '../shared/Chip';
+import AvatarCircle from '../shared/AvatarCircle';
 import { BorderRadius, Colors, FontSizes, Spacing } from '../../constants/theme';
 import { Castaway } from '../../types/survivor';
 
@@ -85,7 +86,6 @@ const DetailItem = ({ label, value }: { label: string; value: string }) => (
 );
 
 export default function CastawayProfileCard({ castaway, imageSource }: CastawayProfileCardProps) {
-  const castawayInitial = castaway.name.trim().charAt(0).toUpperCase();
   const threeWordChips = splitThreeWords(castaway.three_words).map(capitalizeFirstLetter);
   const occupation = displayValue(castaway.occupation);
   const city = displayValue(castaway.city);
@@ -100,13 +100,7 @@ export default function CastawayProfileCard({ castaway, imageSource }: CastawayP
   return (
     <Card shadow="medium" style={styles.card}>
       <View style={styles.heroRow}>
-        <View style={styles.avatarCircle}>
-          {imageSource ? (
-            <Image source={imageSource} style={styles.avatarImage} resizeMode="cover" />
-          ) : (
-            <Text style={styles.avatarInitial}>{castawayInitial}</Text>
-          )}
-        </View>
+        <AvatarCircle size={90} source={imageSource} fallbackText={castaway.name} />
 
         <View style={styles.heroTextWrap}>
           <Text style={styles.name}>{castaway.full_name || castaway.name}</Text>
@@ -159,24 +153,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-  },
-  avatarCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarInitial: {
-    color: Colors.background,
-    fontSize: FontSizes.xxlarge,
-    fontWeight: '700',
   },
   heroTextWrap: {
     flex: 1,

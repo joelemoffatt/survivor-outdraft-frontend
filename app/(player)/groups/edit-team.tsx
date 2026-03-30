@@ -17,15 +17,7 @@ import FormInput from '../../../components/shared/FormInput';
 import FormButton from '../../../components/shared/FormButton';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
-import apiService, { TeamResponse } from '../../../services/api';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.86.20:8080';
-
-const getAvatarUri = (avatarImage: string | null | undefined): string | null => {
-  if (!avatarImage) return null;
-  if (avatarImage.startsWith('http')) return avatarImage;
-  return `${API_BASE_URL}${avatarImage}`;
-};
+import apiService, { getApiAssetUri, TeamResponse } from '../../../services/api';
 
 export default function EditTeamScreen() {
   const router = useRouter();
@@ -65,7 +57,7 @@ export default function EditTeamScreen() {
     if (pickedFile?.uri) {
       return pickedFile.uri;
     }
-    return getAvatarUri(team?.avatarImage);
+    return getApiAssetUri(team?.avatarImage);
   }, [pickedFile?.uri, team?.avatarImage]);
 
   const handlePickAvatar = async () => {
@@ -153,8 +145,12 @@ export default function EditTeamScreen() {
       setTeam(updated);
       setTeamName(updated.teamName ?? trimmedName);
       setPickedFile(null);
-      Alert.alert('Success', 'Team profile updated.');
-      router.back();
+      Alert.alert('Success', 'Team profile updated.', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/(player)/team'),
+        },
+      ]);
     } catch (error) {
       console.error('Failed to update team profile:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update team profile.');

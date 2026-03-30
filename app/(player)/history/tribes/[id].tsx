@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import apiService, { TribeMappingRecord } from '../../../../services/api';
+import AvatarCircle from '../../../../components/shared/AvatarCircle';
 import { Colors, FontSizes, Spacing } from '../../../../constants/theme';
 import { getImportedCastawayImageSource } from '../../../../utils/castawayImages';
 import useDelayedLoader from '../../../../hooks/useDelayedLoader';
@@ -179,13 +180,12 @@ export default function TribeDetailsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`View ${member.castawayName} details`}
               >
-                <View style={styles.avatarCircle}>
-                  {imageSource ? (
-                    <Image source={imageSource} style={styles.avatarImage} resizeMode="cover" />
-                  ) : (
-                    <Text style={styles.avatarInitial}>{member.castawayName.trim().charAt(0).toUpperCase()}</Text>
-                  )}
-                </View>
+                <AvatarCircle
+                  size={36}
+                  source={imageSource}
+                  fallbackText={member.castawayName}
+                  style={styles.avatarCircle}
+                />
                 <Text style={styles.memberName}>{member.castawayName}</Text>
               </TouchableOpacity>
             );
@@ -253,23 +253,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: Spacing.md,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarInitial: {
-    color: Colors.background,
-    fontSize: FontSizes.medium,
-    fontWeight: '700',
   },
   memberName: {
     color: Colors.text,

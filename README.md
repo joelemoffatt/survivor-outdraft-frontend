@@ -101,9 +101,15 @@ npm run android
 
 The app connects to the Spring Boot backend:
 - **Development**: `http://localhost:8080/api`
-- **Production**: Configure in `services/api.ts`
+- **Production**: Set `EXPO_PUBLIC_API_BASE_URL` (fallback: `API_BASE_URL`)
 
 Make sure your Spring Boot server is running on port 8080.
+
+### API URL Rules
+
+API URL resolution is centralized in `services/api.ts`:
+- If `NODE_ENV` is development (or unset), frontend uses `http://localhost:8080/api`
+- Otherwise, frontend uses `EXPO_PUBLIC_API_BASE_URL` (or `API_BASE_URL`)
 
 ## 📱 Deployment
 
@@ -154,12 +160,16 @@ if (Platform.OS === 'web') {
 }
 ```
 
-## 🔐 Environment Variables (Future)
+## 🔐 Environment Variables
 
 Create `.env` file:
 ```
-API_BASE_URL=http://localhost:8080/api
+EXPO_PUBLIC_API_BASE_URL=https://your-production-api.example.com/api
 ```
+
+Notes:
+- In development, the app always targets `http://localhost:8080/api`
+- In production builds, set `EXPO_PUBLIC_API_BASE_URL` (or `API_BASE_URL`) to your deployed backend
 
 ## 📄 License
 

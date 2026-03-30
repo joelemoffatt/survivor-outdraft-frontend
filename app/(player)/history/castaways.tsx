@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Card from '../../../components/shared/Card';
+import AvatarCircle from '../../../components/shared/AvatarCircle';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { getImportedCastawayImageSource } from '../../../utils/castawayImages';
 import apiService, { CastawaySearchResult } from '../../../services/api';
@@ -90,17 +91,12 @@ export default function CastawaysScreen() {
               style={[styles.resultRow, index < results.length - 1 && styles.rowBorder]}
             >
               <View style={styles.resultRowContent}>
-                <View style={styles.avatarCircle}>
-                  {getImportedCastawayImageSource(item.season, item.jsonId) ? (
-                    <Image
-                      source={getImportedCastawayImageSource(item.season, item.jsonId)!}
-                      style={styles.avatarImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text style={styles.avatarInitial}>{item.fullName.trim().charAt(0).toUpperCase()}</Text>
-                  )}
-                </View>
+                <AvatarCircle
+                  size={40}
+                  source={getImportedCastawayImageSource(item.season, item.jsonId)}
+                  fallbackText={item.fullName}
+                  style={styles.avatarCircle}
+                />
                 <View style={styles.resultTextGroup}>
                   <Text style={styles.resultName}>{item.fullName}</Text>
                   <Text style={styles.resultSeason}>Season {item.season}</Text>
@@ -168,23 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: Spacing.md,
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarInitial: {
-    color: Colors.background,
-    fontSize: FontSizes.medium,
-    fontWeight: '700',
   },
   resultTextGroup: {
     flex: 1,

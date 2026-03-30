@@ -136,13 +136,8 @@ export default function GroupScreen() {
     const teamByUserId = new Map<number, TeamResponse>();
 
     teams.forEach((team) => {
-      // TeamResponse does not expose user in API type; infer by matching known team names later.
-      // Build a username->team map from accepted memberships.
-      const matchingMember = members.find(
-        (member) => team.teamName === `Team ${member.user.username}`,
-      );
-      if (matchingMember?.user?.id != null) {
-        teamByUserId.set(matchingMember.user.id, team);
+      if (team.userId != null) {
+        teamByUserId.set(team.userId, team);
       }
     });
 
@@ -176,6 +171,7 @@ export default function GroupScreen() {
         rank: currentRank,
         teamName: member.teamName,
         username: member.username,
+        avatarImage: teams.find((team) => team.id === member.teamId)?.avatarImage,
         points: member.points,
         isYourTeam: member.isYou,
         teamId: member.teamId,

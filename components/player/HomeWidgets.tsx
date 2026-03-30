@@ -1,12 +1,28 @@
-import { useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import Card from '../shared/Card';
-import { BorderRadius, Colors, FontSizes, Spacing } from '../../constants/theme';
+import { useState } from "react";
+import {
+  Image,
+  LayoutChangeEvent,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
+import Card from "../shared/Card";
+import {
+  BorderRadius,
+  Colors,
+  FontSizes,
+  Spacing,
+} from "../../constants/theme";
+import AvatarCircle from "../shared/AvatarCircle";
+import { getApiAssetUri } from "../../services/api";
 
 export interface GroupRankingItem {
   rank: number;
   teamName: string;
   username?: string;
+  avatarImage?: string | null;
   points: number;
   isYourTeam?: boolean;
   teamId?: number;
@@ -32,9 +48,17 @@ interface GroupRankingWidgetProps {
   onTeamPress?: (teamId: number, isYourTeam?: boolean) => void;
 }
 
-export function LastEpisodeWidget({ label, onPress, style }: LastEpisodeWidgetProps) {
+export function LastEpisodeWidget({
+  label,
+  onPress,
+  style,
+}: LastEpisodeWidgetProps) {
   return (
-    <Card style={{ ...styles.squareWidget, ...(style || {}) }} padding="md" shadow="light">
+    <Card
+      style={{ ...styles.squareWidget, ...(style || {}) }}
+      padding="md"
+      shadow="light"
+    >
       <View>
         <Text style={styles.widgetLabel}>Last Episode</Text>
         <TouchableOpacity disabled={!onPress} onPress={onPress}>
@@ -46,9 +70,17 @@ export function LastEpisodeWidget({ label, onPress, style }: LastEpisodeWidgetPr
   );
 }
 
-export function TeamPointsWidget({ totalPoints, onPress, style }: TeamPointsWidgetProps) {
+export function TeamPointsWidget({
+  totalPoints,
+  onPress,
+  style,
+}: TeamPointsWidgetProps) {
   return (
-    <Card style={{ ...styles.squareWidget, ...(style || {}) }} padding="md" shadow="light">
+    <Card
+      style={{ ...styles.squareWidget, ...(style || {}) }}
+      padding="md"
+      shadow="light"
+    >
       <View>
         <Text style={styles.widgetLabel}>Your Team</Text>
         <TouchableOpacity disabled={!onPress} onPress={onPress}>
@@ -60,7 +92,13 @@ export function TeamPointsWidget({ totalPoints, onPress, style }: TeamPointsWidg
   );
 }
 
-export function GroupRankingWidget({ groupName, rankings, style, showDimensions = false, onTeamPress }: GroupRankingWidgetProps) {
+export function GroupRankingWidget({
+  groupName,
+  rankings,
+  style,
+  showDimensions = false,
+  onTeamPress,
+}: GroupRankingWidgetProps) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -92,25 +130,48 @@ export function GroupRankingWidget({ groupName, rankings, style, showDimensions 
             <View style={styles.rankBadge}>
               <Text style={styles.rankText}>#{team.rank}</Text>
             </View>
-            <TouchableOpacity 
+            <AvatarCircle
+              size={34}
+              uri={getApiAssetUri(team.avatarImage)}
+              fallbackText={team.teamName}
+              style={styles.teamAvatar}
+            />
+            <TouchableOpacity
               style={styles.memberInfo}
-              onPress={() => team.teamId && onTeamPress?.(team.teamId, team.isYourTeam)}
+              onPress={() =>
+                team.teamId && onTeamPress?.(team.teamId, team.isYourTeam)
+              }
               disabled={!team.teamId || !onTeamPress}
             >
-              <Text style={[
-                styles.memberUsername,
-                team.isYourTeam ? styles.yourTeamText : (team.teamId && onTeamPress ? styles.clickableName : null),
-              ]}>
-                {team.username}
-              </Text>
-              <Text style={[
-                styles.memberTeam,
-                team.teamId && onTeamPress ? styles.clickableName : null,
-              ]}>
+              <Text
+                style={[
+                  styles.memberTeam,
+                  team.isYourTeam
+                    ? styles.yourTeamText
+                    : team.teamId && onTeamPress
+                      ? styles.clickableName
+                      : null,
+                ]}
+              >
                 {team.teamName}
               </Text>
+              <Text
+                style={[
+                  styles.memberUsername,
+                  team.teamId && onTeamPress ? styles.clickableName : null,
+                ]}
+              >
+                {team.username || "Unknown user"}
+              </Text>
             </TouchableOpacity>
-            <Text style={[styles.pointsText, team.isYourTeam && styles.yourTeamText]}>{team.points}</Text>
+            <Text
+              style={[
+                styles.pointsText,
+                team.isYourTeam && styles.yourTeamText,
+              ]}
+            >
+              {team.points}
+            </Text>
           </View>
         ))}
       </View>
@@ -133,14 +194,14 @@ const styles = StyleSheet.create({
   widgetLabel: {
     color: Colors.textSecondary,
     fontSize: FontSizes.small,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    textTransform: "uppercase",
     letterSpacing: 0.4,
   },
   widgetValue: {
     color: Colors.primary,
     fontSize: FontSizes.title,
-    fontWeight: '800',
+    fontWeight: "800",
     marginTop: Spacing.sm,
   },
   widgetSubtext: {
@@ -156,8 +217,8 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   rankingRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
@@ -170,28 +231,31 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   rankBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     minWidth: 34,
+    marginRight: Spacing.sm,
+  },
+  teamAvatar: {
     marginRight: Spacing.sm,
   },
   rankText: {
     color: Colors.textSecondary,
     fontSize: FontSizes.small,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   memberInfo: {
     flex: 1,
   },
   memberUsername: {
-    color: Colors.text,
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-  },
-  memberTeam: {
     color: Colors.textSecondary,
     fontSize: FontSizes.small,
     marginTop: Spacing.xxs,
+  },
+  memberTeam: {
+    color: Colors.text,
+    fontSize: FontSizes.medium,
+    fontWeight: "600",
   },
   clickableTeamName: {
     color: Colors.primary,
@@ -203,12 +267,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
     flex: 1,
     fontSize: FontSizes.medium,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   pointsText: {
     color: Colors.text,
     fontSize: FontSizes.medium,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   yourTeamText: {
     color: Colors.primary,
@@ -225,6 +289,6 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: FontSizes.small,
     marginTop: Spacing.sm,
-    textAlign: 'right',
+    textAlign: "right",
   },
 });
