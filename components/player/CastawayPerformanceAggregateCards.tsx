@@ -23,8 +23,8 @@ interface CastawayPerformanceAggregateCardsProps {
 type MetricKey =
   | 'idols'
   | 'advantages'
-  | 'individualChallenges'
-  | 'teamChallenges'
+  | 'individualImmunities'
+  | 'tribalImmunities'
   | 'satOut'
   | 'journey'
   | 'votes'
@@ -73,14 +73,14 @@ const METRIC_CARD_DEFINITIONS: MetricCardDefinition[] = [
     accentColor: '#2ECC71',
   },
   {
-    key: 'individualChallenges',
-    label: 'Individual Challenges',
+    key: 'individualImmunities',
+    label: 'Individual Immunity',
     icon: 'medal-outline',
     historyCategory: 'challenges',
   },
   {
-    key: 'teamChallenges',
-    label: 'Team Challenges',
+    key: 'tribalImmunities',
+    label: 'Tribal Immunities',
     icon: 'people-outline',
     historyCategory: 'challenges',
     accentColor: '#3B82F6',
@@ -113,12 +113,12 @@ const METRIC_CARD_DEFINITIONS: MetricCardDefinition[] = [
 
 const MIN_VISIBLE_METRIC_CARDS = 4;
 const METRIC_REMOVAL_PRIORITY: MetricKey[] = [
-  'teamChallenges',
+  'tribalImmunities',
   'satOut',
   'journey',
   'votesNullified',
   'advantages',
-  'individualChallenges',
+  'individualImmunities',
   'votes',
   'idols',
 ];
@@ -141,8 +141,8 @@ const matchesAlias = (value: string | null | undefined, aliases: Set<string>) =>
 const createMetricMap = (): Record<MetricKey, Map<number, EpisodeEventSummary>> => ({
   idols: new Map<number, EpisodeEventSummary>(),
   advantages: new Map<number, EpisodeEventSummary>(),
-  individualChallenges: new Map<number, EpisodeEventSummary>(),
-  teamChallenges: new Map<number, EpisodeEventSummary>(),
+  individualImmunities: new Map<number, EpisodeEventSummary>(),
+  tribalImmunities: new Map<number, EpisodeEventSummary>(),
   satOut: new Map<number, EpisodeEventSummary>(),
   journey: new Map<number, EpisodeEventSummary>(),
   votes: new Map<number, EpisodeEventSummary>(),
@@ -422,28 +422,28 @@ export default function CastawayPerformanceAggregateCards({
                     }
 
                     const metricKey: MetricKey = isTribalChallenge(challenge.type)
-                      ? 'teamChallenges'
-                      : 'individualChallenges';
-                    const baseLabel = isTribalChallenge(challenge.type) ? 'Team challenge' : 'Individual challenge';
-                    const isIndividualChallenge = metricKey === 'individualChallenges';
-                    const isTeamChallenge = metricKey === 'teamChallenges';
+                      ? 'tribalImmunities'
+                      : 'individualImmunities';
+                    const baseLabel = isTribalChallenge(challenge.type) ? 'Tribal immunity' : 'Individual immunity';
+                    const isIndividualImmunity = metricKey === 'individualImmunities';
+                    const isTribalImmunity = metricKey === 'tribalImmunities';
                     const isImmunityChallenge =
                       normalize(challenge.type).includes('immunity') ||
                       normalize(challenge.title).includes('immunity');
 
-                    if (isIndividualChallenge && !row.won) {
+                    if (isIndividualImmunity && !row.won) {
                       return;
                     }
 
-                    if (isIndividualChallenge && !isImmunityChallenge) {
+                    if (isIndividualImmunity && !isImmunityChallenge) {
                       return;
                     }
 
-                    if (isTeamChallenge && !row.won) {
+                    if (isTribalImmunity && !row.won) {
                       return;
                     }
 
-                    if (isTeamChallenge && !isImmunityChallenge) {
+                    if (isTribalImmunity && !isImmunityChallenge) {
                       return;
                     }
 
@@ -663,8 +663,8 @@ export default function CastawayPerformanceAggregateCards({
             const metricEpisodeEvents = {
               idols: mapToSortedEpisodeEvents(metricMaps.idols),
               advantages: mapToSortedEpisodeEvents(metricMaps.advantages),
-              individualChallenges: mapToSortedEpisodeEvents(metricMaps.individualChallenges),
-              teamChallenges: mapToSortedEpisodeEvents(metricMaps.teamChallenges),
+              individualImmunities: mapToSortedEpisodeEvents(metricMaps.individualImmunities),
+              tribalImmunities: mapToSortedEpisodeEvents(metricMaps.tribalImmunities),
               satOut: mapToSortedEpisodeEvents(metricMaps.satOut),
               journey: mapToSortedEpisodeEvents(metricMaps.journey),
               votes: mapToSortedEpisodeEvents(metricMaps.votes),
@@ -678,11 +678,11 @@ export default function CastawayPerformanceAggregateCards({
                 (total, episode) => total + episode.events.length,
                 0,
               ),
-              individualChallenges: metricEpisodeEvents.individualChallenges.reduce(
+              individualImmunities: metricEpisodeEvents.individualImmunities.reduce(
                 (total, episode) => total + episode.events.length,
                 0,
               ),
-              teamChallenges: metricEpisodeEvents.teamChallenges.reduce((total, episode) => total + episode.events.length, 0),
+              tribalImmunities: metricEpisodeEvents.tribalImmunities.reduce((total, episode) => total + episode.events.length, 0),
               satOut: metricEpisodeEvents.satOut.reduce((total, episode) => total + episode.events.length, 0),
               journey: metricEpisodeEvents.journey.reduce((total, episode) => total + episode.events.length, 0),
               votes: metricEpisodeEvents.votes.reduce((total, episode) => total + episode.events.length, 0),

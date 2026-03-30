@@ -1,8 +1,10 @@
+import React, { useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 
 export type LocalRuleType =
   | 'INDIVIDUAL_IMMUNITY'
+  | 'TRIBAL_IMMUNITY'
   | 'FOUND_IDOL'
   | 'FOUND_ADVANTAGE'
   | 'SOLE_SURVIVOR'
@@ -24,6 +26,7 @@ type RuleTemplate = {
 
 export const DEFAULT_RULE_TEMPLATES: RuleTemplate[] = [
   { ruleType: 'INDIVIDUAL_IMMUNITY', label: 'Individual Immunity', defaultPoints: 2 },
+  { ruleType: 'TRIBAL_IMMUNITY', label: 'Tribal Immunity', defaultPoints: 2 },
   { ruleType: 'FOUND_IDOL', label: 'Found Idol', defaultPoints: 1 },
   { ruleType: 'FOUND_ADVANTAGE', label: 'Found Advantage', defaultPoints: 1 },
   { ruleType: 'SOLE_SURVIVOR', label: 'Sole Survivor', defaultPoints: 5 },
@@ -62,6 +65,7 @@ const normalizeRules = (rules: LocalRule[]): LocalRule[] => {
 };
 
 export default function GroupRulesEditor({ rules, onChange }: GroupRulesEditorProps) {
+  const [displayValues, setDisplayValues] = useState<Record<string, string>>({});
   const normalizedRules = normalizeRules(rules);
 
   const setRuleActive = (template: RuleTemplate, isActive: boolean) => {
@@ -84,8 +88,27 @@ export default function GroupRulesEditor({ rules, onChange }: GroupRulesEditorPr
     onChange(normalizedRules.filter((rule) => rule.ruleType !== template.ruleType));
   };
 
+  const sanitizePointsInput = (input: string): string => {
+    if (input === '' || input === '-') return input;
+    const cleaned = input.replace(/[^\d-]/g, '');
+    if (cleaned.startsWith('-')) {
+      return '-' + cleaned.slice(1).replace(/-/g, '');
+    }
+    return cleaned.replace(/-/g, '');
+  };
+
   const updatePoints = (template: RuleTemplate, rawPoints: string) => {
-    const parsedPoints = parseInt(rawPoints, 10);
+    const sanitized = sanitizePointsInput(rawPoints);
+    setDisplayValues((prev) => ({ ...prev, [template.ruleType]: sanitized }));
+  };
+
+  const finalizPoints = (template: RuleTemplate) => {
+    const displayValue = displayValues[template.ruleType] ?? String(normalizedRules.find((r) => r.ruleType === template.ruleType)?.points ?? template.defaultPoints);
+    if (displayValue === '' || displayValue === '-') {
+      setDisplayValues((prev) => ({ ...prev, [template.ruleType]: String(template.defaultPoints) }));
+      return;
+    }
+    const parsedPoints = parseInt(displayValue, 10);
     const nextPoints = Number.isNaN(parsedPoints) ? 0 : parsedPoints;
 
     const nextRules = normalizedRules.map((rule) =>
@@ -123,9 +146,10 @@ export default function GroupRulesEditor({ rules, onChange }: GroupRulesEditorPr
             <View style={styles.pointsRow}>
               <Text style={[styles.pointsLabel, !isActive && styles.ruleLabelInactive]}>Points</Text>
               <TextInput
-                value={String(activeRule?.points ?? template.defaultPoints)}
+                value={displayValues[template.ruleType] ?? String(activeRule?.points ?? template.defaultPoints)}
                 onChangeText={(value) => updatePoints(template, value)}
-                keyboardType="number-pad"
+                onBlur={() => finalizPoints(template)}
+                keyboardType="numbers-and-punctuation"
                 editable={isActive}
                 style={[styles.pointsInput, !isActive && styles.pointsInputInactive]}
               />

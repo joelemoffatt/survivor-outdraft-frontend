@@ -15,6 +15,7 @@ import { Colors, FontSizes, Spacing } from '../../constants/theme';
 
 export type LocalRuleType =
   | 'INDIVIDUAL_IMMUNITY'
+  | 'TRIBAL_IMMUNITY'
   | 'FOUND_IDOL'
   | 'FOUND_ADVANTAGE'
   | 'SOLE_SURVIVOR'
@@ -36,6 +37,7 @@ type RuleTemplate = {
 
 export const RULE_TEMPLATES: RuleTemplate[] = [
   { ruleType: 'INDIVIDUAL_IMMUNITY', label: 'Individual Immunity', defaultPoints: 2 },
+  { ruleType: 'TRIBAL_IMMUNITY', label: 'Tribal Immunity', defaultPoints: 2 },
   { ruleType: 'FOUND_IDOL', label: 'Found Idol', defaultPoints: 1 },
   { ruleType: 'FOUND_ADVANTAGE', label: 'Found Advantage', defaultPoints: 1 },
   { ruleType: 'SOLE_SURVIVOR', label: 'Sole Survivor', defaultPoints: 5 },
@@ -59,20 +61,23 @@ interface PointRulesInputProps {
 interface RuleRowProps {
   rule: LocalRule;
   index: number;
+  displayValue: string;
   onPointsChange: (index: number, points: string) => void;
+  onPointsBlur: (index: number) => void;
   onDelete: (index: number) => void;
 }
 
-function RuleRow({ rule, index, onPointsChange, onDelete }: RuleRowProps) {
+function RuleRow({ rule, index, displayValue, onPointsChange, onPointsBlur, onDelete }: RuleRowProps) {
   const ruleLabel = RULE_TEMPLATES.find((t) => t.ruleType === rule.ruleType)?.label || rule.ruleType;
 
   return (
     <View style={styles.ruleRow}>
       <Text style={styles.ruleLabelText}>{ruleLabel}</Text>
       <TextInput
-        value={String(rule.points)}
+        value={displayValue}
         onChangeText={(points) => onPointsChange(index, points)}
-        keyboardType="number-pad"
+        onBlur={() => onPointsBlur(index)}
+        keyboardType="numbers-and-punctuation"
         style={styles.pointsInput}
         placeholder="0"
       />
@@ -85,6 +90,7 @@ function RuleRow({ rule, index, onPointsChange, onDelete }: RuleRowProps) {
 
 export default function PointRulesInput({ rules, onChange }: PointRulesInputProps) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [displayValues, setDisplayValues] = useState<Record<number, string>>({});
 
   const availableRuleOptions = RULE_TEMPLATES.filter(
     (template) => !rules.find((r) => r.ruleType === template.ruleType)
@@ -108,10 +114,28 @@ export default function PointRulesInput({ rules, onChange }: PointRulesInputProp
     setModalVisible(false);
   };
 
-  const handlePointsChange = (index: number, pointsStr: string) => {
-    const points = parseInt(pointsStr, 10);
-    const newPoints = Number.isNaN(points) ? 0 : points;
+  const sanitizePointsInput = (input: string): string => {
+    if (input === '' || input === '-') return input;
+    const cleaned = input.replace(/[^\d-]/g, '');
+    if (cleaned.startsWith('-')) {
+      return '-' + cleaned.slice(1).replace(/-/g, '');
+    }
+    return cleaned.replace(/-/g, '');
+  };
 
+  const handlePointsChange = (index: number, pointsStr: string) => {
+    const sanitized = sanitizePointsInput(pointsStr);
+    setDisplayValues((prev) => ({ ...prev, [index]: sanitized }));
+  };
+
+  const handlePointsBlur = (index: number) => {
+    const displayValue = displayValues[index] ?? String(rules[index]?.points ?? 0);
+    if (displayValue === '' || displayValue === '-') {
+      setDisplayValues((prev) => ({ ...prev, [index]: String(rules[index]?.points ?? 0) }));
+      return;
+    }
+    const parsedPoints = parseInt(displayValue, 10);
+    const newPoints = Number.isNaN(parsedPoints) ? 0 : parsedPoints;
     const newRules = [...rules];
     newRules[index] = { ...newRules[index], points: newPoints };
     onChange(newRules);
@@ -136,7 +160,9 @@ export default function PointRulesInput({ rules, onChange }: PointRulesInputProp
             <RuleRow
               rule={item}
               index={index}
+              displayValue={displayValues[index] ?? String(item.points)}
               onPointsChange={handlePointsChange}
+              onPointsBlur={handlePointsBlur}
               onDelete={handleDeleteRule}
             />
           )}

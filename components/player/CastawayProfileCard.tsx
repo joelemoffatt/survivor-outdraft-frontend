@@ -12,7 +12,22 @@ interface CastawayProfileCardProps {
 
 const hasText = (value?: string | null) => Boolean(value && value.trim().length > 0);
 
-const displayValue = (value?: string | null) => (hasText(value) ? value!.trim() : null);
+const stripInlineHtml = (value: string) =>
+  value
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const displayValue = (value?: string | null) => {
+  if (!hasText(value)) {
+    return null;
+  }
+
+  const cleaned = stripInlineHtml(value!.trim());
+  return cleaned.length > 0 ? cleaned : null;
+};
 
 const splitThreeWords = (value?: string | null) => {
   if (!value) {
