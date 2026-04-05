@@ -144,6 +144,7 @@ export default function ManageGroupDetailsScreen() {
     () => episodes.find((episode) => episode.id === formData.latestWatchedEpisodeId),
     [episodes, formData.latestWatchedEpisodeId]
   );
+  const isDraftCompleted = group?.draft?.status === 'COMPLETED';
 
   const seasonOptions: PickerOption[] = seasons.map((season) => ({
     label: season.seasonName || `Survivor ${season.season}`,
@@ -336,7 +337,7 @@ export default function ManageGroupDetailsScreen() {
           loadingSeasons={loadingSeasons}
           loadingEpisodes={loadingEpisodes}
           onFormChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
-          lockedFields={['seasonId']}
+          lockedFields={isDraftCompleted ? ['seasonId', 'teamSize', 'style'] : ['seasonId']}
           showMembersSection
         />
 

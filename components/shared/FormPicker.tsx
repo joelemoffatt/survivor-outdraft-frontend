@@ -27,6 +27,7 @@ interface FormPickerProps {
   required?: boolean;
   searchable?: boolean;
   disabled?: boolean;
+  locked?: boolean;
 }
 
 export default function FormPicker({
@@ -39,6 +40,7 @@ export default function FormPicker({
   required,
   searchable = false,
   disabled = false,
+  locked = false,
 }: FormPickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,28 +60,30 @@ export default function FormPicker({
     setSearchQuery('');
   };
 
+  const isDisabled = disabled || locked;
+
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, isDisabled && styles.labelDisabled]}>{label}</Text>
         {required && <Text style={styles.required}>*</Text>}
       </View>
       
       <TouchableOpacity
-        style={[styles.picker, error && styles.pickerError, disabled && styles.pickerDisabled]}
-        onPress={() => !disabled && setModalVisible(true)}
-        disabled={disabled}
+        style={[styles.picker, error && styles.pickerError, isDisabled && styles.pickerDisabled]}
+        onPress={() => !isDisabled && setModalVisible(true)}
+        disabled={isDisabled}
       >
         <Text
           style={[
             styles.pickerText,
             !selectedOption && styles.placeholderText,
-            disabled && styles.pickerDisabledText,
+            isDisabled && styles.pickerDisabledText,
           ]}
         >
           {displayText}
         </Text>
-        <Ionicons name="chevron-down" size={20} color={disabled ? Colors.textSecondary : Colors.textSecondary} />
+        <Ionicons name="chevron-down" size={20} color={isDisabled ? Colors.disabled : Colors.textSecondary} />
       </TouchableOpacity>
 
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -166,6 +170,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
   },
+  labelDisabled: {
+    color: Colors.textSecondary,
+  },
   required: {
     fontSize: FontSizes.medium,
     color: Colors.warning,
@@ -185,8 +192,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.warning,
   },
   pickerDisabled: {
-    backgroundColor: '#f5f5f5',
-    opacity: 0.6,
+    backgroundColor: Colors.lightBackground,
+    borderColor: Colors.border,
   },
   pickerText: {
     fontSize: FontSizes.medium,

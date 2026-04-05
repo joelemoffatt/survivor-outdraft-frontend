@@ -88,6 +88,7 @@ export default function GroupSettingsForm({
         error={errors.name}
         required
         maxLength={100}
+        locked={isLocked('name')}
         editable={!isLocked('name')}
       />
 
@@ -106,6 +107,7 @@ export default function GroupSettingsForm({
         error={errors.seasonId}
         required
         searchable
+        locked={isLocked('seasonId')}
         disabled={isLocked('seasonId')}
       />
 
@@ -127,6 +129,7 @@ export default function GroupSettingsForm({
             : 'None (all castaways visible)'
         }
         searchable
+        locked={isLocked('latestWatchedEpisodeId')}
         disabled={!formData.seasonId || isLocked('latestWatchedEpisodeId')}
         required
       />
@@ -142,6 +145,7 @@ export default function GroupSettingsForm({
           error={errors.teamSize}
           keyboardType="number-pad"
           required
+          locked={isLocked('teamSize')}
           editable={!!formData.seasonId && !isLocked('teamSize')}
         />
 
@@ -156,6 +160,7 @@ export default function GroupSettingsForm({
           }
           placeholder="Select draft style"
           required
+          locked={isLocked('style')}
           disabled={isLocked('style')}
         />
 
@@ -165,6 +170,7 @@ export default function GroupSettingsForm({
             value={formData.draftDate ?? ''}
             onChangeText={(draftDate) => onFormChange({ draftDate })}
             placeholder="YYYY-MM-DDTHH:mm:ss"
+            locked={isLocked('draftDate')}
             editable={!isLocked('draftDate')}
           />
         )}
@@ -208,6 +214,7 @@ export default function GroupSettingsForm({
           error={errors.firstScoringEpisodeNumber}
           keyboardType="number-pad"
           required
+          locked={isLocked('firstScoringEpisodeNumber')}
           editable={!isLocked('firstScoringEpisodeNumber')}
         />
 

@@ -6,24 +6,29 @@ interface FormInputProps extends TextInputProps {
   label: string;
   error?: string;
   required?: boolean;
+  locked?: boolean;
 }
 
 export default function FormInput({
   label,
   error,
   required,
+  locked = false,
   style,
   ...props
 }: FormInputProps) {
+  const isDisabled = locked || props.editable === false;
+
   return (
     <View style={styles.container}>
       <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, isDisabled && styles.labelDisabled]}>{label}</Text>
         {required && <Text style={styles.required}>*</Text>}
       </View>
       <TextInput
         style={[
           styles.input,
+          isDisabled && styles.inputDisabled,
           error && styles.inputError,
           style,
         ]}
@@ -48,6 +53,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
   },
+  labelDisabled: {
+    color: Colors.textSecondary,
+  },
   required: {
     fontSize: FontSizes.medium,
     color: Colors.warning,
@@ -61,6 +69,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.medium,
     color: Colors.text,
     backgroundColor: '#fff',
+  },
+  inputDisabled: {
+    backgroundColor: Colors.lightBackground,
+    borderColor: Colors.border,
+    color: Colors.textSecondary,
   },
   inputError: {
     borderColor: Colors.warning,
