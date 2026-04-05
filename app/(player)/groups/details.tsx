@@ -167,7 +167,7 @@ export default function GroupDetailsScreen() {
         subtitle="These values control drafting flow, spoiler filtering, and scoring eligibility."
       >
         <DetailRow label="Draft Style" value={draftStyleLabels[group.draft?.style ?? 'SNAKE'] ?? 'Snake'} />
-        <DetailRow label="Team Size" value={group.teamSize != null ? `${group.teamSize}` : 'Not set'} />
+        <DetailRow label="Team Size" value={group.draft?.teamSize != null ? `${group.draft.teamSize}` : 'Not set'} />
         <DetailRow
           label="Latest Episode Watched"
           value={

@@ -87,7 +87,7 @@ export default function ManageGroupsScreen() {
             <View style={styles.cardLeft}>
               <Text style={styles.groupName}>{group.name}</Text>
               <Text style={styles.metaText}>{group.season.seasonName}</Text>
-              <Text style={styles.metaText}>Team Size: {group.teamSize ?? '-'}</Text>
+              <Text style={styles.metaText}>Team Size: {group.draft?.teamSize ?? '-'}</Text>
               <Text style={styles.metaText}>First Scoring Episode: {group.firstScoringEpisodeNumber ?? 1}</Text>
             </View>
             <Ionicons name="chevron-forward" size={22} color={Colors.textSecondary} />

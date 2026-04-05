@@ -421,14 +421,19 @@ export default function CastawayPerformanceAggregateCards({
                       return;
                     }
 
-                    const metricKey: MetricKey = isTribalChallenge(challenge.type)
+                    const normalizedChallengeType = normalize(challenge.type);
+                    const isTribalImmunityType =
+                      normalizedChallengeType.includes('tribal') &&
+                      normalizedChallengeType.includes('immunity');
+
+                    const metricKey: MetricKey = isTribalImmunityType
                       ? 'tribalImmunities'
                       : 'individualImmunities';
-                    const baseLabel = isTribalChallenge(challenge.type) ? 'Tribal immunity' : 'Individual immunity';
+                    const baseLabel = isTribalImmunityType ? 'Tribal immunity' : 'Individual immunity';
                     const isIndividualImmunity = metricKey === 'individualImmunities';
                     const isTribalImmunity = metricKey === 'tribalImmunities';
                     const isImmunityChallenge =
-                      normalize(challenge.type).includes('immunity') ||
+                      normalizedChallengeType.includes('immunity') ||
                       normalize(challenge.title).includes('immunity');
 
                     if (isIndividualImmunity && !row.won) {

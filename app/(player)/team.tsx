@@ -331,7 +331,7 @@ export default function TeamScreen() {
             <View style={styles.draftDetail}>
               <Text style={styles.draftDetailLabel}>Team Size</Text>
               <Text style={styles.draftDetailValue}>
-                {group.teamSize || "?"} players
+                {group.draft?.teamSize || "?"} players
               </Text>
             </View>
             <View style={styles.draftDetail}>
@@ -373,7 +373,7 @@ export default function TeamScreen() {
     return (
       <DraftScreen
         groupId={selectedGroupId}
-        teamSize={group.teamSize || 5}
+        teamSize={group.draft?.teamSize || 5}
         onDraftComplete={async () => {
           try {
             // Refresh group + team data when draft completes

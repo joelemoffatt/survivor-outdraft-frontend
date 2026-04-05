@@ -121,7 +121,7 @@ export default function ManageGroupDetailsScreen() {
         seasonId: groupData.season.id,
         latestWatchedEpisodeId: groupData.latestEpisodeWatched?.id ?? null,
         firstScoringEpisodeNumber: String(groupData.firstScoringEpisodeNumber ?? 1),
-        teamSize: String(groupData.teamSize ?? ''),
+        teamSize: String(groupData.draft?.teamSize ?? ''),
         style: groupData.draft?.style ?? 'SNAKE',
         draftDate: groupData.draft?.scheduledAt ?? '',
         pointRules: (groupData.pointRules ?? []).map((rule) => ({
@@ -216,10 +216,12 @@ export default function ManageGroupDetailsScreen() {
       const payload: Parameters<typeof apiService.updateGroupSettings>[1] = {
         name: formData.name.trim(),
         seasonId: Number(formData.seasonId),
-        teamSize: parseInt(formData.teamSize, 10),
         latestWatchedEpisodeId: formData.latestWatchedEpisodeId,
         firstScoringEpisodeNumber: parseInt(formData.firstScoringEpisodeNumber, 10),
-        style: formData.style,
+        draft: {
+          teamSize: parseInt(formData.teamSize, 10),
+          style: formData.style,
+        },
         pointRules: formData.pointRules.map((rule) => ({
           ruleType: rule.ruleType,
           points: rule.points,

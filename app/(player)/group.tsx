@@ -270,7 +270,7 @@ export default function GroupScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{group.teamSize ?? "-"}</Text>
+            <Text style={styles.statValue}>{group.draft?.teamSize ?? "-"}</Text>
             <Text style={styles.statLabel}>Team Size</Text>
           </View>
           <View style={styles.statDivider} />

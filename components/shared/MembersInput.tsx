@@ -3,6 +3,8 @@ import {
   StyleSheet,
   Text,
   View,
+  StyleProp,
+  ViewStyle,
   TouchableOpacity,
   TextInput,
   FlatList,
@@ -27,6 +29,7 @@ interface MembersInputProps {
   members: GroupMember[];
   onChange: (members: GroupMember[]) => void;
   availableUsers?: Array<{ id: string; username: string }>;
+  style?: StyleProp<ViewStyle>;
 }
 
 const statusColors: Record<MembershipStatus, string> = {
@@ -79,6 +82,7 @@ export default function MembersInput({
   members,
   onChange,
   availableUsers = [],
+  style,
 }: MembersInputProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
@@ -104,9 +108,7 @@ export default function MembersInput({
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Members</Text>
-
+    <View style={[styles.container, style]}>
       {members.length === 0 ? (
         <Text style={styles.emptyText}>No members added yet</Text>
       ) : (

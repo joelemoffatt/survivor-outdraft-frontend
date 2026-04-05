@@ -101,7 +101,7 @@ class ApiService {
           .catch(() => ({ message: response.statusText || `HTTP error! status: ${response.status}` }));
         console.error('API Error Response:', errorData);
 
-        if ((response.status === 401 || response.status === 403) && this.authFailureHandler) {
+        if (response.status === 401 && this.authFailureHandler) {
           this.authFailureHandler();
         }
 
@@ -314,9 +314,11 @@ class ApiService {
     season: { id: number };
     latestWatchedEpisode?: { id: number };
     firstScoringEpisodeNumber?: number;
-    teamSize: number;
-    style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
-    scheduledAt?: string;
+    draft: {
+      teamSize: number;
+      style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+      scheduledAt?: string;
+    };
     pointRules: Array<{ ruleType: string; points: number }>;
   }): Promise<GroupResponse> {
     return this.post<GroupResponse>(`/v1/groups`, groupData);
@@ -327,10 +329,12 @@ class ApiService {
     data: {
       name: string;
       seasonId: number;
-      teamSize: number;
       latestWatchedEpisodeId: number | null;
       firstScoringEpisodeNumber: number;
-      style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+      draft: {
+        teamSize: number;
+        style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+      };
       pointRules?: Array<{ ruleType: string; points: number }>;
     }
   ): Promise<GroupResponse> {
@@ -516,11 +520,11 @@ export interface GroupResponse {
     id: number;
     status: 'PENDING' | 'DRAFTING' | 'COMPLETED';
     style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+    teamSize: number;
     scheduledAt: string | null;
     startedAt: string | null;
     completedAt: string | null;
   } | null;
-  teamSize: number | null;
   firstScoringEpisodeNumber: number;
   latestEpisodeWatched?: {
     id: number;

@@ -18,16 +18,50 @@ import apiService, { GroupResponse } from "../../../services/api";
 import { Episode, Season } from "../../../types/survivor";
 import { PickerOption } from "../../../components/shared/FormPicker";
 import FormButton from "../../../components/shared/FormButton";
-import InviteMember from "../../../components/shared/InviteMember";
 import { LocalRule } from "../../../components/shared/PointRulesInput";
-import { GroupMember } from "../../../components/shared/MembersInput";
+import MembersInput, {
+  GroupMember,
+  MembershipStatus,
+} from "../../../components/shared/MembersInput";
 import GroupSettingsForm from "../../../components/shared/GroupSettingsForm";
+
+const defaultRulesConfig = require("../../../constants/defaultGroupRules.json") as {
+  rules?: Array<{ ruleType?: string; points?: number }>;
+};
 
 const draftStyleOptions: PickerOption[] = [
   { label: "Snake", value: "SNAKE" },
   { label: "Round Robin", value: "ROUND_ROBIN" },
   { label: "Linear", value: "LINEAR" },
 ];
+
+const VALID_RULE_TYPES: LocalRule["ruleType"][] = [
+  "INDIVIDUAL_IMMUNITY",
+  "TRIBAL_IMMUNITY",
+  "FOUND_IDOL",
+  "FOUND_ADVANTAGE",
+  "SOLE_SURVIVOR",
+  "RUNNER_UP",
+  "MADE_MERGE",
+  "MED_EVAC",
+  "QUIT",
+];
+
+const getInitialDefaultRules = (): LocalRule[] => {
+  const rules = defaultRulesConfig?.rules ?? [];
+  return rules
+    .filter(
+      (rule): rule is { ruleType: LocalRule["ruleType"]; points: number } =>
+        !!rule &&
+        typeof rule.ruleType === "string" &&
+        VALID_RULE_TYPES.includes(rule.ruleType as LocalRule["ruleType"]) &&
+        typeof rule.points === "number",
+    )
+    .map((rule) => ({
+      ruleType: rule.ruleType,
+      points: rule.points,
+    }));
+};
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -36,6 +70,8 @@ export default function CreateGroupScreen() {
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdGroup, setCreatedGroup] = useState<GroupResponse | null>(null);
+  const [successMembers, setSuccessMembers] = useState<GroupMember[]>([]);
+  const [loadingSuccessMembers, setLoadingSuccessMembers] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingSeasons, setLoadingSeasons] = useState(true);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
@@ -55,8 +91,7 @@ export default function CreateGroupScreen() {
     teamSize: "",
     style: "SNAKE" as "SNAKE" | "ROUND_ROBIN" | "LINEAR",
     draftDate: "",
-    pointRules: [] as LocalRule[],
-    groupMembers: [] as GroupMember[],
+    pointRules: getInitialDefaultRules(),
   });
 
   const [errors, setErrors] = useState({
@@ -89,6 +124,33 @@ export default function CreateGroupScreen() {
   useEffect(() => {
     loadSeasons();
   }, []);
+
+  useEffect(() => {
+    const loadGroupMembers = async () => {
+      if (!showSuccess || !createdGroup) {
+        return;
+      }
+
+      try {
+        setLoadingSuccessMembers(true);
+        const members = await apiService.getGroupMembers(createdGroup.id);
+        const mappedMembers: GroupMember[] = members.map((member) => ({
+          id: String(member.id),
+          memberId: member.id,
+          username: member.user.username,
+          status: member.status as MembershipStatus,
+          isAdmin: member.user.id === createdGroup.admin.id,
+        }));
+        setSuccessMembers(mappedMembers);
+      } catch (error) {
+        console.error("Failed to load group members:", error);
+      } finally {
+        setLoadingSuccessMembers(false);
+      }
+    };
+
+    loadGroupMembers();
+  }, [showSuccess, createdGroup]);
 
   useEffect(() => {
     const loadEpisodes = async () => {
@@ -333,8 +395,10 @@ export default function CreateGroupScreen() {
           formData.firstScoringEpisodeNumber,
           10,
         ),
-        teamSize: parseInt(formData.teamSize, 10),
-        style: formData.style,
+        draft: {
+          teamSize: parseInt(formData.teamSize, 10),
+          style: formData.style,
+        },
         pointRules: formData.pointRules.map((rule) => ({
           ruleType: rule.ruleType,
           points: rule.points,
@@ -342,7 +406,7 @@ export default function CreateGroupScreen() {
       };
 
       if (formData.draftDate) {
-        groupData.scheduledAt = formData.draftDate;
+        groupData.draft.scheduledAt = formData.draftDate;
       }
 
       const newGroup = await apiService.createGroup(groupData);
@@ -365,6 +429,88 @@ export default function CreateGroupScreen() {
     }
   };
 
+  const handleSuccessMembersChange = async (nextMembers: GroupMember[]) => {
+    if (!createdGroup) {
+      return;
+    }
+
+    if (nextMembers.length < successMembers.length) {
+      const removedMembers = successMembers.filter(
+        (member) => !nextMembers.some((nextMember) => nextMember.id === member.id),
+      );
+
+      setSuccessMembers(nextMembers);
+
+      for (const member of removedMembers) {
+        if (!member.memberId || member.isAdmin) {
+          continue;
+        }
+
+        try {
+          await apiService.cancelInvitation(member.memberId);
+        } catch (error) {
+          console.error("Failed to cancel invitation:", error);
+          Alert.alert(
+            "Error",
+            error instanceof Error
+              ? error.message
+              : `Failed to remove ${member.username}.`,
+          );
+        }
+      }
+      return;
+    }
+
+    const addedMembers = nextMembers.filter(
+      (member) => !successMembers.some((existingMember) => existingMember.id === member.id),
+    );
+
+    if (addedMembers.length === 0) {
+      setSuccessMembers(nextMembers);
+      return;
+    }
+
+    setSuccessMembers(
+      nextMembers.map((member) =>
+        addedMembers.some((addedMember) => addedMember.id === member.id)
+          ? { ...member, status: "PENDING" }
+          : member,
+      ),
+    );
+
+    for (const addedMember of addedMembers) {
+      try {
+        const createdMember = await apiService.inviteByUsername(
+          createdGroup.id,
+          addedMember.username,
+        );
+
+        setSuccessMembers((prev) =>
+          prev.map((member) =>
+            member.id === addedMember.id
+              ? {
+                  id: String(createdMember.id),
+                  memberId: createdMember.id,
+                  username: createdMember.user.username,
+                  status: createdMember.status as MembershipStatus,
+                  isAdmin: createdMember.user.id === createdGroup.admin.id,
+                }
+              : member,
+          ),
+        );
+      } catch (error) {
+        console.error("Failed to send invitation:", error);
+        setSuccessMembers((prev) => prev.filter((member) => member.id !== addedMember.id));
+        Alert.alert(
+          "Error",
+          error instanceof Error
+            ? error.message
+            : `Failed to invite ${addedMember.username}.`,
+        );
+      }
+    }
+  };
+
   if (showSuccess && createdGroup) {
     return (
       <ScrollView
@@ -379,6 +525,19 @@ export default function CreateGroupScreen() {
           <Text style={styles.successSubtitle}>
             You are now the admin of {createdGroup.name}
           </Text>
+        </View>
+
+        <View style={styles.inviteSection}>
+          <Text style={styles.inviteTitle}>Invite Members</Text>
+          {loadingSuccessMembers ? (
+            <Text style={styles.loadingMembersText}>Loading members...</Text>
+          ) : (
+            <MembersInput
+              style={{ marginTop: 0 }}
+              members={successMembers}
+              onChange={handleSuccessMembersChange}
+            />
+          )}
         </View>
 
         <View style={styles.successActions}>
@@ -419,7 +578,6 @@ export default function CreateGroupScreen() {
           onFormChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
           showDraftDate
           showSafetyInfo
-          showMembersSection
           seasonCastawayCount={seasonCastawayCount}
           bootsCount={bootsCount}
           availableCastaways={availableCastaways}
@@ -541,6 +699,22 @@ const styles = StyleSheet.create({
   },
   inviteSection: {
     marginBottom: Spacing.xl,
+  },
+  inviteTitle: {
+    fontSize: FontSizes.large,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  inviteSubtitle: {
+    fontSize: FontSizes.small,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+    lineHeight: 18,
+  },
+  loadingMembersText: {
+    fontSize: FontSizes.small,
+    color: Colors.textSecondary,
   },
   successActions: {
     gap: Spacing.sm,

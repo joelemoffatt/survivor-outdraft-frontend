@@ -1,0 +1,13 @@
+{
+  "rules": [
+    { "ruleType": "INDIVIDUAL_IMMUNITY", "points": 4 },
+    { "ruleType": "TRIBAL_IMMUNITY", "points": 1 },
+    { "ruleType": "FOUND_IDOL", "points": 4 },
+    { "ruleType": "FOUND_ADVANTAGE", "points": 2 },
+    { "ruleType": "SOLE_SURVIVOR", "points": 10 },
+    { "ruleType": "RUNNER_UP", "points": 5 },
+    { "ruleType": "MADE_MERGE", "points": 2 },
+    { "ruleType": "MED_EVAC", "points": -2 },
+    { "ruleType": "QUIT", "points": -2 }
+  ]
+}
