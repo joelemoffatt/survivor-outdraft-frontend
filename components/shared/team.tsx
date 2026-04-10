@@ -213,7 +213,8 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                   (c) => c.teamCastawayId === teamCastaway.id
                 );
                 const isLoadingBreakdown = loadingCastawayBreakdownId === teamCastaway.id;
-                const castawayStatus = getCastawayStatus(teamCastaway.placement ?? null);
+                const shouldApplyPlacement = group?.latestEpisodeWatched != null;
+                const castawayStatus = shouldApplyPlacement ? getCastawayStatus(teamCastaway.placement ?? null) : null;
                 const isBooted = castawayStatus === 'booted';
                 const pts = breakdown?.totalPoints ?? teamCastaway.points;
                 return (
@@ -221,11 +222,11 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                     key={teamCastaway.id}
                     style={[
                       styles.memberRow,
-                      castawayStatus === 'booted' && styles.memberRowBooted,
-                      castawayStatus === 'first' && styles.memberRowFirst,
-                      castawayStatus === 'second' && styles.memberRowSecond,
-                      castawayStatus === 'third' && styles.memberRowThird,
-                      castawayStatus === 'lostFire' && styles.memberRowLostFire,
+                      shouldApplyPlacement && castawayStatus === 'booted' && styles.memberRowBooted,
+                      shouldApplyPlacement && castawayStatus === 'first' && styles.memberRowFirst,
+                      shouldApplyPlacement && castawayStatus === 'second' && styles.memberRowSecond,
+                      shouldApplyPlacement && castawayStatus === 'third' && styles.memberRowThird,
+                      shouldApplyPlacement && castawayStatus === 'lostFire' && styles.memberRowLostFire,
                       index < roster.length - 1 && styles.memberRowBorder,
                     ]}
                   >
@@ -255,11 +256,11 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                       <Text
                         style={[
                           styles.memberUsername,
-                          castawayStatus === 'booted' && styles.memberUsernameBooted,
-                          castawayStatus === 'first' && styles.memberUsernameFirst,
-                          castawayStatus === 'second' && styles.memberUsernameSecond,
-                          castawayStatus === 'third' && styles.memberUsernameThird,
-                          castawayStatus === 'lostFire' && styles.memberUsernameLostFire,
+                          shouldApplyPlacement && castawayStatus === 'booted' && styles.memberUsernameBooted,
+                          shouldApplyPlacement && castawayStatus === 'first' && styles.memberUsernameFirst,
+                          shouldApplyPlacement && castawayStatus === 'second' && styles.memberUsernameSecond,
+                          shouldApplyPlacement && castawayStatus === 'third' && styles.memberUsernameThird,
+                          shouldApplyPlacement && castawayStatus === 'lostFire' && styles.memberUsernameLostFire,
                         ]}
                       >
                         {castawayName}
@@ -267,11 +268,11 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                       <Text
                         style={[
                           styles.memberPick,
-                          castawayStatus === 'booted' && styles.memberPickBooted,
-                          castawayStatus === 'first' && styles.memberPickFirst,
-                          castawayStatus === 'second' && styles.memberPickSecond,
-                          castawayStatus === 'third' && styles.memberPickThird,
-                          castawayStatus === 'lostFire' && styles.memberPickLostFire,
+                          shouldApplyPlacement && castawayStatus === 'booted' && styles.memberPickBooted,
+                          shouldApplyPlacement && castawayStatus === 'first' && styles.memberPickFirst,
+                          shouldApplyPlacement && castawayStatus === 'second' && styles.memberPickSecond,
+                          shouldApplyPlacement && castawayStatus === 'third' && styles.memberPickThird,
+                          shouldApplyPlacement && castawayStatus === 'lostFire' && styles.memberPickLostFire,
                         ]}
                       >
                         Pick #{teamCastaway.draftOrder ?? index + 1}
@@ -402,11 +403,11 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                         <Text
                           style={[
                             styles.memberPoints,
-                            castawayStatus === 'booted' && styles.memberPointsBooted,
-                            castawayStatus === 'first' && styles.memberPointsFirst,
-                            castawayStatus === 'second' && styles.memberPointsSecond,
-                            castawayStatus === 'third' && styles.memberPointsThird,
-                            castawayStatus === 'lostFire' && styles.memberPointsLostFire,
+                            shouldApplyPlacement && castawayStatus === 'booted' && styles.memberPointsBooted,
+                            shouldApplyPlacement && castawayStatus === 'first' && styles.memberPointsFirst,
+                            shouldApplyPlacement && castawayStatus === 'second' && styles.memberPointsSecond,
+                            shouldApplyPlacement && castawayStatus === 'third' && styles.memberPointsThird,
+                            shouldApplyPlacement && castawayStatus === 'lostFire' && styles.memberPointsLostFire,
                           ]}
                         >
                           {pts} pts
