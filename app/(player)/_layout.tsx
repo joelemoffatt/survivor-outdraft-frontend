@@ -1,16 +1,20 @@
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResponsive, Colors } from '../../constants/theme';
 import { ResponsiveNavigation } from '../../components/shared/ResponsiveNavigation';
 import { useAuth } from '../../contexts/AuthContext';
 import { getNavigationConfig } from '../../constants/navigation';
+import { shouldShowPlayerMobileMenu } from '../../constants/playerMenuVisibility';
 import BackButton from '../../components/shared/BackButton';
 
 export default function PlayerLayout() {
   const responsive = useResponsive();
   const { user, isAdminView } = useAuth();
+  const segments = useSegments();
   const navigationConfig = getNavigationConfig(Boolean(user?.isAdmin && isAdminView));
+  const showMobileBottomNavigation =
+    responsive.isMobile && shouldShowPlayerMobileMenu(segments);
 
   return (
     <SafeAreaView style={[styles.container, responsive.isMobile && styles.mobileContainer]} edges={['top', 'left', 'right']}>
@@ -45,7 +49,7 @@ export default function PlayerLayout() {
         </View>
       </View>
 
-      {responsive.isMobile && (
+      {showMobileBottomNavigation && (
         <ResponsiveNavigation items={navigationConfig.items} baseRoute={navigationConfig.baseRoute} logo={navigationConfig.logo} />
       )}
     </SafeAreaView>

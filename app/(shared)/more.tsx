@@ -60,6 +60,11 @@ export default function MoreScreen() {
           onPress: () => router.push('/(player)/groups/create'),
         },
         {
+          label: 'Create Group Multipage (Testing)',
+          icon: 'add-circle',
+          onPress: () => router.push('/(player)/groups/create2'),
+        },
+        {
           label: 'Manage Groups',
           icon: 'settings',
           onPress: () => router.push('/(player)/groups/manage'),

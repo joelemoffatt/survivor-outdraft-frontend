@@ -16,7 +16,11 @@ export default function GroupsLayout() {
       />
       <Stack.Screen
         name="create"
-        options={{ ...HEADER_BASE, title: "Create Group", headerLeft: () => <BackButton fallbackRoute="/(player)/groups/select" /> }}
+        options={{ ...HEADER_BASE, title: "Create Group", headerLeft: () => <BackButton fallbackRoute="/(player)/more" /> }}
+      />
+      <Stack.Screen
+        name="create2"
+        options={{ ...HEADER_BASE, title: "Create Group (Testing)", headerLeft: () => <BackButton fallbackRoute="/(player)/more" /> }}
       />
       <Stack.Screen
         name="details"
