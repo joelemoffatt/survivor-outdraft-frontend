@@ -30,6 +30,7 @@ interface MembersInputProps {
   onChange: (members: GroupMember[]) => void;
   availableUsers?: Array<{ id: string; username: string }>;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 }
 
 const statusColors: Record<MembershipStatus, string> = {
@@ -50,12 +51,13 @@ interface MemberRowProps {
   member: GroupMember;
   index: number;
   onDelete: (index: number) => void;
+  disabled?: boolean;
 }
 
-function MemberRow({ member, index, onDelete }: MemberRowProps) {
+function MemberRow({ member, index, onDelete, disabled = false }: MemberRowProps) {
   return (
-    <View style={styles.memberRow}>
-      <Text style={styles.memberUsername}>{member.username}</Text>
+    <View style={[styles.memberRow, disabled && styles.memberRowDisabled]}>
+      <Text style={[styles.memberUsername, disabled && styles.memberUsernameDisabled]}>{member.username}</Text>
       {member.isAdmin && (
         <View style={styles.adminChip}>
           <Text style={styles.adminChipText}>Admin</Text>
@@ -69,7 +71,7 @@ function MemberRow({ member, index, onDelete }: MemberRowProps) {
       >
         <Text style={styles.statusText}>{statusLabels[member.status]}</Text>
       </View>
-      {!member.isAdmin && (
+      {!member.isAdmin && !disabled && (
         <TouchableOpacity onPress={() => onDelete(index)}>
           <Ionicons name="trash" size={20} color={Colors.warning} />
         </TouchableOpacity>
@@ -83,11 +85,15 @@ export default function MembersInput({
   onChange,
   availableUsers = [],
   style,
+  disabled = false,
 }: MembersInputProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
 
   const handleAddMember = () => {
+    if (disabled) {
+      return;
+    }
     if (usernameInput.trim()) {
       const newMember: GroupMember = {
         id: `new-${Date.now()}`,
@@ -101,6 +107,9 @@ export default function MembersInput({
   };
 
   const handleDeleteMember = (index: number) => {
+    if (disabled) {
+      return;
+    }
     if (members[index]?.isAdmin) {
       return;
     }
@@ -121,18 +130,21 @@ export default function MembersInput({
               member={item}
               index={index}
               onDelete={handleDeleteMember}
+              disabled={disabled}
             />
           )}
         />
       )}
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setModalVisible(true)}
-      >
-        <Ionicons name="add" size={20} color="#000" />
-        <Text style={styles.addButtonText}>Add Member</Text>
-      </TouchableOpacity>
+      {!disabled && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setModalVisible(true)}
+        >
+          <Ionicons name="add" size={20} color="#000" />
+          <Text style={styles.addButtonText}>Add Member</Text>
+        </TouchableOpacity>
+      )}
 
       <Modal
         visible={modalVisible}
@@ -208,11 +220,18 @@ const styles = StyleSheet.create({
     borderColor: '#000',
     height: 54,
   },
+  memberRowDisabled: {
+    backgroundColor: Colors.lightBackground,
+    borderColor: Colors.border,
+  },
   memberUsername: {
     flex: 1,
     fontSize: FontSizes.medium,
     color: Colors.text,
     fontWeight: '500',
+  },
+  memberUsernameDisabled: {
+    color: Colors.textSecondary,
   },
   statusChip: {
     paddingVertical: 4,
@@ -257,6 +276,11 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.medium,
     fontWeight: '600',
     color: '#000',
+  },
+  lockedHintText: {
+    fontSize: FontSizes.small,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,

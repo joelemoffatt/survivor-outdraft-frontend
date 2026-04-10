@@ -145,6 +145,7 @@ export default function ManageGroupDetailsScreen() {
     [episodes, formData.latestWatchedEpisodeId]
   );
   const isDraftCompleted = group?.draft?.status === 'COMPLETED';
+  const isDraftPending = group?.draft?.status === 'PENDING';
 
   const seasonOptions: PickerOption[] = seasons.map((season) => ({
     label: season.seasonName || `Survivor ${season.season}`,
@@ -240,6 +241,11 @@ export default function ManageGroupDetailsScreen() {
       const addedMembers = formData.groupMembers.filter(
         (member) => !member.memberId,
       );
+
+      if (!isDraftPending && (deletedMembers.length > 0 || addedMembers.length > 0)) {
+        Alert.alert('Members Locked', 'Members can only be edited while the draft is pending.');
+        return;
+      }
 
       const updated = await apiService.updateGroupSettings(groupId, payload);
 
@@ -339,6 +345,7 @@ export default function ManageGroupDetailsScreen() {
           onFormChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
           lockedFields={isDraftCompleted ? ['seasonId', 'teamSize', 'style'] : ['seasonId']}
           showMembersSection
+          membersLocked={!isDraftPending}
         />
 
         <View style={styles.buttonContainer}>

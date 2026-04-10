@@ -47,6 +47,7 @@ export interface GroupSettingsFormProps {
   onFormChange: (patch: Partial<GroupSettingsFormData>) => void;
   lockedFields?: LockedField[];
   showMembersSection?: boolean;
+  membersLocked?: boolean;
   showDraftDate?: boolean;
   showSafetyInfo?: boolean;
   seasonCastawayCount?: number | null;
@@ -67,6 +68,7 @@ export default function GroupSettingsForm({
   onFormChange,
   lockedFields = [],
   showMembersSection = false,
+  membersLocked = false,
   showDraftDate = false,
   showSafetyInfo = false,
   seasonCastawayCount = null,
@@ -231,6 +233,7 @@ export default function GroupSettingsForm({
           <MembersInput
             members={formData.groupMembers ?? []}
             onChange={(groupMembers: GroupMember[]) => onFormChange({ groupMembers })}
+            disabled={membersLocked}
           />
         </View>
       )}
