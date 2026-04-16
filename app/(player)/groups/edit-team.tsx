@@ -28,7 +28,8 @@ export default function EditTeamScreen() {
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [teamName, setTeamName] = useState('');
   const [nameError, setNameError] = useState('');
-  const [pickedFile, setPickedFile] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [pickedFile, setPickedFile] = useState<{ uri: string; name: string; type: string } | File | null>(null);
+  const [avatarPreviewUri, setAvatarPreviewUri] = useState<string | null>(null);
 
   useEffect(() => {
     const loadTeam = async () => {
@@ -54,11 +55,14 @@ export default function EditTeamScreen() {
   }, [selectedGroupId, user?.id]);
 
   const displayedAvatarUri = useMemo(() => {
-    if (pickedFile?.uri) {
+    if (avatarPreviewUri) {
+      return avatarPreviewUri;
+    }
+    if (pickedFile && typeof File === 'undefined' && 'uri' in pickedFile) {
       return pickedFile.uri;
     }
     return getApiAssetUri(team?.avatarImage);
-  }, [pickedFile?.uri, team?.avatarImage]);
+  }, [avatarPreviewUri, pickedFile, team?.avatarImage]);
 
   const handlePickAvatar = async () => {
     if (saving) return;
@@ -79,11 +83,8 @@ export default function EditTeamScreen() {
             resolve();
             return;
           }
-          setPickedFile({
-            uri: URL.createObjectURL(file),
-            name: file.name,
-            type: file.type || 'image/jpeg',
-          });
+          setPickedFile(file);
+          setAvatarPreviewUri(URL.createObjectURL(file));
           resolve();
         };
         input.click();
@@ -109,11 +110,13 @@ export default function EditTeamScreen() {
       }
 
       const asset = result.assets[0];
-      setPickedFile({
+      const nextPickedFile = {
         uri: asset.uri,
         name: asset.fileName || `team-avatar-${Date.now()}.jpg`,
         type: asset.mimeType || 'image/jpeg',
-      });
+      };
+      setPickedFile(nextPickedFile);
+      setAvatarPreviewUri(asset.uri);
     } catch (error) {
       console.error('Failed to open image picker:', error);
       Alert.alert('Error', 'Failed to open image picker.');
@@ -142,9 +145,17 @@ export default function EditTeamScreen() {
         teamName: trimmedName,
         file: pickedFile ?? undefined,
       });
-      setTeam(updated);
+      const resolvedAvatar = getApiAssetUri(updated.avatarImage);
+      const cacheBustedAvatar = resolvedAvatar
+        ? `${resolvedAvatar}${resolvedAvatar.includes('?') ? '&' : '?'}t=${Date.now()}`
+        : null;
+      setTeam({
+        ...updated,
+        avatarImage: cacheBustedAvatar,
+      });
       setTeamName(updated.teamName ?? trimmedName);
       setPickedFile(null);
+      setAvatarPreviewUri(null);
       Alert.alert('Success', 'Team profile updated.', [
         {
           text: 'OK',
@@ -158,6 +169,14 @@ export default function EditTeamScreen() {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUri && avatarPreviewUri.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreviewUri);
+      }
+    };
+  }, [avatarPreviewUri]);
 
   return (
     <KeyboardAvoidingView

@@ -1,28 +1,35 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, FontSizes, Spacing } from '../../../constants/theme';
+import { Colors, Spacing } from '../../../constants/theme';
 import FormInput from '../../../components/shared/FormInput';
+import FormPicker, { PickerOption } from '../../../components/shared/FormPicker';
+import FormDatePicker from '../../../components/shared/FormDatePicker';
+import PointRulesInput, { getDefaultLocalRules, LocalRule } from '../../../components/shared/PointRulesInput';
 import MultiPageActions from '../../../components/shared/multipage/MultiPageActions';
 import MultiPageProgress from '../../../components/shared/multipage/MultiPageProgress';
 import MultiPageStepContainer from '../../../components/shared/multipage/MultiPageStepContainer';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useGroup } from '../../../contexts/GroupContext';
+import apiService, { GroupResponse } from '../../../services/api';
+import { Season } from '../../../types/survivor';
 
 interface MultiPageFormData {
-  groupName: string;
-  groupCode: string;
-  draftTheme: string;
-  welcomeMessage: string;
-  inviteName: string;
-  inviteEmail: string;
+  name: string;
+  seasonId: number | null;
+  teamSize: string;
+  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+  draftDate: Date | null;
+  firstScoringEpisodeNumber: string;
+  pointRules: LocalRule[];
 }
 
 interface StepConfig {
@@ -33,46 +40,79 @@ interface StepConfig {
 const STEPS: StepConfig[] = [
   {
     title: 'Basics',
-    description: 'Testing fields for core group information.',
+    description: 'Group name and season.',
   },
   {
-    title: 'Experience',
-    description: 'Testing fields for how this group should feel.',
+    title: 'Draft',
+    description: 'Draft size, style, and scheduled start.',
   },
   {
-    title: 'Invite',
-    description: 'Testing fields for inviting one player.',
+    title: 'Scoring',
+    description: 'First scoring episode and rules.',
   },
 ];
 
 const INITIAL_DATA: MultiPageFormData = {
-  groupName: '',
-  groupCode: '',
-  draftTheme: '',
-  welcomeMessage: '',
-  inviteName: '',
-  inviteEmail: '',
+  name: '',
+  seasonId: null,
+  teamSize: '',
+  style: 'SNAKE',
+  draftDate: null,
+  firstScoringEpisodeNumber: '1',
+  pointRules: getDefaultLocalRules(),
 };
+
+const draftStyleOptions: PickerOption[] = [
+  { label: 'Snake', value: 'SNAKE' },
+  { label: 'Round Robin', value: 'ROUND_ROBIN' },
+  { label: 'Linear', value: 'LINEAR' },
+];
 
 export default function CreateGroupMultiPageTestingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { setSelectedGroupId } = useGroup();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<MultiPageFormData>(INITIAL_DATA);
   const [errors, setErrors] = useState<Partial<Record<keyof MultiPageFormData, string>>>({});
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [loadingSeasons, setLoadingSeasons] = useState(false);
 
   const activeStep = STEPS[currentStep];
   const isFinalStep = currentStep === STEPS.length - 1;
 
+  useEffect(() => {
+    const loadSeasons = async () => {
+      try {
+        setLoadingSeasons(true);
+        const seasonsData = await apiService.getSeasons();
+        setSeasons(seasonsData);
+      } catch (error) {
+        console.error('Failed to load seasons:', error);
+        Alert.alert('Error', 'Failed to load seasons. Please try again.');
+      } finally {
+        setLoadingSeasons(false);
+      }
+    };
+
+    loadSeasons();
+  }, []);
+
+  const seasonOptions: PickerOption[] = seasons.map((season) => ({
+    label: season.seasonName || `Survivor ${season.season}`,
+    value: season.season,
+  }));
+
   const canProceed = useMemo(() => {
     if (currentStep === 0) {
-      return !!formData.groupName.trim() && !!formData.groupCode.trim();
+      return !!formData.name.trim() && formData.seasonId != null;
     }
     if (currentStep === 1) {
-      return !!formData.draftTheme.trim() && !!formData.welcomeMessage.trim();
+      return !!formData.teamSize.trim();
     }
-    return !!formData.inviteName.trim() && !!formData.inviteEmail.trim();
+    return !!formData.firstScoringEpisodeNumber.trim() && formData.pointRules.length > 0;
   }, [currentStep, formData]);
 
   const setField = (key: keyof MultiPageFormData, value: string) => {
@@ -83,11 +123,11 @@ export default function CreateGroupMultiPageTestingScreen() {
   const validateCurrentStep = () => {
     if (currentStep === 0) {
       const nextErrors: Partial<Record<keyof MultiPageFormData, string>> = {};
-      if (!formData.groupName.trim()) {
-        nextErrors.groupName = 'Group name is required';
+      if (!formData.name.trim()) {
+        nextErrors.name = 'Group name is required';
       }
-      if (!formData.groupCode.trim()) {
-        nextErrors.groupCode = 'Group code is required';
+      if (formData.seasonId == null) {
+        nextErrors.seasonId = 'Season is required';
       }
       setErrors((prev) => ({ ...prev, ...nextErrors }));
       return Object.keys(nextErrors).length === 0;
@@ -95,24 +135,20 @@ export default function CreateGroupMultiPageTestingScreen() {
 
     if (currentStep === 1) {
       const nextErrors: Partial<Record<keyof MultiPageFormData, string>> = {};
-      if (!formData.draftTheme.trim()) {
-        nextErrors.draftTheme = 'Draft theme is required';
-      }
-      if (!formData.welcomeMessage.trim()) {
-        nextErrors.welcomeMessage = 'Welcome message is required';
+      if (!formData.teamSize.trim()) {
+        nextErrors.teamSize = 'Team size is required';
+      } else if (Number.isNaN(Number.parseInt(formData.teamSize, 10)) || Number.parseInt(formData.teamSize, 10) < 1) {
+        nextErrors.teamSize = 'Team size must be a positive number';
       }
       setErrors((prev) => ({ ...prev, ...nextErrors }));
       return Object.keys(nextErrors).length === 0;
     }
 
     const nextErrors: Partial<Record<keyof MultiPageFormData, string>> = {};
-    if (!formData.inviteName.trim()) {
-      nextErrors.inviteName = 'Invite name is required';
-    }
-    if (!formData.inviteEmail.trim()) {
-      nextErrors.inviteEmail = 'Invite email is required';
-    } else if (!formData.inviteEmail.includes('@')) {
-      nextErrors.inviteEmail = 'Invite email must include @';
+    if (!formData.firstScoringEpisodeNumber.trim()) {
+      nextErrors.firstScoringEpisodeNumber = 'First scoring episode is required';
+    } else if (Number.isNaN(Number.parseInt(formData.firstScoringEpisodeNumber, 10)) || Number.parseInt(formData.firstScoringEpisodeNumber, 10) < 1) {
+      nextErrors.firstScoringEpisodeNumber = 'First scoring episode must be 1 or greater';
     }
     setErrors((prev) => ({ ...prev, ...nextErrors }));
     return Object.keys(nextErrors).length === 0;
@@ -130,14 +166,31 @@ export default function CreateGroupMultiPageTestingScreen() {
 
     try {
       setSubmitting(true);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      Alert.alert(
-        'Testing Submission',
-        `This is test content only.\n\n${JSON.stringify(formData, null, 2)}`,
-      );
-      setCurrentStep(0);
-      setFormData(INITIAL_DATA);
-      setErrors({});
+      if (!user?.id) {
+        Alert.alert('Error', 'You must be signed in to create a group.');
+        return;
+      }
+
+      const payload: any = {
+        name: formData.name.trim(),
+        admin: { id: user.id },
+        season: { id: formData.seasonId },
+        firstScoringEpisodeNumber: Number.parseInt(formData.firstScoringEpisodeNumber, 10),
+        draft: {
+          teamSize: Number.parseInt(formData.teamSize, 10),
+          style: formData.style,
+          ...(formData.draftDate ? { scheduledAt: formData.draftDate.toISOString() } : {}),
+        },
+        pointRules: formData.pointRules.map((rule) => ({
+          ruleType: rule.ruleType,
+          points: rule.points,
+        })),
+      };
+
+      const newGroup: GroupResponse = await apiService.createGroup(payload);
+      setSelectedGroupId(newGroup.id);
+      Alert.alert('Success', 'Group created successfully.');
+      router.replace('/(player)/group');
     } finally {
       setSubmitting(false);
     }
@@ -171,21 +224,29 @@ export default function CreateGroupMultiPageTestingScreen() {
           {currentStep === 0 ? (
             <View>
               <FormInput
-                label="Group Name (Test)"
-                placeholder="Ex: Winners at Camp"
-                value={formData.groupName}
-                onChangeText={(value) => setField('groupName', value)}
-                error={errors.groupName}
+                label="Group Name"
+                placeholder="Enter group name"
+                value={formData.name}
+                onChangeText={(value) => setField('name', value)}
+                error={errors.name}
                 required
+                maxLength={100}
               />
-              <FormInput
-                label="Group Code (Test)"
-                placeholder="Ex: WAC2026"
-                value={formData.groupCode}
-                onChangeText={(value) => setField('groupCode', value)}
-                autoCapitalize="characters"
-                error={errors.groupCode}
+              <FormPicker
+                label="Season"
+                value={formData.seasonId}
+                options={seasonOptions}
+                onValueChange={(seasonId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    seasonId: seasonId == null ? null : Number(seasonId),
+                  }))
+                }
+                placeholder={loadingSeasons ? 'Loading seasons...' : 'Select a season'}
+                error={errors.seasonId}
                 required
+                searchable
+                disabled={loadingSeasons}
               />
             </View>
           ) : null}
@@ -193,20 +254,32 @@ export default function CreateGroupMultiPageTestingScreen() {
           {currentStep === 1 ? (
             <View>
               <FormInput
-                label="Draft Theme (Test)"
-                placeholder="Ex: Old School"
-                value={formData.draftTheme}
-                onChangeText={(value) => setField('draftTheme', value)}
-                error={errors.draftTheme}
+                label="Team Size"
+                placeholder="e.g., 10"
+                value={formData.teamSize}
+                onChangeText={(value) => setField('teamSize', value)}
+                error={errors.teamSize}
+                keyboardType="number-pad"
                 required
               />
-              <FormInput
-                label="Welcome Message (Test)"
-                placeholder="Ex: No spoilers after Thursday night"
-                value={formData.welcomeMessage}
-                onChangeText={(value) => setField('welcomeMessage', value)}
-                error={errors.welcomeMessage}
+              <FormPicker
+                label="Draft Style"
+                value={formData.style}
+                options={draftStyleOptions}
+                onValueChange={(style) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    style: (style ?? 'SNAKE') as MultiPageFormData['style'],
+                  }))
+                }
+                placeholder="Select draft style"
                 required
+              />
+              <FormDatePicker
+                label="Scheduled Start"
+                value={formData.draftDate}
+                onChange={(draftDate) => setFormData((prev) => ({ ...prev, draftDate }))}
+                placeholder="No scheduled date"
               />
             </View>
           ) : null}
@@ -214,30 +287,18 @@ export default function CreateGroupMultiPageTestingScreen() {
           {currentStep === 2 ? (
             <View>
               <FormInput
-                label="Invite Name (Test)"
-                placeholder="Ex: Jeff Fan"
-                value={formData.inviteName}
-                onChangeText={(value) => setField('inviteName', value)}
-                error={errors.inviteName}
+                label="First Scoring Episode Number"
+                placeholder="e.g., 1"
+                value={formData.firstScoringEpisodeNumber}
+                onChangeText={(value) => setField('firstScoringEpisodeNumber', value)}
+                error={errors.firstScoringEpisodeNumber}
+                keyboardType="number-pad"
                 required
               />
-              <FormInput
-                label="Invite Email (Test)"
-                placeholder="Ex: jeff@example.com"
-                value={formData.inviteEmail}
-                onChangeText={(value) => setField('inviteEmail', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                error={errors.inviteEmail}
-                required
+              <PointRulesInput
+                rules={formData.pointRules}
+                onChange={(pointRules) => setFormData((prev) => ({ ...prev, pointRules }))}
               />
-
-              <View style={styles.previewCard}>
-                <Text style={styles.previewTitle}>Testing Summary</Text>
-                <Text style={styles.previewText}>Group: {formData.groupName || '-'}</Text>
-                <Text style={styles.previewText}>Code: {formData.groupCode || '-'}</Text>
-                <Text style={styles.previewText}>Theme: {formData.draftTheme || '-'}</Text>
-              </View>
             </View>
           ) : null}
         </MultiPageStepContainer>
@@ -251,10 +312,10 @@ export default function CreateGroupMultiPageTestingScreen() {
           onNext={() => {
             void handleNext();
           }}
-          nextDisabled={!canProceed || submitting}
+          nextDisabled={!canProceed || submitting || loadingSeasons}
           submitting={submitting}
           nextLabel="Continue"
-          submitLabel="Submit Test"
+          submitLabel="Create Group"
         />
       </View>
     </KeyboardAvoidingView>
@@ -279,24 +340,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-  },
-  previewCard: {
-    marginTop: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    backgroundColor: Colors.lightBackground,
-    padding: Spacing.md,
-  },
-  previewTitle: {
-    fontSize: FontSizes.medium,
-    fontWeight: '700',
-    color: Colors.secondary,
-    marginBottom: Spacing.sm,
-  },
-  previewText: {
-    fontSize: FontSizes.medium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
   },
 });
