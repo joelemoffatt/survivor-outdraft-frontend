@@ -131,6 +131,11 @@ export default function PlayerHome() {
         setGroup(groupData);
         setTeam(userTeam);
 
+        // Prefetch team score breakdown in the background so Team screen can render instantly.
+        void apiService.getTeamScoreBreakdown(userTeam.id).catch((prefetchError) => {
+          console.debug("Score breakdown prefetch skipped:", prefetchError);
+        });
+
         let currentRank = 0;
         let previousPoints: number | null = null;
 

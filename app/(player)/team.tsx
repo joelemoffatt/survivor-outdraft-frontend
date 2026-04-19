@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useCallback, useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import {
   useResponsive,
   BorderRadius,
@@ -35,8 +35,7 @@ export default function TeamScreen() {
   const router = useRouter();
   const responsive = useResponsive();
   const { user } = useAuth();
-  const { selectedGroupId, setSelectedGroupId, groupsLoaded, userHasGroups } =
-    useGroup();
+  const { selectedGroupId, groupsLoaded, userHasGroups } = useGroup();
   const [team, setTeam] = useState<TeamResponse | null>(null);
   const [group, setGroup] = useState<GroupResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +44,6 @@ export default function TeamScreen() {
   const [startingDraft, setStartingDraft] = useState(false);
   const [startDraftError, setStartDraftError] = useState<string | null>(null);
   const [draftComplete, setDraftComplete] = useState(false);
-  const [selectingGroup, setSelectingGroup] = useState(false);
   const [scoreBreakdown, setScoreBreakdown] =
     useState<ScoreBreakdownResponse | null>(null);
   const showDataLoadingSpinner = useDelayedLoader(loading, 200);
@@ -57,6 +55,16 @@ export default function TeamScreen() {
     ? Number(user.id) === Number(group?.admin?.id)
     : false;
 
+  const fetchScoreBreakdown = useCallback(async (teamId: number) => {
+    try {
+      const breakdown = await apiService.getTeamScoreBreakdown(teamId);
+      setScoreBreakdown(breakdown);
+    } catch (err) {
+      console.debug("Score breakdown not available yet:", err);
+      setScoreBreakdown(null);
+    }
+  }, []);
+
   const fetchTeamAndGroupData = useCallback(async () => {
     if (!user || !selectedGroupId) {
       setLoading(false);
@@ -64,26 +72,22 @@ export default function TeamScreen() {
       return;
     }
 
+    const isInitialLoad = !team || !group;
+
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       setError(null);
 
-      const groupData = await apiService.getGroupById(selectedGroupId);
+      const [groupData, teamData] = await Promise.all([
+        apiService.getGroupById(selectedGroupId),
+        apiService.getTeamByGroupAndUser(selectedGroupId, user.id),
+      ]);
+
       setGroup(groupData);
-
-      const teamData = await apiService.getTeamByGroupAndUser(
-        selectedGroupId,
-        user.id,
-      );
       setTeam(teamData);
-
-      try {
-        const breakdown = await apiService.getTeamScoreBreakdown(teamData.id);
-        setScoreBreakdown(breakdown);
-      } catch (err) {
-        console.debug("Score breakdown not available yet:", err);
-        setScoreBreakdown(null);
-      }
+      void fetchScoreBreakdown(teamData.id);
 
       if (groupData.status === "DRAFTING") {
         setDraftComplete(false);
@@ -92,22 +96,17 @@ export default function TeamScreen() {
       console.error("Failed to fetch data:", err);
       setError(err?.message || "Failed to load data");
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
-  }, [selectedGroupId, user]);
+  }, [fetchScoreBreakdown, group, selectedGroupId, team, user]);
 
   // Note: group auto-selection is handled centrally in GroupContext
 
   useEffect(() => {
     fetchTeamAndGroupData();
   }, [fetchTeamAndGroupData]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchTeamAndGroupData();
-      return undefined;
-    }, [fetchTeamAndGroupData]),
-  );
 
   // Countdown timer for draft start
   useEffect(() => {
@@ -145,7 +144,9 @@ export default function TeamScreen() {
 
     const pollDraftStatus = async () => {
       try {
-        const updatedGroup = await apiService.getGroupById(selectedGroupId);
+        const updatedGroup = await apiService.getGroupById(selectedGroupId, {
+          forceRefresh: true,
+        });
 
         // If status changed from PENDING to DRAFTING, update state
         if (updatedGroup.status !== "PENDING" && group.status === "PENDING") {
@@ -171,7 +172,9 @@ export default function TeamScreen() {
       await apiService.startDraft(selectedGroupId);
 
       // Refresh group data
-      const groupData = await apiService.getGroupById(selectedGroupId);
+      const groupData = await apiService.getGroupById(selectedGroupId, {
+        forceRefresh: true,
+      });
       setGroup(groupData);
     } catch (err: any) {
       console.error("Failed to start draft:", err);
@@ -377,13 +380,16 @@ export default function TeamScreen() {
         onDraftComplete={async () => {
           try {
             // Refresh group + team data when draft completes
-            const groupData = await apiService.getGroupById(selectedGroupId);
+            const groupData = await apiService.getGroupById(selectedGroupId, {
+              forceRefresh: true,
+            });
             setGroup(groupData);
 
             if (user) {
               const teamData = await apiService.getTeamByGroupAndUser(
                 selectedGroupId,
                 user.id,
+                { forceRefresh: true },
               );
               setTeam(teamData);
             }

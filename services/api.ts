@@ -39,6 +39,8 @@ class ApiService {
   private baseUrl: string;
   private token: string | null = null;
   private authFailureHandler: (() => void) | null = null;
+  private getCache = new Map<string, unknown>();
+  private inFlightGetRequests = new Map<string, Promise<unknown>>();
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
@@ -49,10 +51,41 @@ class ApiService {
    */
   setToken(token: string | null) {
     this.token = token;
+    this.clearGetCache();
   }
 
   setAuthFailureHandler(handler: (() => void) | null) {
     this.authFailureHandler = handler;
+  }
+
+  private clearGetCache() {
+    this.getCache.clear();
+    this.inFlightGetRequests.clear();
+  }
+
+  private async getCached<T>(endpoint: string, forceRefresh = false): Promise<T> {
+    if (!forceRefresh && this.getCache.has(endpoint)) {
+      return this.getCache.get(endpoint) as T;
+    }
+
+    if (!forceRefresh) {
+      const inFlight = this.inFlightGetRequests.get(endpoint);
+      if (inFlight) {
+        return inFlight as Promise<T>;
+      }
+    }
+
+    const requestPromise = this.request<T>(endpoint, { method: 'GET' })
+      .then((data) => {
+        this.getCache.set(endpoint, data);
+        return data;
+      })
+      .finally(() => {
+        this.inFlightGetRequests.delete(endpoint);
+      });
+
+    this.inFlightGetRequests.set(endpoint, requestPromise as Promise<unknown>);
+    return requestPromise;
   }
 
   private async sleep(ms: number): Promise<void> {
@@ -292,20 +325,22 @@ class ApiService {
   }
 
   // Group endpoints
-  async getUserGroups(userId: number): Promise<GroupResponse[]> {
-    return this.get<GroupResponse[]>(`/v1/groups/user/${userId}`);
+  async getUserGroups(userId: number, options?: { forceRefresh?: boolean }): Promise<GroupResponse[]> {
+    return this.getCached<GroupResponse[]>(`/v1/groups/user/${userId}`, Boolean(options?.forceRefresh));
   }
 
-  async getAdminGroups(adminId: number): Promise<GroupResponse[]> {
-    return this.get<GroupResponse[]>(`/v1/groups/admin/${adminId}`);
+  async getAdminGroups(adminId: number, options?: { forceRefresh?: boolean }): Promise<GroupResponse[]> {
+    return this.getCached<GroupResponse[]>(`/v1/groups/admin/${adminId}`, Boolean(options?.forceRefresh));
   }
 
-  async getGroupById(groupId: number): Promise<GroupResponse> {
-    return this.get<GroupResponse>(`/v1/groups/${groupId}`);
+  async getGroupById(groupId: number, options?: { forceRefresh?: boolean }): Promise<GroupResponse> {
+    return this.getCached<GroupResponse>(`/v1/groups/${groupId}`, Boolean(options?.forceRefresh));
   }
 
   async markGroupAccessed(groupId: number): Promise<GroupResponse> {
-    return this.post<GroupResponse>(`/v1/groups/${groupId}/access`, {});
+    const result = await this.post<GroupResponse>(`/v1/groups/${groupId}/access`, {});
+    this.clearGetCache();
+    return result;
   }
 
   async createGroup(groupData: {
@@ -321,7 +356,9 @@ class ApiService {
     };
     pointRules: Array<{ ruleType: string; points: number }>;
   }): Promise<GroupResponse> {
-    return this.post<GroupResponse>(`/v1/groups`, groupData);
+    const result = await this.post<GroupResponse>(`/v1/groups`, groupData);
+    this.clearGetCache();
+    return result;
   }
 
   async updateGroupSettings(
@@ -339,30 +376,34 @@ class ApiService {
     }
   ): Promise<GroupResponse> {
     console.log('Updating group settings with data:', data);
-    return this.patch<GroupResponse>(`/v1/groups/${groupId}/settings`, data);
+    const result = await this.patch<GroupResponse>(`/v1/groups/${groupId}/settings`, data);
+    this.clearGetCache();
+    return result;
   }
 
   async updateFirstScoringEpisode(groupId: number, firstScoringEpisodeNumber: number): Promise<GroupResponse> {
-    return this.patch<GroupResponse>(`/v1/groups/${groupId}/first-scoring-episode`, {
+    const result = await this.patch<GroupResponse>(`/v1/groups/${groupId}/first-scoring-episode`, {
       firstScoringEpisodeNumber,
     });
+    this.clearGetCache();
+    return result;
   }
 
   // Team endpoints
-  async getTeamByGroupAndUser(groupId: number, userId: number): Promise<TeamResponse> {
-    return this.get<TeamResponse>(`/v1/teams/group/${groupId}/user/${userId}`);
+  async getTeamByGroupAndUser(groupId: number, userId: number, options?: { forceRefresh?: boolean }): Promise<TeamResponse> {
+    return this.getCached<TeamResponse>(`/v1/teams/group/${groupId}/user/${userId}`, Boolean(options?.forceRefresh));
   }
 
-  async getTeamById(teamId: number): Promise<TeamResponse> {
-    return this.get<TeamResponse>(`/v1/teams/${teamId}`);
+  async getTeamById(teamId: number, options?: { forceRefresh?: boolean }): Promise<TeamResponse> {
+    return this.getCached<TeamResponse>(`/v1/teams/${teamId}`, Boolean(options?.forceRefresh));
   }
 
-  async getTeamsByGroupId(groupId: number): Promise<TeamResponse[]> {
-    return this.get<TeamResponse[]>(`/v1/teams/group/${groupId}`);
+  async getTeamsByGroupId(groupId: number, options?: { forceRefresh?: boolean }): Promise<TeamResponse[]> {
+    return this.getCached<TeamResponse[]>(`/v1/teams/group/${groupId}`, Boolean(options?.forceRefresh));
   }
 
-  async getTeamScoreBreakdown(teamId: number): Promise<ScoreBreakdownResponse> {
-    return this.get<ScoreBreakdownResponse>(`/v1/teams/${teamId}/score-breakdown`);
+  async getTeamScoreBreakdown(teamId: number, options?: { forceRefresh?: boolean }): Promise<ScoreBreakdownResponse> {
+    return this.getCached<ScoreBreakdownResponse>(`/v1/teams/${teamId}/score-breakdown`, Boolean(options?.forceRefresh));
   }
 
   async updateTeamProfile(
@@ -404,12 +445,16 @@ class ApiService {
     }
 
     const text = await response.text();
-    return text ? (JSON.parse(text) as TeamResponse) : ({} as TeamResponse);
+    const result = text ? (JSON.parse(text) as TeamResponse) : ({} as TeamResponse);
+    this.clearGetCache();
+    return result;
   }
 
   // Draft endpoints
   async startDraft(groupId: number): Promise<DraftDTO> {
-    return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/start`, {});
+    const result = await this.post<DraftDTO>(`/v1/drafts/group/${groupId}/start`, {});
+    this.clearGetCache();
+    return result;
   }
 
   async getDraftState(groupId: number): Promise<DraftDTO> {
@@ -417,7 +462,9 @@ class ApiService {
   }
 
   async makeDraftPick(draftId: number, castawayPerformanceId: number): Promise<DraftDTO> {
-    return this.post<DraftDTO>(`/v1/drafts/${draftId}/pick`, { castawayPerformanceId });
+    const result = await this.post<DraftDTO>(`/v1/drafts/${draftId}/pick`, { castawayPerformanceId });
+    this.clearGetCache();
+    return result;
   }
 
   async isMyTurn(draftId: number): Promise<{ isMyTurn: boolean; pickNumber?: number }> {
@@ -425,19 +472,25 @@ class ApiService {
   }
 
   async completeDraft(groupId: number): Promise<DraftDTO> {
-    return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/complete`, {});
+    const result = await this.post<DraftDTO>(`/v1/drafts/group/${groupId}/complete`, {});
+    this.clearGetCache();
+    return result;
   }
 
   async resetDraft(groupId: number): Promise<DraftDTO> {
-    return this.post<DraftDTO>(`/v1/drafts/group/${groupId}/reset`, {});
+    const result = await this.post<DraftDTO>(`/v1/drafts/group/${groupId}/reset`, {});
+    this.clearGetCache();
+    return result;
   }
 
   // Invitation endpoints
   async inviteByUsername(groupId: number, username: string): Promise<GroupMemberResponse> {
-    return this.post<GroupMemberResponse>('/v1/group-members/invite-by-username', {
+    const result = await this.post<GroupMemberResponse>('/v1/group-members/invite-by-username', {
       groupId,
       username,
     });
+    this.clearGetCache();
+    return result;
   }
 
   async getPendingInvitations(userId: number): Promise<GroupMemberResponse[]> {
@@ -445,21 +498,27 @@ class ApiService {
   }
 
   async acceptInvitation(memberId: number): Promise<void> {
-    return this.request<void>(`/v1/group-members/${memberId}/status?status=ACCEPTED`, {
+    const result = await this.request<void>(`/v1/group-members/${memberId}/status?status=ACCEPTED`, {
       method: 'PATCH',
     });
+    this.clearGetCache();
+    return result;
   }
 
   async rejectInvitation(memberId: number): Promise<void> {
-    return this.delete<void>(`/v1/group-members/${memberId}`);
+    const result = await this.delete<void>(`/v1/group-members/${memberId}`);
+    this.clearGetCache();
+    return result;
   }
 
-  async getGroupMembers(groupId: number): Promise<GroupMemberResponse[]> {
-    return this.get<GroupMemberResponse[]>(`/v1/group-members/group/${groupId}`);
+  async getGroupMembers(groupId: number, options?: { forceRefresh?: boolean }): Promise<GroupMemberResponse[]> {
+    return this.getCached<GroupMemberResponse[]>(`/v1/group-members/group/${groupId}`, Boolean(options?.forceRefresh));
   }
 
   async cancelInvitation(memberId: number): Promise<void> {
-    return this.delete<void>(`/v1/group-members/${memberId}`);
+    const result = await this.delete<void>(`/v1/group-members/${memberId}`);
+    this.clearGetCache();
+    return result;
   }
 }
 
