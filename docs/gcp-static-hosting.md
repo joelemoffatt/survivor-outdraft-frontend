@@ -23,8 +23,16 @@ export GCP_PROJECT_ID="project-3a4e8cbe-52bf-4e46-9e9"
 export GCP_REGION="us-central1"
 export FRONTEND_BUCKET="survivor-outdraft-frontend"
 export EXPO_PUBLIC_API_BASE_URL="https://survivor-outdraft-backend-620492727914.us-central1.run.app/api"
-export GCP_WORKLOAD_IDENTITY_PROVIDER="projects/.../locations/global/workloadIdentityPools/.../providers/..."
 export GCP_SERVICE_ACCOUNT="github-actions-deployer@project-3a4e8cbe-52bf-4e46-9e9.iam.gserviceaccount.com"
+```
+
+Set the Workload Identity Provider from the project number, pool ID, and provider ID:
+
+```bash
+export GCP_PROJECT_NUMBER="$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')"
+export WIF_POOL_ID="github-pool"
+export WIF_PROVIDER_ID="github-provider"
+export GCP_WORKLOAD_IDENTITY_PROVIDER="projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_ID}/providers/${WIF_PROVIDER_ID}"
 ```
 
 Create the bucket and enable website behavior:
@@ -57,7 +65,7 @@ Create these repository secrets:
 | --- | --- |
 | GCP_PROJECT_ID | project-3a4e8cbe-52bf-4e46-9e9 |
 | GCP_BUCKET_NAME | survivor-outdraft-frontend |
-| GCP_WORKLOAD_IDENTITY_PROVIDER | projects/.../locations/global/workloadIdentityPools/.../providers/... |
+| GCP_WORKLOAD_IDENTITY_PROVIDER | projects/620492727914/locations/global/workloadIdentityPools/github-pool/providers/github-provider |
 | GCP_SERVICE_ACCOUNT | github-actions-deployer@project-3a4e8cbe-52bf-4e46-9e9.iam.gserviceaccount.com |
 | EXPO_PUBLIC_API_BASE_URL | https://survivor-outdraft-backend-620492727914.us-central1.run.app/api |
 | GCP_REGION | us-central1 |
