@@ -55,10 +55,11 @@ Create these repository secrets:
 
 | Secret Name | Copy/Paste Value |
 | --- | --- |
-| GCP_PROJECT_ID | project-3a4e8cbe-52bf-4e46-9e9 |
 | GCP_WORKLOAD_IDENTITY_PROVIDER | projects/620492727914/locations/global/workloadIdentityPools/github-pool/providers/github-provider |
 | GCP_SERVICE_ACCOUNT | github-actions-deployer@project-3a4e8cbe-52bf-4e46-9e9.iam.gserviceaccount.com |
 | EXPO_PUBLIC_API_BASE_URL | https://survivor-outdraft-backend-620492727914.us-central1.run.app/api |
+
+The workflow uses the Firebase project id already defined in [.firebaserc](../.firebaserc), so `GCP_PROJECT_ID` is no longer required for hosting deploys.
 
 Update the Workload Identity Provider condition to trust this frontend repo:
 
