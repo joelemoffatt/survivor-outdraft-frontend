@@ -114,11 +114,13 @@ API URL resolution is centralized in `services/api.ts`:
 ## 📱 Deployment
 
 ### Web Deployment
-```bash
-# Build for web
-npx expo export -p web
+This app exports to static web assets. For Google Cloud static hosting, see [docs/gcp-static-hosting.md](docs/gcp-static-hosting.md).
 
-# Deploy static files to Netlify, Vercel, etc.
+Quick path:
+```bash
+npm run web:export
+# Upload dist/ to a Cloud Storage bucket
+# Copy dist/index.html to dist/404.html in the bucket for Expo Router fallbacks
 ```
 
 ### Mobile App Stores (Future)

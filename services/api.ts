@@ -6,10 +6,12 @@ const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NOD
 const normalizeBaseUrl = (value: string): string => value.trim().replace(/\/+$/, '');
 
 const PRODUCTION_API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
+const CONFIGURED_API_BASE_URL = PRODUCTION_API_BASE_URL ? normalizeBaseUrl(PRODUCTION_API_BASE_URL) : '';
 
-export const API_BASE_URL = isDevelopment
-  ? 'http://localhost:8080/api'
-  : normalizeBaseUrl(PRODUCTION_API_BASE_URL || 'https://your-production-url.com/api');
+export const API_BASE_URL = CONFIGURED_API_BASE_URL ||
+  (isDevelopment
+    ? 'http://localhost:8080/api'
+    : 'https://your-production-url.com/api');
 
 export const API_ORIGIN = (() => {
   try {
