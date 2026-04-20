@@ -3,6 +3,7 @@ name: Deploy Frontend Static Hosting
 on:
   push:
     branches:
+      - master
       - main
     paths:
       - "**"
