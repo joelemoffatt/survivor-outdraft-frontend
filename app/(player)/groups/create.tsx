@@ -1,403 +1,185 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  TouchableOpacity,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Colors, FontSizes, Spacing } from "../../../constants/theme";
-import { useAuth } from "../../../contexts/AuthContext";
-import { useGroup } from "../../../contexts/GroupContext";
-import apiService, { GroupResponse } from "../../../services/api";
-import { Episode, Season } from "../../../types/survivor";
-import { PickerOption } from "../../../components/shared/FormPicker";
-import FormButton from "../../../components/shared/FormButton";
-import { LocalRule } from "../../../components/shared/PointRulesInput";
-import MembersInput, {
-  GroupMember,
-  MembershipStatus,
-} from "../../../components/shared/MembersInput";
-import GroupSettingsForm from "../../../components/shared/GroupSettingsForm";
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Spacing } from '../../../constants/theme';
+import FormInput from '../../../components/shared/FormInput';
+import FormPicker, { PickerOption } from '../../../components/shared/FormPicker';
+import FormDatePicker from '../../../components/shared/FormDatePicker';
+import PointRulesInput, { getDefaultLocalRules, LocalRule } from '../../../components/shared/PointRulesInput';
+import MultiPageActions from '../../../components/shared/multipage/MultiPageActions';
+import MultiPageProgress from '../../../components/shared/multipage/MultiPageProgress';
+import MultiPageStepContainer from '../../../components/shared/multipage/MultiPageStepContainer';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useGroup } from '../../../contexts/GroupContext';
+import apiService, { GroupResponse } from '../../../services/api';
+import { Season } from '../../../types/survivor';
 
-const defaultRulesConfig = require("../../../constants/defaultGroupRules.json") as {
-  rules?: Array<{ ruleType?: string; points?: number }>;
+interface MultiPageFormData {
+  name: string;
+  seasonId: number | null;
+  teamSize: string;
+  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+  draftDate: Date | null;
+  firstScoringEpisodeNumber: string;
+  pointRules: LocalRule[];
+}
+
+interface StepConfig {
+  title: string;
+  description: string;
+}
+
+const STEPS: StepConfig[] = [
+  {
+    title: 'Basics',
+    description: 'Group name and season.',
+  },
+  {
+    title: 'Draft',
+    description: 'Draft size, style, and scheduled start.',
+  },
+  {
+    title: 'Scoring',
+    description: 'First scoring episode and rules.',
+  },
+];
+
+const INITIAL_DATA: MultiPageFormData = {
+  name: '',
+  seasonId: null,
+  teamSize: '',
+  style: 'SNAKE',
+  draftDate: null,
+  firstScoringEpisodeNumber: '1',
+  pointRules: getDefaultLocalRules(),
 };
 
 const draftStyleOptions: PickerOption[] = [
-  { label: "Snake", value: "SNAKE" },
-  { label: "Round Robin", value: "ROUND_ROBIN" },
-  { label: "Linear", value: "LINEAR" },
+  { label: 'Snake', value: 'SNAKE' },
+  { label: 'Round Robin', value: 'ROUND_ROBIN' },
+  { label: 'Linear', value: 'LINEAR' },
 ];
 
-const VALID_RULE_TYPES: LocalRule["ruleType"][] = [
-  "INDIVIDUAL_IMMUNITY",
-  "TRIBAL_IMMUNITY",
-  "FOUND_IDOL",
-  "FOUND_ADVANTAGE",
-  "SOLE_SURVIVOR",
-  "RUNNER_UP",
-  "MADE_MERGE",
-  "MED_EVAC",
-  "QUIT",
-];
-
-const getInitialDefaultRules = (): LocalRule[] => {
-  const rules = defaultRulesConfig?.rules ?? [];
-  return rules
-    .filter(
-      (rule): rule is { ruleType: LocalRule["ruleType"]; points: number } =>
-        !!rule &&
-        typeof rule.ruleType === "string" &&
-        VALID_RULE_TYPES.includes(rule.ruleType as LocalRule["ruleType"]) &&
-        typeof rule.points === "number",
-    )
-    .map((rule) => ({
-      ruleType: rule.ruleType,
-      points: rule.points,
-    }));
-};
-
-export default function CreateGroupScreen() {
+export default function CreateGroupMultiPageTestingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { setSelectedGroupId } = useGroup();
-
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [createdGroup, setCreatedGroup] = useState<GroupResponse | null>(null);
-  const [successMembers, setSuccessMembers] = useState<GroupMember[]>([]);
-  const [loadingSuccessMembers, setLoadingSuccessMembers] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [loadingSeasons, setLoadingSeasons] = useState(true);
-  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState<MultiPageFormData>(INITIAL_DATA);
+  const [errors, setErrors] = useState<Partial<Record<keyof MultiPageFormData, string>>>({});
   const [seasons, setSeasons] = useState<Season[]>([]);
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [seasonCastawayCount, setSeasonCastawayCount] = useState<number | null>(
-    null,
-  );
-  const [loadingCastawayStats, setLoadingCastawayStats] = useState(false);
-  const [bootsCount, setBootsCount] = useState<number>(0);
+  const [loadingSeasons, setLoadingSeasons] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    seasonId: null as number | null,
-    latestWatchedEpisodeId: null as number | null,
-    firstScoringEpisodeNumber: "1",
-    teamSize: "",
-    style: "SNAKE" as "SNAKE" | "ROUND_ROBIN" | "LINEAR",
-    draftDate: "",
-    pointRules: getInitialDefaultRules(),
-  });
-
-  const [errors, setErrors] = useState({
-    name: "",
-    seasonId: "",
-    firstScoringEpisodeNumber: "",
-    teamSize: "",
-  });
-
-  const getTeamSizeAvailabilityError = (
-    teamSizeValue: string,
-    available: number | null,
-  ): string => {
-    if (!teamSizeValue.trim()) {
-      return "";
-    }
-
-    const teamSizeNum = parseInt(teamSizeValue, 10);
-    if (isNaN(teamSizeNum) || teamSizeNum < 1) {
-      return "Team size must be a positive number";
-    }
-
-    if (available != null && teamSizeNum > available) {
-      return `Team size cannot exceed available castaways (${available})`;
-    }
-
-    return "";
-  };
+  const activeStep = STEPS[currentStep];
+  const isFinalStep = currentStep === STEPS.length - 1;
 
   useEffect(() => {
+    const loadSeasons = async () => {
+      try {
+        setLoadingSeasons(true);
+        const seasonsData = await apiService.getSeasons();
+        setSeasons(seasonsData);
+      } catch (error) {
+        console.error('Failed to load seasons:', error);
+        Alert.alert('Error', 'Failed to load seasons. Please try again.');
+      } finally {
+        setLoadingSeasons(false);
+      }
+    };
+
     loadSeasons();
   }, []);
-
-  useEffect(() => {
-    const loadGroupMembers = async () => {
-      if (!showSuccess || !createdGroup) {
-        return;
-      }
-
-      try {
-        setLoadingSuccessMembers(true);
-        const members = await apiService.getGroupMembers(createdGroup.id);
-        const mappedMembers: GroupMember[] = members.map((member) => ({
-          id: String(member.id),
-          memberId: member.id,
-          username: member.user.username,
-          status: member.status as MembershipStatus,
-          isAdmin: member.user.id === createdGroup.admin.id,
-        }));
-        setSuccessMembers(mappedMembers);
-      } catch (error) {
-        console.error("Failed to load group members:", error);
-      } finally {
-        setLoadingSuccessMembers(false);
-      }
-    };
-
-    loadGroupMembers();
-  }, [showSuccess, createdGroup]);
-
-  useEffect(() => {
-    const loadEpisodes = async () => {
-      if (!formData.seasonId) {
-        setEpisodes([]);
-        return;
-      }
-
-      try {
-        setLoadingEpisodes(true);
-        const episodesData = await apiService.getEpisodes(formData.seasonId);
-        setEpisodes(episodesData);
-      } catch (error) {
-        console.error("Failed to load episodes:", error);
-        // TODO: replace alerts with custom popup
-        Alert.alert("Error", "Failed to load episodes. Please try again.");
-        setEpisodes([]);
-      } finally {
-        setLoadingEpisodes(false);
-      }
-    };
-
-    setFormData((prev) => ({
-      ...prev,
-      latestWatchedEpisodeId: null,
-      firstScoringEpisodeNumber: "1",
-    }));
-    loadEpisodes();
-  }, [formData.seasonId]);
-
-  useEffect(() => {
-    const countBootsUpToEpisode = async () => {
-      if (!formData.seasonId || !formData.latestWatchedEpisodeId) {
-        setBootsCount(0);
-        return;
-      }
-
-      try {
-        setLoadingCastawayStats(true);
-        const watchedEpisodeData = episodes.find(
-          (episode) => episode.id === formData.latestWatchedEpisodeId,
-        );
-
-        if (!watchedEpisodeData) {
-          setBootsCount(0);
-          return;
-        }
-
-        // Count boots from all episodes up to and including this one
-        let totalBoots = 0;
-        for (const episode of episodes) {
-          if (episode.episodeNumber <= watchedEpisodeData.episodeNumber) {
-            try {
-              const detail = await apiService.getEpisodeDetail(
-                formData.seasonId,
-                episode.episodeNumber,
-              );
-              totalBoots += detail.boots?.length ?? 0;
-              totalBoots += detail.tribals?.length ?? 0;
-            } catch (error) {
-              console.error(
-                `Failed to load episode ${episode.episodeNumber} details:`,
-                error,
-              );
-            }
-          }
-        }
-
-        setBootsCount(totalBoots);
-      } catch (error) {
-        console.error("Failed to count boots:", error);
-        setBootsCount(0);
-      } finally {
-        setLoadingCastawayStats(false);
-      }
-    };
-
-    countBootsUpToEpisode();
-  }, [formData.seasonId, formData.latestWatchedEpisodeId, episodes]);
-
-  useEffect(() => {
-    const loadSeasonCastaways = async () => {
-      if (!formData.seasonId) {
-        setSeasonCastawayCount(null);
-        return;
-      }
-
-      try {
-        setLoadingCastawayStats(true);
-        const castaways = await apiService.getCastaways(formData.seasonId);
-        setSeasonCastawayCount(castaways.length);
-      } catch (error) {
-        console.error("Failed to load season castaways:", error);
-        setSeasonCastawayCount(null);
-      } finally {
-        setLoadingCastawayStats(false);
-      }
-    };
-
-    loadSeasonCastaways();
-  }, [formData.seasonId]);
-
-  const loadSeasons = async () => {
-    try {
-      setLoadingSeasons(true);
-      const seasonsData = await apiService.getSeasons();
-      setSeasons(seasonsData);
-    } catch (error) {
-      console.error("Failed to load seasons:", error);
-      Alert.alert("Error", "Failed to load seasons. Please try again.");
-    } finally {
-      setLoadingSeasons(false);
-    }
-  };
 
   const seasonOptions: PickerOption[] = seasons.map((season) => ({
     label: season.seasonName || `Survivor ${season.season}`,
     value: season.season,
   }));
 
-  const episodeOptions: PickerOption[] = [
-    {
-      label: "Haven't watched any episodes",
-      value: null,
-    },
-    ...episodes.map((episode) => ({
-      label: `Episode ${episode.episodeNumber}${episode.episodeTitle ? ` - ${episode.episodeTitle}` : ""}`,
-      value: episode.id,
-    })),
-  ];
+  const canProceed = useMemo(() => {
+    if (currentStep === 0) {
+      return !!formData.name.trim() && formData.seasonId != null;
+    }
+    if (currentStep === 1) {
+      return !!formData.teamSize.trim();
+    }
+    return !!formData.firstScoringEpisodeNumber.trim() && formData.pointRules.length > 0;
+  }, [currentStep, formData]);
 
-  const watchedEpisode = episodes.find(
-    (episode) => episode.id === formData.latestWatchedEpisodeId,
-  );
-  const availableCastaways =
-    seasonCastawayCount == null
-      ? null
-      : Math.max(seasonCastawayCount - bootsCount, 0);
-  const teamSizeAvailabilityError = getTeamSizeAvailabilityError(
-    formData.teamSize,
-    availableCastaways,
-  );
-  const isTeamSizeAvailable = teamSizeAvailabilityError.length === 0;
+  const setField = (key: keyof MultiPageFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => ({ ...prev, [key]: '' }));
+  };
 
-  useEffect(() => {
-    if (!formData.teamSize.trim()) {
+  const validateCurrentStep = () => {
+    if (currentStep === 0) {
+      const nextErrors: Partial<Record<keyof MultiPageFormData, string>> = {};
+      if (!formData.name.trim()) {
+        nextErrors.name = 'Group name is required';
+      }
+      if (formData.seasonId == null) {
+        nextErrors.seasonId = 'Season is required';
+      }
+      setErrors((prev) => ({ ...prev, ...nextErrors }));
+      return Object.keys(nextErrors).length === 0;
+    }
+
+    if (currentStep === 1) {
+      const nextErrors: Partial<Record<keyof MultiPageFormData, string>> = {};
+      if (!formData.teamSize.trim()) {
+        nextErrors.teamSize = 'Team size is required';
+      } else if (Number.isNaN(Number.parseInt(formData.teamSize, 10)) || Number.parseInt(formData.teamSize, 10) < 1) {
+        nextErrors.teamSize = 'Team size must be a positive number';
+      }
+      setErrors((prev) => ({ ...prev, ...nextErrors }));
+      return Object.keys(nextErrors).length === 0;
+    }
+
+    const nextErrors: Partial<Record<keyof MultiPageFormData, string>> = {};
+    if (!formData.firstScoringEpisodeNumber.trim()) {
+      nextErrors.firstScoringEpisodeNumber = 'First scoring episode is required';
+    } else if (Number.isNaN(Number.parseInt(formData.firstScoringEpisodeNumber, 10)) || Number.parseInt(formData.firstScoringEpisodeNumber, 10) < 1) {
+      nextErrors.firstScoringEpisodeNumber = 'First scoring episode must be 1 or greater';
+    }
+    setErrors((prev) => ({ ...prev, ...nextErrors }));
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleNext = async () => {
+    if (!validateCurrentStep()) {
       return;
     }
 
-    const nextTeamSizeError = getTeamSizeAvailabilityError(
-      formData.teamSize,
-      availableCastaways,
-    );
-    if (nextTeamSizeError !== errors.teamSize) {
-      setErrors((prev) => ({ ...prev, teamSize: nextTeamSizeError }));
-    }
-  }, [formData.teamSize, availableCastaways, errors.teamSize]);
-
-  const validateForm = (): boolean => {
-    const newErrors = {
-      name: "",
-      seasonId: "",
-      firstScoringEpisodeNumber: "",
-      teamSize: "",
-    };
-
-    let isValid = true;
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Group name is required";
-      isValid = false;
-    } else if (formData.name.length > 100) {
-      newErrors.name = "Group name must be less than 100 characters";
-      isValid = false;
-    }
-
-    if (!formData.seasonId) {
-      newErrors.seasonId = "Please select a season";
-      isValid = false;
-    }
-
-    if (!formData.teamSize.trim()) {
-      newErrors.teamSize = "Team size is required";
-      isValid = false;
-    } else {
-      const teamSizeNum = parseInt(formData.teamSize, 10);
-      if (isNaN(teamSizeNum) || teamSizeNum < 1) {
-        newErrors.teamSize = "Team size must be a positive number";
-        isValid = false;
-      } else if (
-        availableCastaways != null &&
-        teamSizeNum > availableCastaways
-      ) {
-        newErrors.teamSize = `Team size cannot exceed available castaways (${availableCastaways})`;
-        isValid = false;
-      }
-    }
-
-    const firstScoringEpisodeNumber = parseInt(
-      formData.firstScoringEpisodeNumber,
-      10,
-    );
-    if (!formData.firstScoringEpisodeNumber.trim()) {
-      newErrors.firstScoringEpisodeNumber = "First scoring episode is required";
-      isValid = false;
-    } else if (
-      isNaN(firstScoringEpisodeNumber) ||
-      firstScoringEpisodeNumber < 1
-    ) {
-      newErrors.firstScoringEpisodeNumber =
-        "First scoring episode must be 1 or greater";
-      isValid = false;
-    } else if (
-      watchedEpisode &&
-      firstScoringEpisodeNumber > watchedEpisode.episodeNumber
-    ) {
-      newErrors.firstScoringEpisodeNumber =
-        "Cannot be greater than latest watched episode number";
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm() || !user?.id) {
+    if (!isFinalStep) {
+      setCurrentStep((prev) => prev + 1);
       return;
     }
 
     try {
-      setLoading(true);
+      setSubmitting(true);
+      if (!user?.id) {
+        Alert.alert('Error', 'You must be signed in to create a group.');
+        return;
+      }
 
-      const groupData: any = {
+      const payload: any = {
         name: formData.name.trim(),
         admin: { id: user.id },
         season: { id: formData.seasonId },
-        ...(formData.latestWatchedEpisodeId != null && {
-          latestWatchedEpisode: { id: formData.latestWatchedEpisodeId },
-        }),
-        firstScoringEpisodeNumber: parseInt(
-          formData.firstScoringEpisodeNumber,
-          10,
-        ),
+        firstScoringEpisodeNumber: Number.parseInt(formData.firstScoringEpisodeNumber, 10),
         draft: {
-          teamSize: parseInt(formData.teamSize, 10),
+          teamSize: Number.parseInt(formData.teamSize, 10),
           style: formData.style,
+          ...(formData.draftDate ? { scheduledAt: formData.draftDate.toISOString() } : {}),
         },
         pointRules: formData.pointRules.map((rule) => ({
           ruleType: rule.ruleType,
@@ -405,195 +187,137 @@ export default function CreateGroupScreen() {
         })),
       };
 
-      if (formData.draftDate) {
-        groupData.draft.scheduledAt = formData.draftDate;
-      }
-
-      const newGroup = await apiService.createGroup(groupData);
-
-      // Set the newly created group as selected
+      const newGroup: GroupResponse = await apiService.createGroup(payload);
       setSelectedGroupId(newGroup.id);
-      setCreatedGroup(newGroup);
-
-      setShowSuccess(true);
-    } catch (error) {
-      console.error("Failed to create group:", error);
-      Alert.alert(
-        "Error",
-        error instanceof Error
-          ? error.message
-          : "Failed to create group. Please try again.",
-      );
+      Alert.alert('Success', 'Group created successfully.');
+      router.replace('/(player)/group');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleSuccessMembersChange = async (nextMembers: GroupMember[]) => {
-    if (!createdGroup) {
+  const handleBack = () => {
+    if (currentStep === 0) {
+      router.back();
       return;
     }
-
-    if (nextMembers.length < successMembers.length) {
-      const removedMembers = successMembers.filter(
-        (member) => !nextMembers.some((nextMember) => nextMember.id === member.id),
-      );
-
-      setSuccessMembers(nextMembers);
-
-      for (const member of removedMembers) {
-        if (!member.memberId || member.isAdmin) {
-          continue;
-        }
-
-        try {
-          await apiService.cancelInvitation(member.memberId);
-        } catch (error) {
-          console.error("Failed to cancel invitation:", error);
-          Alert.alert(
-            "Error",
-            error instanceof Error
-              ? error.message
-              : `Failed to remove ${member.username}.`,
-          );
-        }
-      }
-      return;
-    }
-
-    const addedMembers = nextMembers.filter(
-      (member) => !successMembers.some((existingMember) => existingMember.id === member.id),
-    );
-
-    if (addedMembers.length === 0) {
-      setSuccessMembers(nextMembers);
-      return;
-    }
-
-    setSuccessMembers(
-      nextMembers.map((member) =>
-        addedMembers.some((addedMember) => addedMember.id === member.id)
-          ? { ...member, status: "PENDING" }
-          : member,
-      ),
-    );
-
-    for (const addedMember of addedMembers) {
-      try {
-        const createdMember = await apiService.inviteByUsername(
-          createdGroup.id,
-          addedMember.username,
-        );
-
-        setSuccessMembers((prev) =>
-          prev.map((member) =>
-            member.id === addedMember.id
-              ? {
-                  id: String(createdMember.id),
-                  memberId: createdMember.id,
-                  username: createdMember.user.username,
-                  status: createdMember.status as MembershipStatus,
-                  isAdmin: createdMember.user.id === createdGroup.admin.id,
-                }
-              : member,
-          ),
-        );
-      } catch (error) {
-        console.error("Failed to send invitation:", error);
-        setSuccessMembers((prev) => prev.filter((member) => member.id !== addedMember.id));
-        Alert.alert(
-          "Error",
-          error instanceof Error
-            ? error.message
-            : `Failed to invite ${addedMember.username}.`,
-        );
-      }
-    }
+    setCurrentStep((prev) => prev - 1);
   };
-
-  if (showSuccess && createdGroup) {
-    return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.successContent}
-      >
-        <View style={styles.successHeader}>
-          <View style={styles.checkCircle}>
-            <Ionicons name="checkmark" size={48} color="#fff" />
-          </View>
-          <Text style={styles.successTitle}>Group Created!</Text>
-          <Text style={styles.successSubtitle}>
-            You are now the admin of {createdGroup.name}
-          </Text>
-        </View>
-
-        <View style={styles.inviteSection}>
-          <Text style={styles.inviteTitle}>Invite Members</Text>
-          {loadingSuccessMembers ? (
-            <Text style={styles.loadingMembersText}>Loading members...</Text>
-          ) : (
-            <MembersInput
-              style={{ marginTop: 0 }}
-              members={successMembers}
-              onChange={handleSuccessMembersChange}
-            />
-          )}
-        </View>
-
-        <View style={styles.successActions}>
-          <TouchableOpacity
-            style={styles.doneButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.doneButtonText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    );
-  }
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, styles.contentWithFooterPadding]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.description}>
-          Create a new group to compete with friends! As the group admin, you'll
-          be able to invite members and manage draft settings.
-        </Text>
-
-        <GroupSettingsForm
-          formData={formData}
-          errors={errors}
-          seasonOptions={seasonOptions}
-          episodeOptions={episodeOptions}
-          draftStyleOptions={draftStyleOptions}
-          loadingSeasons={loadingSeasons}
-          loadingEpisodes={loadingEpisodes}
-          onFormChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
-          showDraftDate
-          showSafetyInfo
-          seasonCastawayCount={seasonCastawayCount}
-          bootsCount={bootsCount}
-          availableCastaways={availableCastaways}
-          teamSizeAvailabilityError={teamSizeAvailabilityError}
-          loadingCastawayStats={loadingCastawayStats}
+        <MultiPageProgress
+          stepTitle={activeStep.title}
+          description={activeStep.description}
+          currentStep={currentStep + 1}
+          totalSteps={STEPS.length}
         />
 
-        <View style={styles.buttonContainer}>
-          <FormButton
-            title="Create Group"
-            onPress={handleSubmit}
-            loading={loading}
-            disabled={loadingSeasons || loadingEpisodes || !isTeamSizeAvailable}
-          />
-        </View>
+        <MultiPageStepContainer>
+          {currentStep === 0 ? (
+            <View>
+              <FormInput
+                label="Group Name"
+                placeholder="Enter group name"
+                value={formData.name}
+                onChangeText={(value) => setField('name', value)}
+                error={errors.name}
+                required
+                maxLength={100}
+              />
+              <FormPicker
+                label="Season"
+                value={formData.seasonId}
+                options={seasonOptions}
+                onValueChange={(seasonId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    seasonId: seasonId == null ? null : Number(seasonId),
+                  }))
+                }
+                placeholder={loadingSeasons ? 'Loading seasons...' : 'Select a season'}
+                error={errors.seasonId}
+                required
+                searchable
+                disabled={loadingSeasons}
+              />
+            </View>
+          ) : null}
+
+          {currentStep === 1 ? (
+            <View>
+              <FormInput
+                label="Team Size"
+                placeholder="e.g., 10"
+                value={formData.teamSize}
+                onChangeText={(value) => setField('teamSize', value)}
+                error={errors.teamSize}
+                keyboardType="number-pad"
+                required
+              />
+              <FormPicker
+                label="Draft Style"
+                value={formData.style}
+                options={draftStyleOptions}
+                onValueChange={(style) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    style: (style ?? 'SNAKE') as MultiPageFormData['style'],
+                  }))
+                }
+                placeholder="Select draft style"
+                required
+              />
+              <FormDatePicker
+                label="Scheduled Start"
+                value={formData.draftDate}
+                onChange={(draftDate) => setFormData((prev) => ({ ...prev, draftDate }))}
+                placeholder="No scheduled date"
+              />
+            </View>
+          ) : null}
+
+          {currentStep === 2 ? (
+            <View>
+              <FormInput
+                label="First Scoring Episode Number"
+                placeholder="e.g., 1"
+                value={formData.firstScoringEpisodeNumber}
+                onChangeText={(value) => setField('firstScoringEpisodeNumber', value)}
+                error={errors.firstScoringEpisodeNumber}
+                keyboardType="number-pad"
+                required
+              />
+              <PointRulesInput
+                rules={formData.pointRules}
+                onChange={(pointRules) => setFormData((prev) => ({ ...prev, pointRules }))}
+              />
+            </View>
+          ) : null}
+        </MultiPageStepContainer>
       </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}> 
+        <MultiPageActions
+          canGoBack
+          isFinalStep={isFinalStep}
+          onBack={handleBack}
+          onNext={() => {
+            void handleNext();
+          }}
+          nextDisabled={!canProceed || submitting || loadingSeasons}
+          submitting={submitting}
+          nextLabel="Continue"
+          submitLabel="Create Group"
+        />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -603,131 +327,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scrollView: {
-    flex: 1,
-  },
   content: {
     padding: Spacing.lg,
+    paddingBottom: Spacing.lg,
   },
-  description: {
-    fontSize: FontSizes.medium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xl,
-    lineHeight: 22,
+  contentWithFooterPadding: {
+    paddingBottom: Spacing.xl * 4,
   },
-  buttonContainer: {
-    marginTop: Spacing.lg,
-  },
-  sectionContainer: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: FontSizes.large,
-    fontWeight: "700",
-    color: Colors.text,
-    marginBottom: Spacing.lg,
-  },
-  deadlockInfoCard: {
-    marginTop: -Spacing.sm,
-    marginBottom: Spacing.lg,
-    padding: Spacing.md,
-    borderRadius: 8,
-    backgroundColor: Colors.infoBackground,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  deadlockInfoTitle: {
-    fontSize: FontSizes.medium,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  deadlockInfoText: {
-    fontSize: FontSizes.small,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
-  teamSizeErrorText: {
-    marginTop: Spacing.sm,
-    fontSize: FontSizes.small,
-    fontWeight: "600",
-    color: Colors.warning,
-  },
-  deadlockInfoResult: {
-    marginTop: Spacing.sm,
-    fontSize: FontSizes.small,
-    fontWeight: "600",
-  },
-  deadlockSafe: {
-    color: Colors.success,
-  },
-  deadlockRisk: {
-    color: Colors.warning,
-  },
-  successContent: {
-    padding: Spacing.lg,
-  },
-  successHeader: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-  },
-  checkCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.success,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  successTitle: {
-    fontSize: FontSizes.xxlarge,
-    fontWeight: "700",
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  successSubtitle: {
-    fontSize: FontSizes.medium,
-    color: Colors.textSecondary,
-    textAlign: "center",
-  },
-  inviteSection: {
-    marginBottom: Spacing.xl,
-  },
-  inviteTitle: {
-    fontSize: FontSizes.large,
-    fontWeight: "700",
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  inviteSubtitle: {
-    fontSize: FontSizes.small,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    lineHeight: 18,
-  },
-  loadingMembersText: {
-    fontSize: FontSizes.small,
-    color: Colors.textSecondary,
-  },
-  successActions: {
-    gap: Spacing.sm,
-  },
-  doneButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: Spacing.md,
-    alignItems: "center",
-  },
-  doneButtonText: {
-    color: "#fff",
-    fontSize: FontSizes.large,
-    fontWeight: "600",
+  footer: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
   },
 });

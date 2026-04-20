@@ -1,4 +1,4 @@
-name: Deploy Frontend Static Hosting
+name: Deploy Frontend Firebase Hosting
 
 on:
   push:
@@ -51,9 +51,8 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Deploy to Cloud Storage
+      - name: Deploy to Firebase Hosting
         env:
-          GCP_BUCKET_NAME: ${{ secrets.GCP_BUCKET_NAME }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gsutil -m rsync -r -d dist "gs://${GCP_BUCKET_NAME}"
-          gsutil cp dist/index.html "gs://${GCP_BUCKET_NAME}/404.html"
+          npx --yes firebase-tools@13 deploy --only hosting --project "$GCP_PROJECT_ID" --non-interactive

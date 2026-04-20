@@ -114,13 +114,12 @@ API URL resolution is centralized in `services/api.ts`:
 ## 📱 Deployment
 
 ### Web Deployment
-This app exports to static web assets. For Google Cloud static hosting, see [docs/gcp-static-hosting.md](docs/gcp-static-hosting.md).
+This app exports to static web assets. For Firebase Hosting, see [docs/gcp-static-hosting.md](docs/gcp-static-hosting.md).
 
 Quick path:
 ```bash
 npm run web:export
-# Upload dist/ to a Cloud Storage bucket
-# Copy dist/index.html to dist/404.html in the bucket for Expo Router fallbacks
+# Deploy dist/ to Firebase Hosting
 ```
 
 ### Mobile App Stores (Future)
