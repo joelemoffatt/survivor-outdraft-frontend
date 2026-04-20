@@ -43,6 +43,7 @@ jobs:
         run: npm run web:export
 
       - name: Authenticate to Google Cloud
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -54,5 +55,8 @@ jobs:
           project_id: ${{ env.FIREBASE_PROJECT_ID }}
 
       - name: Deploy to Firebase Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+          FIREBASE_PROJECT_ID: ${{ env.FIREBASE_PROJECT_ID }}
         run: |
           npx --yes firebase-tools@13 deploy --only hosting:app --project "$FIREBASE_PROJECT_ID" --non-interactive
