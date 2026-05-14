@@ -2,6 +2,17 @@
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*"],
+    "headers": [
+      {
+        "source": "/favicon.png",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, max-age=0"
+          }
+        ]
+      }
+    ],
     "rewrites": [
       {
         "source": "**",

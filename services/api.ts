@@ -339,6 +339,10 @@ class ApiService {
     return this.getCached<GroupResponse>(`/v1/groups/${groupId}`, Boolean(options?.forceRefresh));
   }
 
+  async getGroupDashboard(groupId: number, options?: { forceRefresh?: boolean }): Promise<GroupDashboardResponse> {
+    return this.getCached<GroupDashboardResponse>(`/v1/groups/${groupId}/dashboard`, Boolean(options?.forceRefresh));
+  }
+
   async markGroupAccessed(groupId: number): Promise<GroupResponse> {
     const result = await this.post<GroupResponse>(`/v1/groups/${groupId}/access`, {});
     this.clearGetCache();
@@ -606,6 +610,7 @@ export interface TeamCastawayResponse {
   points: number;
   draftedAt: string;
   placement?: 'booted' | 'first' | 'second' | 'third' | 'lostFire' | null;
+  scoreEvents?: ScoreEventBreakdown[];
   castawayPerformance: {
     id: number;
     seasonId?: number | null;
@@ -725,6 +730,12 @@ export interface GroupMemberResponse {
   lastAccessedAt?: string | null;
 }
 
+export interface GroupDashboardResponse {
+  group: GroupResponse;
+  members: GroupMemberResponse[];
+  teams: TeamResponse[];
+}
+
 export interface CastawaySearchResult {
   castawayId: number;
   season: number;
@@ -788,6 +799,21 @@ export interface ScoreBreakdownResponse {
   teamName: string;
   totalPoints: number;
   castaways: CastawayScoreBreakdown[];
+}
+
+export function deriveScoreBreakdown(team: TeamResponse): ScoreBreakdownResponse {
+  return {
+    teamId: team.id,
+    teamName: team.teamName,
+    totalPoints: team.totalPoints,
+    castaways: (team.roster ?? []).map((tc) => ({
+      teamCastawayId: tc.id,
+      castawayPerformanceId: tc.castawayPerformance.id,
+      castawayName: tc.castawayPerformance.castaway.name,
+      totalPoints: tc.points,
+      scoreEvents: tc.scoreEvents ?? [],
+    })),
+  };
 }
 
 export const apiService = new ApiService();

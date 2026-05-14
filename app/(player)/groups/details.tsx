@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import Chip from '../../../components/shared/Chip';
@@ -8,7 +8,7 @@ import { DetailRow, DetailsSection } from '../../../components/shared/DetailsSec
 import { getLocalRuleLabel } from '../../../components/admin/GroupRulesEditor';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
-import apiService, { GroupResponse } from '../../../services/api';
+import { GroupResponse } from '../../../services/api';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
@@ -54,37 +54,9 @@ const formatDateTime = (value?: string | null) => {
 export default function GroupDetailsScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { selectedGroupId } = useGroup();
-  const [loading, setLoading] = useState(true);
-  const [group, setGroup] = useState<GroupResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { selectedGroupId, groupData } = useGroup();
+  const { group, loading, error } = groupData;
   const showLoadingSpinner = useDelayedLoader(loading, 200);
-
-  useEffect(() => {
-    const loadGroup = async () => {
-      if (!selectedGroupId) {
-        setGroup(null);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const groupData = await apiService.getGroupById(selectedGroupId);
-        setGroup(groupData);
-      } catch (err) {
-        console.error('Failed to load group details:', err);
-        setGroup(null);
-        setError(err instanceof Error ? err.message : 'Failed to load group details.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadGroup();
-  }, [selectedGroupId]);
 
   const sortedRules = useMemo(
     () =>

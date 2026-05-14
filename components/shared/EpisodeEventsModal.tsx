@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, ScrollView, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
+import { ActivityIndicator, Modal, View, Text, ScrollView, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
 import { BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
 
 export interface EpisodeEvent {
@@ -24,6 +24,7 @@ interface Props {
   seasonId?: number | null;
   episodes: EpisodeBlock[];
   onEpisodePress?: (seasonId: number, episodeNumber: number) => void;
+  loading?: boolean;
 }
 
 export default function EpisodeEventsModal({
@@ -34,6 +35,7 @@ export default function EpisodeEventsModal({
   seasonId,
   episodes,
   onEpisodePress,
+  loading = false,
 }: Props) {
   return (
     <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
@@ -42,6 +44,11 @@ export default function EpisodeEventsModal({
           {title ? <Text style={styles.modalTitle}>{title}</Text> : null}
           {subtitle ? <Text style={styles.modalSubtitle}>{subtitle}</Text> : null}
 
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : (
           <ScrollView style={styles.modalList}>
             {episodes && episodes.length > 0 ? (
               episodes.map((episode) => (
@@ -74,6 +81,7 @@ export default function EpisodeEventsModal({
               <Text style={styles.emptyText}>No events found for this category.</Text>
             )}
           </ScrollView>
+          )}
 
           <TouchableOpacity style={styles.modalClose} onPress={onClose}>
             <Text style={styles.modalCloseText}>Close</Text>
@@ -187,5 +195,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     paddingVertical: Spacing.lg,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
   },
 });

@@ -1,60 +1,47 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
-import apiService, { TeamResponse, ScoreBreakdownResponse } from '../../../services/api';
+import { useGroup } from '../../../contexts/GroupContext';
+import apiService, { TeamResponse, deriveScoreBreakdown } from '../../../services/api';
 import BackButton from '../../../components/shared/BackButton';
 import TeamView from '../../../components/shared/team';
 import useDelayedLoader from '../../../hooks/useDelayedLoader';
 
 export default function TeamDetailScreen() {
   const { user } = useAuth();
+  const { groupData } = useGroup();
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
+  const parsedTeamId = teamId ? parseInt(teamId) : null;
 
-  const [team, setTeam] = useState<TeamResponse | null>(null);
-  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdownResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Try to find team in context first (already loaded via dashboard)
+  const teamFromContext = useMemo(
+    () => groupData.teams.find((t) => t.id === parsedTeamId) ?? null,
+    [groupData.teams, parsedTeamId]
+  );
+
+  const [fallbackTeam, setFallbackTeam] = useState<TeamResponse | null>(null);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const showLoadingSpinner = useDelayedLoader(loading, 200);
+  const showLoadingSpinner = useDelayedLoader(fallbackLoading, 200);
 
+  // Only fetch from API if not in context (e.g., direct navigation or different group)
   useEffect(() => {
-    const loadTeamData = async () => {
-      if (!teamId || !user) {
-        setLoading(false);
-        return;
-      }
+    if (teamFromContext || !parsedTeamId || !user) return;
+    setFallbackLoading(true);
+    setError(null);
+    apiService.getTeamById(parsedTeamId)
+      .then(setFallbackTeam)
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load team'))
+      .finally(() => setFallbackLoading(false));
+  }, [teamFromContext, parsedTeamId, user]);
 
-      try {
-        setLoading(true);
-        setError(null);
-
-        const teamData = await apiService.getTeamById(parseInt(teamId));
-        setTeam(teamData);
-
-        try {
-          const breakdown = await apiService.getTeamScoreBreakdown(teamData.id);
-          setScoreBreakdown(breakdown);
-        } catch (err) {
-          console.debug('Score breakdown not available:', err);
-          setScoreBreakdown(null);
-        }
-      } catch (err) {
-        console.error('Failed to load team:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load team');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTeamData();
-  }, [teamId, user]);
+  const team = teamFromContext ?? fallbackTeam;
+  const loading = !teamFromContext && fallbackLoading;
 
   if (loading) {
-    if (!showLoadingSpinner) {
-      return <View style={styles.centerContainer} />;
-    }
-
+    if (!showLoadingSpinner) return <View style={styles.centerContainer} />;
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -72,7 +59,7 @@ export default function TeamDetailScreen() {
     );
   }
 
-  return <TeamView team={team} scoreBreakdown={scoreBreakdown} />;
+  return <TeamView team={team} scoreBreakdown={deriveScoreBreakdown(team)} />;
 }
 
 const styles = StyleSheet.create({
@@ -98,4 +85,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

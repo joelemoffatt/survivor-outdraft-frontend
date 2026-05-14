@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { BorderRadius, Colors, FontSizes, Shadow, Spacing } from '../../constants/theme';
@@ -129,10 +129,13 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
   const castawaysLeft = Math.max(0, (team.roster?.length ?? 0) - eliminatedCount);
 
   const closeScoreModal = () => {
+    // Increment request ID so any in-flight load ignores its result
+    modalRequestIdRef.current += 1;
     setIsScoreModalVisible(false);
     setSelectedCastaway(null);
     setAdvantageTextByEpisode({});
     setSelectedCastawaySeasonId(null);
+    setLoadingCastawayBreakdownId(null);
   };
 
   const navigateToEpisodeFromModal = (seasonId: number, episodeNumber: number) => {
@@ -212,7 +215,6 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                 const breakdown = scoreBreakdown?.castaways?.find(
                   (c) => c.teamCastawayId === teamCastaway.id
                 );
-                const isLoadingBreakdown = loadingCastawayBreakdownId === teamCastaway.id;
                 const shouldApplyPlacement = group?.latestEpisodeWatched != null;
                 const castawayStatus = shouldApplyPlacement ? getCastawayStatus(teamCastaway.placement ?? null) : null;
                 const isBooted = castawayStatus === 'booted';
@@ -288,6 +290,8 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                         const requestId = modalRequestIdRef.current + 1;
                         modalRequestIdRef.current = requestId;
                         setLoadingCastawayBreakdownId(breakdown.teamCastawayId);
+                        setSelectedCastaway(breakdown);
+                        setIsScoreModalVisible(true);
 
                         let loadedAdvantageTextByEpisode: Record<number, string[]> = {};
                         try {
@@ -388,18 +392,10 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
 
                         setSelectedCastawayEpisodes(episodesPrepared);
                         setSelectedCastawaySeasonId(seasonId ?? null);
-
-                        setSelectedCastaway(breakdown);
-                        setIsScoreModalVisible(true);
                         setLoadingCastawayBreakdownId(null);
                       }}
-                      disabled={!breakdown || loadingCastawayBreakdownId != null}
+                      disabled={!breakdown}
                     >
-                      {isLoadingBreakdown ? (
-                        <View style={styles.memberPointsLoadingRow}>
-                          <ActivityIndicator size="small" color={Colors.primary} />
-                        </View>
-                      ) : (
                         <Text
                           style={[
                             styles.memberPoints,
@@ -412,7 +408,6 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
                         >
                           {pts} pts
                         </Text>
-                      )}
                     </TouchableOpacity>
                   </View>
                 );
@@ -433,6 +428,7 @@ export default function TeamView({ team, group, scoreBreakdown, onDetailsPress, 
       seasonId={selectedCastawaySeasonId}
       onEpisodePress={(seasonId, episodeNumber) => navigateToEpisodeFromModal(seasonId, episodeNumber)}
       episodes={selectedCastawayEpisodes}
+      loading={loadingCastawayBreakdownId != null}
     />
 
     </>
@@ -639,11 +635,6 @@ const styles = StyleSheet.create({
   },
   memberPointsLostFire: {
     color: Colors.warning,
-  },
-  memberPointsLoadingRow: {
-    minWidth: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,
