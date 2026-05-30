@@ -391,10 +391,7 @@ export default function CastawayPerformanceAggregateCards({
         const loadedAggregates = await Promise.all(
           validPerformances.map(async (performance) => {
             const seasonId = performance.season!.id;
-            const episodes = await apiService.getEpisodes(seasonId);
-            const details = await Promise.all(
-              episodes.map((episode) => apiService.getEpisodeDetail(seasonId, episode.episodeNumber)),
-            );
+            const details = await apiService.getSeasonEpisodeDetails(seasonId);
             const tribeRecords = await apiService.getTribes();
             const tribeColorByName = new Map(
               tribeRecords

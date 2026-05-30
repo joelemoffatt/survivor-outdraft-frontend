@@ -12,6 +12,7 @@ import useDelayedLoader from '../../../hooks/useDelayedLoader';
 export default function TeamDetailScreen() {
   const { user } = useAuth();
   const { groupData } = useGroup();
+  const { group } = groupData;
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
   const parsedTeamId = teamId ? parseInt(teamId) : null;
 
@@ -59,7 +60,7 @@ export default function TeamDetailScreen() {
     );
   }
 
-  return <TeamView team={team} scoreBreakdown={deriveScoreBreakdown(team)} />;
+  return <TeamView team={team} group={group} scoreBreakdown={deriveScoreBreakdown(team)} />;
 }
 
 const styles = StyleSheet.create({

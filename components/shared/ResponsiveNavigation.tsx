@@ -131,7 +131,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2c3e50',
     borderTopWidth: 1,
     borderTopColor: '#34495e',
-    paddingBottom: 20,
   },
 
   mobileNavItem: {

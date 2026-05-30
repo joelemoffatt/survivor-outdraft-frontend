@@ -326,6 +326,10 @@ class ApiService {
     return this.get<EpisodeDetail>(`/v1/episodes/detail?seasonId=${seasonId}&episodeNumber=${episodeNumber}`);
   }
 
+  async getSeasonEpisodeDetails(seasonId: number): Promise<EpisodeDetail[]> {
+    return this.getCached<EpisodeDetail[]>(`/v1/episodes/detail/season?seasonId=${seasonId}`, false);
+  }
+
   // Group endpoints
   async getUserGroups(userId: number, options?: { forceRefresh?: boolean }): Promise<GroupResponse[]> {
     return this.getCached<GroupResponse[]>(`/v1/groups/user/${userId}`, Boolean(options?.forceRefresh));
