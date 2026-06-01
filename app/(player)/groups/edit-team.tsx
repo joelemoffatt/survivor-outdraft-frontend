@@ -156,12 +156,7 @@ export default function EditTeamScreen() {
       setTeamName(updated.teamName ?? trimmedName);
       setPickedFile(null);
       setAvatarPreviewUri(null);
-      Alert.alert('Success', 'Team profile updated.', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/(player)/team'),
-        },
-      ]);
+      router.replace('/(player)/team');
     } catch (error) {
       console.error('Failed to update team profile:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update team profile.');

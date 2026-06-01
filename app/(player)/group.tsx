@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import AppLoader from "../../components/shared/AppLoader";
 import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import Card from "../../components/shared/Card";
 import Button from "../../components/shared/Button";
@@ -87,20 +87,11 @@ export default function GroupScreen() {
   const { user } = useAuth();
   const { selectedGroupId, groupsLoaded, userHasGroups, groupData, refreshGroupData } = useGroup();
   const { group, teams, members, loading, error } = groupData;
-  const [hasMultipleGroups, setHasMultipleGroups] = useState(false);
   const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
   const [addMemberUsername, setAddMemberUsername] = useState("");
   const [addMemberLoading, setAddMemberLoading] = useState(false);
   const isGroupLeader = user ? Number(user.id) === Number(group?.admin?.id) : false;
   const showLoadingSpinner = useDelayedLoader(loading, 200);
-
-  // Only fetch to check if user has multiple groups (lightweight)
-  useEffect(() => {
-    if (!user?.id) return;
-    apiService.getUserGroups(user.id)
-      .then((groups) => setHasMultipleGroups(groups.length > 1))
-      .catch(() => {});
-  }, [user?.id]);
 
   const handleAddMember = async () => {
     if (!selectedGroupId || !addMemberUsername.trim()) return;
@@ -257,17 +248,7 @@ export default function GroupScreen() {
           </View>
         </View>
 
-        {hasMultipleGroups && (
-          <Button
-            label="Switch Groups"
-            variant="outline"
-            size="md"
-            fullWidth
-            onPress={() => router.push("/(player)/groups/select")}
-            style={styles.switchButton}
-            icon="swap-horizontal-outline"
-          />
-        )}
+
       </Card>
 
       {group.status === "PENDING" ? (
@@ -405,7 +386,6 @@ const styles = StyleSheet.create({
   statValue: { color: Colors.text, fontSize: FontSizes.large, fontWeight: "800" },
   statLabel: { color: Colors.textSecondary, fontSize: FontSizes.small, marginTop: Spacing.xxs },
   statDivider: { backgroundColor: Colors.border, height: 32, width: 1 },
-  switchButton: { marginTop: Spacing.md },
   addMembersButton: { marginTop: Spacing.md },
   memberListSection: { width: "100%" },
   sectionTitle: {

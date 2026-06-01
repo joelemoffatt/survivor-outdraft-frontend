@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, SafeAreaView } from 'react-native';
-import { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, SafeAreaView, Animated } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../constants/theme';
 import { GroupResponse } from '../../services/api';
@@ -9,6 +10,7 @@ interface GroupSelectorProps {
   selectedGroupId: number | null;
   onSelectGroup: (groupId: number) => void;
   triggerColor?: string;
+  disabled?: boolean;
 }
 
 export function GroupSelector({
@@ -16,26 +18,47 @@ export function GroupSelector({
   selectedGroupId,
   onSelectGroup,
   triggerColor = Colors.text,
+  disabled = false,
 }: GroupSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedGroup = groups.find((g) => g.id === selectedGroupId);
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    if (!disabled) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 600, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [disabled]);
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.trigger}
-        onPress={() => setIsOpen(true)}
+        onPress={() => { if (!disabled) setIsOpen(true); }}
         accessibilityRole="button"
         accessibilityLabel="Switch group"
+        disabled={disabled}
       >
-        <Text style={[styles.triggerText, { color: triggerColor }]} numberOfLines={1}>
-          {selectedGroup?.name || 'Select Group'}
-        </Text>
-        <Ionicons
-          name={isOpen ? 'chevron-up' : 'chevron-down'}
-          size={16}
-          color={triggerColor}
-        />
+        {disabled ? (
+          <Animated.View style={[styles.skeleton, { opacity: pulseAnim }]} />
+        ) : (
+          <>
+            <Text style={[styles.triggerText, { color: triggerColor }]} numberOfLines={1}>
+              {selectedGroup?.name || 'Select Group'}
+            </Text>
+            <Ionicons
+              name={isOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={triggerColor}
+            />
+          </>
+        )}
       </TouchableOpacity>
 
       <Modal
@@ -113,6 +136,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+  },
+
+  skeleton: {
+    width: 120,
+    height: 16,
+    borderRadius: 4,
+    backgroundColor: '#a0a0a0',
   },
 
   triggerText: {

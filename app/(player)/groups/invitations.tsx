@@ -5,15 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
 import apiService, { GroupMemberResponse } from '../../../services/api';
-import { useRouter } from 'expo-router';
 import useDelayedLoader from '../../../hooks/useDelayedLoader';
+import { ConfirmDialog } from '../../../components/shared/ConfirmDialog';
 
 export default function GroupInvitationsScreen() {
   const { user } = useAuth();
-  const router = useRouter();
   const [invitations, setInvitations] = useState<GroupMemberResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<GroupMemberResponse | null>(null);
   const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   useEffect(() => {
@@ -58,34 +58,21 @@ export default function GroupInvitationsScreen() {
     }
   };
 
-  const handleReject = async (invitationId: number, groupName: string) => {
-    Alert.alert(
-      'Reject Invitation',
-      `Are you sure you want to reject the invitation to ${groupName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setActionLoading(invitationId);
-              await apiService.rejectInvitation(invitationId);
-              
-              // Remove invitation from local state immediately
-              setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
-            } catch (error) {
-              console.error('Failed to reject invitation:', error);
-              Alert.alert('Error', 'Failed to reject invitation');
-              // Reload invitations to sync state on error
-              await loadInvitations();
-            } finally {
-              setActionLoading(null);
-            }
-          },
-        },
-      ]
-    );
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    const target = rejectTarget;
+    setRejectTarget(null);
+    try {
+      setActionLoading(target.id);
+      await apiService.rejectInvitation(target.id);
+      setInvitations(prev => prev.filter(inv => inv.id !== target.id));
+    } catch (error) {
+      console.error('Failed to reject invitation:', error);
+      Alert.alert('Error', 'Failed to reject invitation');
+      await loadInvitations();
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   if (loading) {
@@ -107,6 +94,7 @@ export default function GroupInvitationsScreen() {
   }
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Pending Invitations</Text>
       
@@ -125,7 +113,7 @@ export default function GroupInvitationsScreen() {
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.button, styles.rejectButton]}
-              onPress={() => handleReject(invitation.id, invitation.group.name)}
+              onPress={() => setRejectTarget(invitation)}
               disabled={actionLoading === invitation.id}
             >
               {actionLoading === invitation.id ? (
@@ -156,6 +144,18 @@ export default function GroupInvitationsScreen() {
         </View>
       ))}
     </ScrollView>
+
+      <ConfirmDialog
+        visible={rejectTarget !== null}
+        title="Reject Invitation"
+        message={`Are you sure you want to reject the invitation to ${rejectTarget?.group.name}?`}
+        confirmText="Reject"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={confirmReject}
+        onCancel={() => setRejectTarget(null)}
+      />
+    </>
   );
 }
 

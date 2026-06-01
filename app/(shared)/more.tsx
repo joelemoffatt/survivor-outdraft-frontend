@@ -50,19 +50,9 @@ export default function MoreScreen() {
       title: 'Groups',
       items: [
         {
-          label: 'Select Group',
-          icon: 'people',
-          onPress: () => router.push('/(player)/groups/select'),
-        },
-        {
           label: 'Create Group',
           icon: 'add-circle',
           onPress: () => router.push('/(player)/groups/create'),
-        },
-        {
-          label: 'Manage Groups',
-          icon: 'settings',
-          onPress: () => router.push('/(player)/groups/manage'),
         },
         {
           label: 'Group Invitations',

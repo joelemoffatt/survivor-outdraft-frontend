@@ -11,7 +11,7 @@ import { useGroup } from '../../contexts/GroupContext';
 export function PlayerHeader() {
   const router = useRouter();
   const { user } = useAuth();
-  const { userGroups, selectedGroupId, setSelectedGroupId } = useGroup();
+  const { userGroups, selectedGroupId, setSelectedGroupId, groupsLoaded } = useGroup();
   const [pendingInviteCount, setPendingInviteCount] = useState(0);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function PlayerHeader() {
       <View style={styles.headerContent}>
         {/* Left: Group Selector */}
         <View style={styles.leftContent}>
-          {userGroups.length === 0 ? (
+          {groupsLoaded && userGroups.length === 0 ? (
             <Text style={styles.infoText}>No groups</Text>
           ) : (
             <GroupSelector
@@ -38,6 +38,7 @@ export function PlayerHeader() {
               selectedGroupId={selectedGroupId}
               onSelectGroup={handleGroupSelect}
               triggerColor={Colors.text}
+              disabled={!groupsLoaded}
             />
           )}
         </View>

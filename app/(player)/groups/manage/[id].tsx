@@ -70,6 +70,7 @@ export default function ManageGroupDetailsScreen() {
   const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
   const [addMemberUsername, setAddMemberUsername] = useState('');
   const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [removeMemberTarget, setRemoveMemberTarget] = useState<GroupMemberResponse | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -290,26 +291,16 @@ export default function ManageGroupDetailsScreen() {
     }
   };
 
-  const handleRemoveMember = (member: GroupMemberResponse) => {
-    Alert.alert(
-      'Remove Member',
-      `Remove ${member.user.username} from this group?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiService.cancelInvitation(member.id);
-              setMembers((prev) => prev.filter((m) => m.id !== member.id));
-            } catch (err: any) {
-              Alert.alert('Error', err?.message ?? 'Failed to remove member.');
-            }
-          },
-        },
-      ]
-    );
+  const confirmRemoveMember = async () => {
+    if (!removeMemberTarget) return;
+    const target = removeMemberTarget;
+    setRemoveMemberTarget(null);
+    try {
+      await apiService.cancelInvitation(target.id);
+      setMembers((prev) => prev.filter((m) => m.id !== target.id));
+    } catch (err: any) {
+      Alert.alert('Error', err?.message ?? 'Failed to remove member.');
+    }
   };
 
   const getMemberStatusStyle = (status: GroupMemberResponse['status']) => {
@@ -546,7 +537,7 @@ export default function ManageGroupDetailsScreen() {
                   {!isAdmin && isDraftPending && (
                     <TouchableOpacity
                       style={styles.deleteButton}
-                      onPress={() => handleRemoveMember(m)}
+                      onPress={() => setRemoveMemberTarget(m)}
                     >
                       <Ionicons name="trash-outline" size={18} color={Colors.warning} />
                     </TouchableOpacity>
@@ -592,6 +583,18 @@ export default function ManageGroupDetailsScreen() {
         confirmVariant="danger"
         onCancel={() => setDeleteGroupModalVisible(false)}
         onConfirm={confirmDeleteGroup}
+      />
+
+      {/* Remove Member confirmation */}
+      <ConfirmDialog
+        visible={removeMemberTarget !== null}
+        title="Remove Member"
+        message={`Remove ${removeMemberTarget?.user.username} from this group?`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onCancel={() => setRemoveMemberTarget(null)}
+        onConfirm={confirmRemoveMember}
       />
 
       {/* Add Member modal */}
