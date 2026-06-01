@@ -381,12 +381,19 @@ class ApiService {
       draft: {
         teamSize: number;
         style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+        scheduledAt?: string | null;
       };
       pointRules?: Array<{ ruleType: string; points: number }>;
     }
   ): Promise<GroupResponse> {
     console.log('Updating group settings with data:', data);
     const result = await this.patch<GroupResponse>(`/v1/groups/${groupId}/settings`, data);
+    this.clearGetCache();
+    return result;
+  }
+
+  async deleteGroup(groupId: number): Promise<void> {
+    const result = await this.delete<void>(`/v1/groups/${groupId}`);
     this.clearGetCache();
     return result;
   }
