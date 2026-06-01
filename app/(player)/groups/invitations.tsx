@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import AppLoader from '../../../components/shared/AppLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -92,12 +93,7 @@ export default function GroupInvitationsScreen() {
       return <View style={styles.centerContainer} />;
     }
 
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading invitations...</Text>
-      </View>
-    );
+    return <AppLoader />;
   }
 
   if (invitations.length === 0) {

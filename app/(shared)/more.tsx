@@ -318,7 +318,7 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.secondaryBackground,
   },
   content: {
     paddingBottom: Spacing.xl,

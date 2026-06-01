@@ -307,7 +307,7 @@ class ApiService {
   }
 
   async getCastaways(seasonId: number): Promise<Castaway[]> {
-    return this.get<Castaway[]>(`/v1/castaways?seasonId=${seasonId}`);
+    return this.getCached<Castaway[]>(`/v1/castaways?seasonId=${seasonId}`);
   }
 
   async searchCastaways(query: string): Promise<CastawaySearchResult[]> {

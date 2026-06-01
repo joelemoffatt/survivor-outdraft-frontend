@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import AppLoader from '../../../components/shared/AppLoader';
 import { Stack, useRouter } from 'expo-router';
 import Chip from '../../../components/shared/Chip';
 import EmptyState from '../../../components/shared/EmptyState';
@@ -82,9 +83,7 @@ export default function GroupDetailsScreen() {
     return (
       <>
         <Stack.Screen options={{ title: headerTitle }} />
-        <View style={styles.centerContainer}>
-          <Text style={styles.loadingText}>Loading group details...</Text>
-        </View>
+        <AppLoader />
       </>
     );
   }

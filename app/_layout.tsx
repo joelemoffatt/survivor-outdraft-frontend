@@ -2,7 +2,8 @@ import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { GroupProvider } from "../contexts/GroupContext";
-import { View, ActivityIndicator } from "react-native";
+import { View } from "react-native";
+import AppLoader from "../components/shared/AppLoader";
 import { useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
 import useDelayedLoader from "../hooks/useDelayedLoader";
@@ -38,11 +39,7 @@ function RootLayoutNav() {
   }, [isLoggedIn, isLoading, router, segments]);
 
   if (isLoading && showLoader) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#f4511e" />
-      </View>
-    );
+    return <AppLoader />;
   }
 
   return (

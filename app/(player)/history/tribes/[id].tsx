@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppLoader from '../../../../components/shared/AppLoader';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import apiService, { TribeMappingRecord } from '../../../../services/api';
 import AvatarCircle from '../../../../components/shared/AvatarCircle';
@@ -133,12 +134,7 @@ export default function TribeDetailsScreen() {
       return <View style={styles.centerState} />;
     }
 
-    return (
-      <View style={styles.centerState}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.stateText}>Loading tribe details...</Text>
-      </View>
-    );
+    return <AppLoader />;
   }
 
   if (error) {

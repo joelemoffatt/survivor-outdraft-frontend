@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import AppLoader from '../../../../components/shared/AppLoader';
 import { useLocalSearchParams } from 'expo-router';
 import CastawayPerformanceAggregateCards from '../../../../components/player/CastawayPerformanceAggregateCards';
 import CastawayProfileCard from '../../../../components/player/CastawayProfileCard';
@@ -56,12 +57,7 @@ export default function CastawayDetailsScreen() {
       return <View style={styles.centerContainer} />;
     }
 
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.stateText}>Loading castaway details...</Text>
-      </View>
-    );
+    return <AppLoader />;
   }
 
   if (error || !castaway) {

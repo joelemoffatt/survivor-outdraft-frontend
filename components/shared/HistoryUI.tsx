@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AppLoader from './AppLoader';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 import useDelayedLoader from '../../hooks/useDelayedLoader';
 
@@ -75,12 +76,7 @@ export const HistoryLoading = ({ label }: HistoryLoadingProps) => {
     return <View style={styles.loadingContainer} />;
   }
 
-  return (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={Colors.primary} />
-      <Text style={styles.loadingText}>{label}</Text>
-    </View>
-  );
+  return <AppLoader />;
 };
 
 export const HistoryEmpty = ({ label }: HistoryEmptyProps) => (
@@ -156,7 +152,7 @@ export const HistoryLineText = ({ children }: HistoryTextProps) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.secondaryBackground,
   },
   containerContent: {
     padding: Spacing.lg,
@@ -169,7 +165,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   card: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.secondaryBackground,
     borderRadius: 12,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
@@ -192,6 +188,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: Spacing.xl,
+  },
+  loadingIcon: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
   },
   loadingText: {
     marginTop: Spacing.sm,

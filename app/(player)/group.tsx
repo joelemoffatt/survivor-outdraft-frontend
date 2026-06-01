@@ -1,19 +1,25 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
-  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import AppLoader from "../../components/shared/AppLoader";
+import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import Card from "../../components/shared/Card";
 import Button from "../../components/shared/Button";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGroup } from "../../contexts/GroupContext";
-import apiService, { GroupResponse } from "../../services/api";
+import apiService, { GroupMemberResponse, GroupResponse } from "../../services/api";
+import AvatarCircle from "../../components/shared/AvatarCircle";
 import {
   BorderRadius,
   Colors,
@@ -23,6 +29,18 @@ import {
 import { GroupRankingItem } from "../../components/player/HomeWidgets";
 import LeaderboardSection from "../../components/player/LeaderboardSection";
 import useDelayedLoader from "../../hooks/useDelayedLoader";
+
+const ordinal = (n: number) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+};
+
+const formatDraftDate = (iso: string) => {
+  const d = new Date(iso);
+  const month = d.toLocaleDateString("en-US", { month: "short" });
+  return `${month} ${ordinal(d.getDate())}`;
+};
 
 const formatGroupStatus = (status?: GroupResponse["status"]) => {
   switch (status) {
@@ -48,12 +66,32 @@ const getStatusStyles = (status?: GroupResponse["status"]) => {
   }
 };
 
+const getMemberStatusStyle = (status: GroupMemberResponse["status"]) => {
+  switch (status) {
+    case "ACCEPTED": return styles.statusBadgeActive;
+    case "INVITED": return styles.statusBadgePending;
+    case "DECLINED": return styles.statusBadgeCompleted;
+  }
+};
+
+const getMemberStatusTextStyle = (status: GroupMemberResponse["status"]) => {
+  switch (status) {
+    case "ACCEPTED": return styles.statusTextActive;
+    case "INVITED": return styles.statusTextPending;
+    case "DECLINED": return styles.statusTextCompleted;
+  }
+};
+
 export default function GroupScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { selectedGroupId, groupData } = useGroup();
+  const { selectedGroupId, groupsLoaded, userHasGroups, groupData, refreshGroupData } = useGroup();
   const { group, teams, members, loading, error } = groupData;
   const [hasMultipleGroups, setHasMultipleGroups] = useState(false);
+  const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
+  const [addMemberUsername, setAddMemberUsername] = useState("");
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const isGroupLeader = user ? Number(user.id) === Number(group?.admin?.id) : false;
   const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   // Only fetch to check if user has multiple groups (lightweight)
@@ -63,6 +101,21 @@ export default function GroupScreen() {
       .then((groups) => setHasMultipleGroups(groups.length > 1))
       .catch(() => {});
   }, [user?.id]);
+
+  const handleAddMember = async () => {
+    if (!selectedGroupId || !addMemberUsername.trim()) return;
+    try {
+      setAddMemberLoading(true);
+      await apiService.inviteByUsername(selectedGroupId, addMemberUsername.trim());
+      setAddMemberUsername("");
+      setAddMemberModalVisible(false);
+      await refreshGroupData();
+    } catch (err: any) {
+      Alert.alert("Invite Failed", err?.message ?? "Could not invite user.");
+    } finally {
+      setAddMemberLoading(false);
+    }
+  };
 
   const leaderboardRankings = useMemo<GroupRankingItem[]>(() => {
     const teamByUserId = new Map(teams.map((t) => [t.userId, t]));
@@ -96,15 +149,12 @@ export default function GroupScreen() {
 
   if (loading) {
     if (!showLoadingSpinner) return <View style={styles.centerContainer} />;
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.centerText}>Loading group...</Text>
-      </View>
-    );
+    return <AppLoader />;
   }
 
   if (!selectedGroupId) {
+    if (!groupsLoaded) return <AppLoader />;
+    if (!userHasGroups) return <CreateOrJoinGroup />;
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.centerText}>Select a group to view live standings.</Text>
@@ -155,11 +205,19 @@ export default function GroupScreen() {
           </View>
           <TouchableOpacity
             style={styles.detailsIconButton}
-            onPress={() => router.push("/(player)/groups/details")}
+            onPress={() =>
+              isGroupLeader
+                ? router.push(`/(player)/groups/manage/${group.id}`)
+                : router.push("/(player)/groups/details")
+            }
             accessibilityRole="button"
-            accessibilityLabel="Group details"
+            accessibilityLabel={isGroupLeader ? "Edit group" : "Group details"}
           >
-            <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
+            <Ionicons
+              name={isGroupLeader ? "pencil-outline" : "information-circle-outline"}
+              size={20}
+              color={Colors.primary}
+            />
           </TouchableOpacity>
         </View>
 
@@ -177,12 +235,25 @@ export default function GroupScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>
-              {group.latestEpisodeWatched?.episodeNumber
-                ? `Ep ${group.latestEpisodeWatched.episodeNumber}`
-                : "None"}
-            </Text>
-            <Text style={styles.statLabel}>Last Episode</Text>
+            {group.status === "PENDING" ? (
+              <>
+                <Text style={styles.statValue}>
+                  {group.draft?.scheduledAt
+                    ? formatDraftDate(group.draft.scheduledAt)
+                    : "TBD"}
+                </Text>
+                <Text style={styles.statLabel}>Draft Date</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.statValue}>
+                  {group.latestEpisodeWatched?.episodeNumber
+                    ? `Ep ${group.latestEpisodeWatched.episodeNumber}`
+                    : "None"}
+                </Text>
+                <Text style={styles.statLabel}>Last Episode</Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -199,13 +270,97 @@ export default function GroupScreen() {
         )}
       </Card>
 
-      <LeaderboardSection
-        title="Leaderboard"
-        rankings={leaderboardRankings}
-        onTeamPress={(teamId) =>
-          router.push({ pathname: "/(player)/teams/[teamId]", params: { teamId: String(teamId) } })
-        }
-      />
+      {group.status === "PENDING" ? (
+        <View style={styles.memberListSection}>
+          <Text style={styles.sectionTitle}>Members</Text>
+          <Card padding="sm" shadow="light">
+            {members.length === 0 ? (
+              <Text style={styles.emptyText}>No members yet.</Text>
+            ) : (
+              members.map((m, index) => (
+                <View
+                  key={m.id}
+                  style={[
+                    styles.memberRow,
+                    index < members.length - 1 && styles.memberRowBorder,
+                    m.user.id === user?.id && styles.memberRowSelf,
+                  ]}
+                >
+                  <AvatarCircle
+                    size={34}
+                    fallbackText={m.user.username}
+                    style={styles.memberAvatar}
+                  />
+                  <View style={styles.memberInfo}>
+                    <Text style={[styles.memberName, m.user.id === user?.id && styles.memberNameSelf]}>
+                      {m.user.username}
+                    </Text>
+                  </View>
+                  <View style={[styles.memberStatusBadge, getMemberStatusStyle(m.status)]}>
+                    <Text style={[styles.memberStatusText, getMemberStatusTextStyle(m.status)]}>
+                      {m.status === "ACCEPTED" ? "Joined" : m.status === "INVITED" ? "Invited" : "Declined"}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+            {isGroupLeader && (
+              <TouchableOpacity
+                style={styles.addMemberRow}
+                onPress={() => setAddMemberModalVisible(true)}
+              >
+                <View style={styles.addMemberIcon}>
+                  <Ionicons name="person-add-outline" size={18} color={Colors.primary} />
+                </View>
+                <Text style={styles.addMemberText}>Add Member</Text>
+              </TouchableOpacity>
+            )}
+          </Card>
+        </View>
+      ) : (
+        <LeaderboardSection
+          title="Leaderboard"
+          rankings={leaderboardRankings}
+          onTeamPress={(teamId) =>
+            router.push({ pathname: "/(player)/teams/[teamId]", params: { teamId: String(teamId) } })
+          }
+        />
+      )}
+
+      <Modal
+        visible={addMemberModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddMemberModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setAddMemberModalVisible(false)}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Member</Text>
+              <TouchableOpacity onPress={() => setAddMemberModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <TextInput
+                style={styles.modalInput}
+                value={addMemberUsername}
+                onChangeText={setAddMemberUsername}
+                placeholder="Enter username"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={[styles.modalAddButton, (!addMemberUsername.trim() || addMemberLoading) && styles.modalAddButtonDisabled]}
+                onPress={handleAddMember}
+                disabled={!addMemberUsername.trim() || addMemberLoading}
+              >
+                <Text style={styles.modalAddButtonText}>{addMemberLoading ? "Inviting..." : "Add"}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -251,4 +406,82 @@ const styles = StyleSheet.create({
   statLabel: { color: Colors.textSecondary, fontSize: FontSizes.small, marginTop: Spacing.xxs },
   statDivider: { backgroundColor: Colors.border, height: 32, width: 1 },
   switchButton: { marginTop: Spacing.md },
+  addMembersButton: { marginTop: Spacing.md },
+  memberListSection: { width: "100%" },
+  sectionTitle: {
+    color: Colors.text,
+    fontSize: FontSizes.medium,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.md,
+    textTransform: "uppercase",
+  },
+  emptyText: { color: Colors.textSecondary, fontSize: FontSizes.medium, textAlign: "center", paddingVertical: Spacing.md },
+  memberRow: { flexDirection: "row", alignItems: "center", paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs },
+  memberRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  memberRowSelf: { backgroundColor: Colors.lightBackground, borderRadius: BorderRadius.sm },
+  memberAvatar: { marginRight: Spacing.sm },
+  memberInfo: { flex: 1 },
+  memberName: { color: Colors.text, fontSize: FontSizes.medium, fontWeight: "600" },
+  memberNameSelf: { color: Colors.primary },
+  memberStatusBadge: { alignSelf: "center", borderRadius: BorderRadius.full, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
+  memberStatusText: { fontSize: FontSizes.small, fontWeight: "700" },
+  addMemberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    marginTop: Spacing.xs,
+  },
+  addMemberIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.lightBackground,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.sm,
+  },
+  addMemberText: { color: Colors.primary, fontSize: FontSizes.medium, fontWeight: "600" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: Spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: { fontSize: FontSizes.large, fontWeight: "700", color: Colors.text },
+  modalBody: { padding: Spacing.lg, gap: Spacing.md },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontSize: FontSizes.medium,
+    color: Colors.text,
+  },
+  modalAddButton: {
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+  },
+  modalAddButtonDisabled: { opacity: 0.5 },
+  modalAddButtonText: { fontSize: FontSizes.medium, fontWeight: "600", color: "#fff" },
 });

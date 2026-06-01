@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import AppLoader from '../../../../components/shared/AppLoader';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -309,15 +310,8 @@ export default function ManageGroupDetailsScreen() {
   };
 
   if (loading || loadingSeasons) {
-    if (!showLoadingSpinner) {
-      return <View style={styles.centerContainer} />;
-    }
-
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.loadingText}>Loading group settings...</Text>
-      </View>
-    );
+    if (!showLoadingSpinner) return <View style={styles.centerContainer} />;
+    return <AppLoader />;
   }
 
   return (

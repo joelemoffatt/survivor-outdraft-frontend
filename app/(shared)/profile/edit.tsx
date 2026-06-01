@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AppLoader from '../../../components/shared/AppLoader';
 import {
   Alert,
   Image,
@@ -256,15 +257,8 @@ export default function EditProfileScreen() {
 
 
   if (loading) {
-    if (!showLoadingSpinner) {
-      return <View style={styles.centerContainer} />;
-    }
-
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.loadingText}>Loading profile...</Text>
-      </View>
-    );
+    if (!showLoadingSpinner) return <View style={styles.centerContainer} />;
+    return <AppLoader />;
   }
 
   const displayedAvatarUri = avatarPreviewUri || getApiAssetUri(profile?.avatarImage);

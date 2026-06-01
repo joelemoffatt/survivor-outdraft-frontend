@@ -71,6 +71,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     fetchGroupData(selectedGroupId, user.id, false);
   }, [selectedGroupId, user?.id, fetchGroupData]);
 
+
   const refreshGroupData = useCallback(async () => {
     if (!selectedGroupId || !user?.id) return;
     await fetchGroupData(selectedGroupId, user.id, true);
@@ -78,6 +79,9 @@ export function GroupProvider({ children }: { children: ReactNode }) {
 
   const updateSelectedGroupId = useCallback((id: number | null) => {
     setSelectedGroupId(id);
+    if (id !== null) {
+      setGroupData(prev => ({ ...prev, loading: true, error: null }));
+    }
     if (!user?.id || id === null) return;
     apiService.markGroupAccessed(id).catch((error) => {
       console.error('Failed to persist selected group:', error);

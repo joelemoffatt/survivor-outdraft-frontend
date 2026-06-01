@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import AppLoader from '../../../components/shared/AppLoader';
 import { useLocalSearchParams } from 'expo-router';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -43,12 +44,7 @@ export default function TeamDetailScreen() {
 
   if (loading) {
     if (!showLoadingSpinner) return <View style={styles.centerContainer} />;
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.centerText}>Loading team...</Text>
-      </View>
-    );
+    return <AppLoader />;
   }
 
   if (error || !team) {

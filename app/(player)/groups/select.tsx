@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import AppLoader from '../../../components/shared/AppLoader';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
@@ -80,12 +81,7 @@ export default function SelectGroupScreen() {
       return <View style={styles.centerContainer} />;
     }
 
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Loading groups...</Text>
-      </View>
-    );
+    return <AppLoader />;
   }
 
   if (error) {
