@@ -3,10 +3,13 @@ import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useResponsive, Colors } from '../../constants/theme';
 import { ResponsiveNavigation } from '../../components/shared/ResponsiveNavigation';
+import { PlayerHeader } from '../../components/shared/PlayerHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import { getNavigationConfig } from '../../constants/navigation';
 import { shouldShowPlayerMobileMenu } from '../../constants/playerMenuVisibility';
 import BackButton from '../../components/shared/BackButton';
+
+const MAIN_SCREENS = new Set(['(player)', 'group', 'team']);
 
 export default function PlayerLayout() {
   const responsive = useResponsive();
@@ -15,6 +18,8 @@ export default function PlayerLayout() {
   const navigationConfig = getNavigationConfig(Boolean(user?.isAdmin && isAdminView));
   const showMobileBottomNavigation =
     responsive.isMobile && shouldShowPlayerMobileMenu(segments);
+  const currentScreen = segments[segments.length - 1];
+  const showGroupBar = MAIN_SCREENS.has(currentScreen);
 
   return (
     <SafeAreaView style={[styles.container, responsive.isMobile && styles.mobileContainer]} edges={['top', 'left', 'right']}>
@@ -23,6 +28,7 @@ export default function PlayerLayout() {
       )}
 
       <View style={styles.contentContainer}>
+        {showGroupBar && <PlayerHeader />}
         <View style={styles.stackContainer}>
           <Stack screenOptions={{ 
             headerShown: false, 

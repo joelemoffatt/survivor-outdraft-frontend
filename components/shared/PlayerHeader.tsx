@@ -1,119 +1,55 @@
-import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, useResponsive } from '../../constants/theme';
+import { Colors, Spacing } from '../../constants/theme';
 import { GroupSelector } from './GroupSelector';
-import apiService, { GroupResponse } from '../../services/api';
+import apiService from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
 
-interface PlayerHeaderProps {
-  onGroupChange?: (groupId: number) => void;
-  showGroupSelector?: boolean;
-}
-
-export function PlayerHeader({ onGroupChange, showGroupSelector = true }: PlayerHeaderProps) {
+export function PlayerHeader() {
   const router = useRouter();
-  const [groups, setGroups] = useState<GroupResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pendingInviteCount, setPendingInviteCount] = useState(0);
   const { user } = useAuth();
-  const { selectedGroupId, setSelectedGroupId } = useGroup();
-  const responsive = useResponsive();
+  const { userGroups, selectedGroupId, setSelectedGroupId } = useGroup();
+  const [pendingInviteCount, setPendingInviteCount] = useState(0);
 
   useEffect(() => {
-    const fetchGroups = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Check if user has ID
-        if (!user.id) {
-          console.log('User object:', user);
-          setError('Please log out and log back in to refresh session');
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Fetching groups for user ID:', user.id);
-        const userGroups = await apiService.getUserGroups(user.id);
-        console.log('Fetched groups:', userGroups);
-        setGroups(userGroups);
-        
-        const preferredGroupId =
-          selectedGroupId && userGroups.some((group) => group.id === selectedGroupId)
-            ? selectedGroupId
-            : userGroups[0]?.id ?? null;
-
-        if (preferredGroupId !== null && preferredGroupId !== selectedGroupId) {
-          setSelectedGroupId(preferredGroupId);
-          onGroupChange?.(preferredGroupId);
-        }
-        
-        // Load pending invitations count
-        const invitations = await apiService.getPendingInvitations(user.id);
-        setPendingInviteCount(invitations.length);
-      } catch (err: any) {
-        console.error('Failed to fetch groups:', err);
-        setError(err?.message || 'Failed to load groups');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGroups();
-  }, [user, selectedGroupId, setSelectedGroupId, onGroupChange]);
+    if (!user?.id) return;
+    apiService.getPendingInvitations(user.id)
+      .then((invites) => setPendingInviteCount(invites.length))
+      .catch(() => {});
+  }, [user?.id]);
 
   const handleGroupSelect = (groupId: number) => {
     setSelectedGroupId(groupId);
-    onGroupChange?.(groupId);
   };
 
   return (
-    <View style={[styles.header, responsive.isMobile && styles.mobileHeader]}>
+    <View style={styles.header}>
       <View style={styles.headerContent}>
         {/* Left: Group Selector */}
         <View style={styles.leftContent}>
-          {showGroupSelector && (
-            loading ? (
-              <View style={styles.centerContent}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.infoText}>Loading groups...</Text>
-              </View>
-            ) : error ? (
-              <View style={styles.centerContent}>
-                <Text style={styles.errorText}>{error}</Text>
-                <Text style={styles.hintText}>Check browser console for details</Text>
-              </View>
-            ) : groups.length === 0 ? (
-              <View style={styles.centerContent}>
-                <Text style={styles.infoText}>No groups available</Text>
-              </View>
-            ) : (
-              <GroupSelector
-                groups={groups}
-                selectedGroupId={selectedGroupId}
-                onSelectGroup={handleGroupSelect}
-              />
-            )
+          {userGroups.length === 0 ? (
+            <Text style={styles.infoText}>No groups</Text>
+          ) : (
+            <GroupSelector
+              groups={userGroups}
+              selectedGroupId={selectedGroupId}
+              onSelectGroup={handleGroupSelect}
+              triggerColor={Colors.text}
+            />
           )}
         </View>
 
         {/* Right: Notifications & Profile */}
         <View style={styles.rightContent}>
-          {/* Notifications Bell */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.iconButton}
             onPress={() => router.push('/(player)/groups/invitations')}
+            accessibilityLabel="Notifications"
           >
-            <Ionicons name="notifications-outline" size={24} color={Colors.primary} />
+            <Ionicons name="notifications-outline" size={24} color={Colors.text} />
             {pendingInviteCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -123,12 +59,12 @@ export function PlayerHeader({ onGroupChange, showGroupSelector = true }: Player
             )}
           </TouchableOpacity>
 
-          {/* Profile Icon */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.iconButton}
             onPress={() => router.push('/profile')}
+            accessibilityLabel="Profile"
           >
-            <Ionicons name="person-circle-outline" size={24} color={Colors.primary} />
+            <Ionicons name="person-circle-outline" size={24} color={Colors.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -138,35 +74,31 @@ export function PlayerHeader({ onGroupChange, showGroupSelector = true }: Player
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#f9f9f9',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    overflow: 'visible',
+    backgroundColor: '#d0d0d0',
     zIndex: 100,
-  },
-
-  mobileHeader: {
-    // Mobile-specific adjustments if needed
   },
 
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingLeft: Spacing.md,
+    paddingRight: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
     gap: Spacing.md,
+    minHeight: 52,
   },
 
   leftContent: {
     flex: 1,
-    minWidth: 0, // Allows flex children to shrink
+    minWidth: 0,
   },
 
   rightContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.xs,
   },
 
   iconButton: {
@@ -176,8 +108,8 @@ const styles = StyleSheet.create({
 
   badge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: 2,
+    right: 2,
     backgroundColor: Colors.warning,
     borderRadius: 9,
     minWidth: 18,
@@ -191,25 +123,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     textAlign: 'center',
-  },
-
-  centerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    gap: Spacing.md,
-  },
-
-  errorText: {
-    color: Colors.warning,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  hintText: {
-    color: Colors.textLight,
-    fontSize: 12,
   },
 
   infoText: {

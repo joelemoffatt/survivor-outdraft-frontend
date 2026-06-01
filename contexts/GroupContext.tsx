@@ -25,6 +25,7 @@ interface GroupContextType {
   setSelectedGroupId: (id: number | null) => void;
   groupsLoaded: boolean;
   userHasGroups: boolean;
+  userGroups: GroupResponse[];
   groupData: GroupData;
   refreshGroupData: () => Promise<void>;
 }
@@ -35,6 +36,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [groupsLoaded, setGroupsLoaded] = useState(false);
   const [userHasGroups, setUserHasGroups] = useState(false);
+  const [userGroups, setUserGroups] = useState<GroupResponse[]>([]);
   const [groupData, setGroupData] = useState<GroupData>(initialGroupData);
   const { user, token } = useAuth();
   const autoSelectRequestInFlightRef = useRef(false);
@@ -114,6 +116,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
         const userGroups = await apiService.getUserGroups(user.id);
         if (!isActive) return;
         setGroupsLoaded(true);
+        setUserGroups(userGroups);
         setUserHasGroups(userGroups.length > 0);
         if (userGroups.length > 0) {
           updateSelectedGroupId(userGroups[0].id);
@@ -135,6 +138,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       setSelectedGroupId: updateSelectedGroupId,
       groupsLoaded,
       userHasGroups,
+      userGroups,
       groupData,
       refreshGroupData,
     }}>
