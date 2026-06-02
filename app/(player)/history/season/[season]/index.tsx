@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { showAlert } from '../../../../../utils/alert';
 import { useEffect, useState } from 'react';
 import apiService from '../../../../../services/api';
 import { Episode } from '../../../../../types/survivor';
@@ -23,7 +23,7 @@ export default function SeasonHistory() {
         const data = await apiService.getEpisodes(Number(season));
         setEpisodes(data);
       } catch (error) {
-        Alert.alert('Error', 'Failed to load episodes');
+        showAlert('Error', 'Failed to load episodes');
       } finally {
         setLoading(false);
       }

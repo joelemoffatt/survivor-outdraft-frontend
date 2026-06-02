@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppLoader from '../../../components/shared/AppLoader';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { showAlert } from '../../../utils/alert';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../../constants/theme';
@@ -74,7 +74,7 @@ export default function EditProfileScreen() {
       });
     } catch (error) {
       console.error('Failed to load profile:', error);
-      Alert.alert('Error', 'Failed to load your profile.');
+      showAlert('Error', 'Failed to load your profile.');
       router.back();
     } finally {
       setLoading(false);
@@ -140,10 +140,10 @@ export default function EditProfileScreen() {
         email: refreshed.email,
         avatarImage: refreshed.avatarImage ?? null,
       });
-      Alert.alert('Success', 'Profile updated successfully.');
+      showAlert('Success', 'Profile updated successfully.');
     } catch (error) {
       console.error('Failed to save profile:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update profile.');
+      showAlert('Error', error instanceof Error ? error.message : 'Failed to update profile.');
     } finally {
       setSaving(false);
     }
@@ -175,7 +175,7 @@ export default function EditProfileScreen() {
 
   const openWebFilePicker = async () => {
     if (typeof document === 'undefined') {
-      Alert.alert('Error', 'File upload is unavailable in this environment.');
+      showAlert('Error', 'File upload is unavailable in this environment.');
       return;
     }
 
@@ -193,10 +193,10 @@ export default function EditProfileScreen() {
         try {
           setAvatarBusy(true);
           await uploadAvatar(file);
-          Alert.alert('Success', 'Avatar updated.');
+          showAlert('Success', 'Avatar updated.');
         } catch (error) {
           console.error('Failed to upload avatar:', error);
-          Alert.alert('Error', error instanceof Error ? error.message : 'Failed to upload avatar.');
+          showAlert('Error', error instanceof Error ? error.message : 'Failed to upload avatar.');
         } finally {
           setAvatarBusy(false);
           resolve();
@@ -221,7 +221,7 @@ export default function EditProfileScreen() {
 
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Permission needed', 'Please allow photo library access to update your avatar.');
+        showAlert('Permission needed', 'Please allow photo library access to update your avatar.');
         return;
       }
 
@@ -245,11 +245,11 @@ export default function EditProfileScreen() {
         name: fileName,
         type: mimeType,
       });
-      Alert.alert('Success', 'Avatar updated.');
+      showAlert('Success', 'Avatar updated.');
     } catch (error) {
       console.error('Failed to upload avatar:', error);
       setAvatarPreviewUri(null);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to upload avatar.');
+      showAlert('Error', error instanceof Error ? error.message : 'Failed to upload avatar.');
     } finally {
       setAvatarBusy(false);
     }

@@ -3,6 +3,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { GroupProvider } from "../contexts/GroupContext";
 import { NotificationProvider } from "../contexts/NotificationContext";
+import { DialogProvider } from "../contexts/DialogContext";
 import { View } from "react-native";
 import AppLoader from "../components/shared/AppLoader";
 import { useEffect } from "react";
@@ -63,7 +64,9 @@ export default function RootLayout() {
       <NotificationProvider>
         <GroupProvider>
           <SafeAreaProvider>
-            <RootLayoutNav />
+            <DialogProvider>
+              <RootLayoutNav />
+            </DialogProvider>
           </SafeAreaProvider>
         </GroupProvider>
       </NotificationProvider>

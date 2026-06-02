@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { showAlert } from "../../utils/alert";
 import AppLoader from "../../components/shared/AppLoader";
 import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
 import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
@@ -103,7 +103,7 @@ export default function GroupScreen() {
       setAddMemberModalVisible(false);
       await refreshGroupData();
     } catch (err: any) {
-      Alert.alert("Invite Failed", err?.message ?? "Could not invite user.");
+      showAlert("Invite Failed", err?.message ?? "Could not invite user.");
     } finally {
       setAddMemberLoading(false);
     }

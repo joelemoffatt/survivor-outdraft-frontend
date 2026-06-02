@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { showAlert } from '../../../utils/alert';
 import AppLoader from '../../../components/shared/AppLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing } from '../../../constants/theme';
@@ -32,7 +33,7 @@ export default function GroupInvitationsScreen() {
       setInvitations(pendingInvitations);
     } catch (error) {
       console.error('Failed to load invitations:', error);
-      Alert.alert('Error', 'Failed to load invitations');
+      showAlert('Error', 'Failed to load invitations');
     } finally {
       setLoading(false);
     }
@@ -47,10 +48,10 @@ export default function GroupInvitationsScreen() {
       setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
       
       // Show success message
-      Alert.alert('Success', `You've joined ${groupName}!`);
+      showAlert('Success', `You've joined ${groupName}!`);
     } catch (error) {
       console.error('Failed to accept invitation:', error);
-      Alert.alert('Error', 'Failed to accept invitation');
+      showAlert('Error', 'Failed to accept invitation');
       // Reload invitations to sync state on error
       await loadInvitations();
     } finally {
@@ -68,7 +69,7 @@ export default function GroupInvitationsScreen() {
       setInvitations(prev => prev.filter(inv => inv.id !== target.id));
     } catch (error) {
       console.error('Failed to reject invitation:', error);
-      Alert.alert('Error', 'Failed to reject invitation');
+      showAlert('Error', 'Failed to reject invitation');
       await loadInvitations();
     } finally {
       setActionLoading(null);

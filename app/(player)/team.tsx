@@ -1,5 +1,4 @@
 import {
-  Alert,
   Modal,
   Pressable,
   View,
@@ -9,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import { showAlert } from "../../utils/alert";
 import AppLoader from "../../components/shared/AppLoader";
 import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
 import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
@@ -124,7 +124,7 @@ export default function TeamScreen() {
       setAddMemberModalVisible(false);
       await refreshGroupData();
     } catch (err: any) {
-      Alert.alert("Invite Failed", err?.message ?? "Could not invite user.");
+      showAlert("Invite Failed", err?.message ?? "Could not invite user.");
     } finally {
       setAddMemberLoading(false);
     }
@@ -144,7 +144,7 @@ export default function TeamScreen() {
         ? "This draft setup can leave someone with no legal pick. Try lowering team size or choosing a less advanced watched episode."
         : rawMessage;
       setStartDraftError(friendlyMessage);
-      Alert.alert("Cannot Start Draft", isUnsafe ? `${friendlyMessage}\n\nDetails: ${rawMessage}` : rawMessage);
+      showAlert("Cannot Start Draft", isUnsafe ? `${friendlyMessage}\n\nDetails: ${rawMessage}` : rawMessage);
     } finally {
       setStartingDraft(false);
     }

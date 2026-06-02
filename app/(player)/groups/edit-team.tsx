@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { showAlert } from '../../../utils/alert';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { BorderRadius, Colors, FontSizes, Spacing } from '../../../constants/theme';
@@ -45,7 +45,7 @@ export default function EditTeamScreen() {
         setTeamName(teamData.teamName ?? '');
       } catch (error) {
         console.error('Failed to load team profile:', error);
-        Alert.alert('Error', 'Failed to load team profile.');
+        showAlert('Error', 'Failed to load team profile.');
       } finally {
         setLoading(false);
       }
@@ -69,7 +69,7 @@ export default function EditTeamScreen() {
 
     if (Platform.OS === 'web') {
       if (typeof document === 'undefined') {
-        Alert.alert('Error', 'File upload is unavailable in this environment.');
+        showAlert('Error', 'File upload is unavailable in this environment.');
         return;
       }
 
@@ -95,7 +95,7 @@ export default function EditTeamScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Permission needed', 'Please allow photo library access to update your team avatar.');
+        showAlert('Permission needed', 'Please allow photo library access to update your team avatar.');
         return;
       }
 
@@ -119,7 +119,7 @@ export default function EditTeamScreen() {
       setAvatarPreviewUri(asset.uri);
     } catch (error) {
       console.error('Failed to open image picker:', error);
-      Alert.alert('Error', 'Failed to open image picker.');
+      showAlert('Error', 'Failed to open image picker.');
     }
   };
 
@@ -159,7 +159,7 @@ export default function EditTeamScreen() {
       router.replace('/(player)/team');
     } catch (error) {
       console.error('Failed to update team profile:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update team profile.');
+      showAlert('Error', error instanceof Error ? error.message : 'Failed to update team profile.');
     } finally {
       setSaving(false);
     }

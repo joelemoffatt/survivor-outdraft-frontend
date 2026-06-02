@@ -22,7 +22,7 @@ export default function PlayerLayout() {
   const showGroupBar = MAIN_SCREENS.has(currentScreen);
 
   return (
-    <SafeAreaView style={[styles.container, responsive.isMobile && styles.mobileContainer]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, responsive.isMobile && styles.mobileContainer, responsive.isMobile && styles.mobileBackground]} edges={['left', 'right']}>
       {!responsive.isMobile && (
         <ResponsiveNavigation items={navigationConfig.items} baseRoute={navigationConfig.baseRoute} logo={navigationConfig.logo} />
       )}
@@ -81,6 +81,9 @@ const styles = StyleSheet.create({
   },
   mobileContainer: {
     flexDirection: 'column',
+  },
+  mobileBackground: {
+    backgroundColor: Colors.primary,
   },
   contentContainer: {
     flex: 1,

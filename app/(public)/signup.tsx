@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,15 +24,15 @@ export default function Signup() {
       
       if (success) {
         console.log('Signup successful, navigating to home');
-        Alert.alert('Success', 'Account created! Welcome to Survivor OutDraft!');
+        showAlert('Success', 'Account created! Welcome to Survivor OutDraft!');
         router.replace('/');
       } else {
-        Alert.alert('Signup Failed', 'Unable to create account. Username or email may already be in use.');
+        showAlert('Signup Failed', 'Unable to create account. Username or email may already be in use.');
       }
     } catch (error: any) {
       console.error('Signup error:', error);
       const errorMessage = error?.message || 'An error occurred during signup';
-      Alert.alert('Error', errorMessage);
+      showAlert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

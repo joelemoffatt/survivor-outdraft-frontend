@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { showAlert } from '../../../utils/alert';
 import apiService from '../../../services/api';
 import {
   HistoryCard,
@@ -49,7 +49,7 @@ export default function EpisodesScreen() {
         setEpisodes(flattened);
       } catch (episodesError) {
         console.error('Failed to load episodes list:', episodesError);
-        Alert.alert('Error', 'Failed to load episodes');
+        showAlert('Error', 'Failed to load episodes');
       } finally {
         setLoading(false);
       }

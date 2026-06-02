@@ -1,6 +1,7 @@
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Layout, Spacing } from '../../constants/theme';
 import { GroupSelector } from './GroupSelector';
 import { useGroup } from '../../contexts/GroupContext';
@@ -12,13 +13,14 @@ export function PlayerHeader() {
   const router = useRouter();
   const { userGroups, selectedGroupId, setSelectedGroupId, groupsLoaded } = useGroup();
   const { unreadCount } = useNotifications();
+  const insets = useSafeAreaInsets();
 
   const handleGroupSelect = (groupId: number) => {
     setSelectedGroupId(groupId);
   };
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <View style={styles.headerContent}>
         {/* Left: Group Selector */}
         <View style={styles.leftContent}>

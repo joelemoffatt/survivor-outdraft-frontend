@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
 import { useEffect, useState } from 'react';
+import { showAlert } from '../../../utils/alert';
 import { useRouter } from 'expo-router';
 import apiService from '../../../services/api';
 import { Season } from '../../../types/survivor';
@@ -63,7 +63,7 @@ export default function SeasonsScreen() {
         const data = await apiService.getSeasons();
         setSeasons(data);
       } catch (error) {
-        Alert.alert('Error', 'Failed to load seasons');
+        showAlert('Error', 'Failed to load seasons');
       } finally {
         setLoading(false);
       }

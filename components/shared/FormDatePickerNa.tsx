@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 
@@ -17,9 +17,7 @@ interface FormDatePickerNativeProps {
 }
 
 const formatDisplayValue = (value: Date | null) => {
-  if (!value) {
-    return '';
-  }
+  if (!value) return '';
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'short',
@@ -29,11 +27,12 @@ const formatDisplayValue = (value: Date | null) => {
   }).format(value);
 };
 
-export default function FormDatePickerNative({
+// iOS: render compact native date + time pickers inline — no custom modal
+function IOSDatePicker({
   label,
   value,
   onChange,
-  placeholder = 'Select a date and time',
+  placeholder,
   error,
   required,
   minimumDate,
@@ -41,35 +40,22 @@ export default function FormDatePickerNative({
   disabled = false,
   locked = false,
 }: FormDatePickerNativeProps) {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [draftValue, setDraftValue] = useState<Date>(value ?? new Date());
-  const [mode, setMode] = useState<'date' | 'time'>('date');
-
   const isDisabled = disabled || locked;
-  const displayText = value ? formatDisplayValue(value) : placeholder;
+  const current = value ?? new Date();
 
-  const handleDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (selectedDate) {
-      setDraftValue(selectedDate);
-      if (Platform.OS === 'android') {
-        if (mode === 'date') {
-          setMode('time');
-        } else {
-          onChange(selectedDate);
-          setModalVisible(false);
-        }
-      }
-    }
+  const handleDateChange = (_: DateTimePickerEvent, selected?: Date) => {
+    if (!selected) return;
+    // Preserve the existing time when only the date changes
+    const merged = value ? new Date(value) : new Date();
+    merged.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+    onChange(merged);
   };
 
-  const handleDone = () => {
-    onChange(draftValue);
-    setModalVisible(false);
-  };
-
-  const handleClear = () => {
-    onChange(null);
-    setModalVisible(false);
+  const handleTimeChange = (_: DateTimePickerEvent, selected?: Date) => {
+    if (!selected) return;
+    const merged = value ? new Date(value) : new Date();
+    merged.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+    onChange(merged);
   };
 
   return (
@@ -79,83 +65,127 @@ export default function FormDatePickerNative({
         {required && <Text style={styles.required}>*</Text>}
       </View>
 
-      <TouchableOpacity
-        style={[styles.picker, error && styles.pickerError, isDisabled && styles.pickerDisabled]}
-        onPress={() => !isDisabled && setModalVisible(true)}
-        disabled={isDisabled}
-      >
-        <Text
-          style={[
-            styles.pickerText,
-            !value && styles.placeholderText,
-            isDisabled && styles.pickerDisabledText,
-          ]}
+      <View style={[styles.iosRow, isDisabled && styles.iosRowDisabled]}>
+        <DateTimePicker
+          value={current}
+          mode="date"
+          display="compact"
+          onChange={handleDateChange}
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+          disabled={isDisabled}
+          style={styles.iosPicker}
+        />
+        <DateTimePicker
+          value={current}
+          mode="time"
+          display="compact"
+          onChange={handleTimeChange}
+          disabled={isDisabled}
+          style={styles.iosPicker}
+        />
+        {value && !isDisabled && (
+          <TouchableOpacity onPress={() => onChange(null)} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {!value && (
+        <Text style={styles.placeholderText}>{placeholder ?? 'Select a date and time'}</Text>
+      )}
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+// Android: present the system date/time dialog — no custom modal
+function AndroidDatePicker({
+  label,
+  value,
+  onChange,
+  placeholder,
+  error,
+  required,
+  minimumDate,
+  maximumDate,
+  disabled = false,
+  locked = false,
+}: FormDatePickerNativeProps) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [mode, setMode] = useState<'date' | 'time'>('date');
+  const [draftDate, setDraftDate] = useState<Date>(value ?? new Date());
+
+  const isDisabled = disabled || locked;
+  const displayText = value ? formatDisplayValue(value) : placeholder ?? 'Select a date and time';
+
+  const handlePress = () => {
+    setDraftDate(value ?? new Date());
+    setMode('date');
+    setShowPicker(true);
+  };
+
+  const handleChange = (_: DateTimePickerEvent, selected?: Date) => {
+    if (!selected) {
+      setShowPicker(false);
+      return;
+    }
+    if (mode === 'date') {
+      setDraftDate(selected);
+      setMode('time'); // stay open for time selection
+    } else {
+      onChange(selected);
+      setShowPicker(false);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.labelRow}>
+        <Text style={[styles.label, isDisabled && styles.labelDisabled]}>{label}</Text>
+        {required && <Text style={styles.required}>*</Text>}
+      </View>
+
+      <View style={styles.androidRow}>
+        <TouchableOpacity
+          style={[styles.picker, error && styles.pickerError, isDisabled && styles.pickerDisabled]}
+          onPress={handlePress}
+          disabled={isDisabled}
         >
-          {displayText}
-        </Text>
-      </TouchableOpacity>
+          <Text style={[styles.pickerText, !value && styles.placeholderText, isDisabled && styles.pickerDisabledText]}>
+            {displayText}
+          </Text>
+        </TouchableOpacity>
+
+        {value && !isDisabled && (
+          <TouchableOpacity onPress={() => onChange(null)} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.modalContent} onPress={(event) => event.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{label}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Text style={styles.closeButton}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.pickerContainer}>
-              {Platform.OS === 'ios' && (
-                <View style={styles.modeButtons}>
-                  <TouchableOpacity
-                    style={[styles.modeButton, mode === 'date' && styles.modeButtonActive]}
-                    onPress={() => setMode('date')}
-                  >
-                    <Text style={[styles.modeButtonText, mode === 'date' && styles.modeButtonTextActive]}>
-                      Date
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modeButton, mode === 'time' && styles.modeButtonActive]}
-                    onPress={() => setMode('time')}
-                  >
-                    <Text style={[styles.modeButtonText, mode === 'time' && styles.modeButtonTextActive]}>
-                      Time
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              <DateTimePicker
-                value={draftValue}
-                mode={mode}
-                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                onChange={handleDateChange}
-                minimumDate={minimumDate}
-                maximumDate={maximumDate}
-              />
-            </View>
-
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleClear}>
-                <Text style={styles.secondaryButtonText}>Clear</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleDone}>
-                <Text style={styles.primaryButtonText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {showPicker && (
+        <DateTimePicker
+          value={draftDate}
+          mode={mode}
+          display="default"
+          onChange={handleChange}
+          minimumDate={mode === 'date' ? minimumDate : undefined}
+          maximumDate={mode === 'date' ? maximumDate : undefined}
+        />
+      )}
     </View>
   );
+}
+
+export default function FormDatePickerNative(props: FormDatePickerNativeProps) {
+  if (Platform.OS === 'ios') {
+    return <IOSDatePicker {...props} />;
+  }
+  return <AndroidDatePicker {...props} />;
 }
 
 const styles = StyleSheet.create({
@@ -179,10 +209,29 @@ const styles = StyleSheet.create({
     color: Colors.warning,
     marginLeft: 4,
   },
-  picker: {
+
+  // iOS
+  iosRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  iosRowDisabled: {
+    opacity: 0.5,
+  },
+  iosPicker: {
+    // compact pickers size themselves; no fixed width needed
+  },
+
+  // Android
+  androidRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  picker: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
@@ -204,100 +253,24 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   placeholderText: {
+    fontSize: FontSizes.small,
     color: Colors.textSecondary,
+    marginTop: Spacing.xs,
+  },
+
+  // Shared
+  clearButton: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  clearButtonText: {
+    fontSize: FontSizes.small,
+    color: Colors.textSecondary,
+    textDecorationLine: 'underline',
   },
   errorText: {
     fontSize: FontSizes.small,
     color: Colors.warning,
     marginTop: Spacing.xs,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    padding: Spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: FontSizes.large,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  closeButton: {
-    fontSize: 24,
-    color: Colors.text,
-  },
-  pickerContainer: {
-    paddingVertical: Spacing.md,
-  },
-  modeButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  modeButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: 6,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  modeButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  modeButtonText: {
-    fontSize: FontSizes.small,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-  modeButtonTextActive: {
-    color: '#fff',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    padding: Spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  secondaryButton: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  secondaryButtonText: {
-    color: Colors.text,
-    fontSize: FontSizes.medium,
-    fontWeight: '600',
-  },
-  primaryButton: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: FontSizes.medium,
-    fontWeight: '700',
   },
 });

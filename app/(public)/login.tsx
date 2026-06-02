@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { showAlert } from '../../utils/alert';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,12 +24,12 @@ export default function Login() {
         console.log('Login successful, navigating to home');
         router.replace('/');
       } else {
-        Alert.alert('Login Failed', 'Invalid username or password');
+        showAlert('Login Failed', 'Invalid username or password');
       }
     } catch (error: any) {
       console.error('Login error:', error);
       const errorMessage = error?.message || 'An error occurred during login';
-      Alert.alert('Error', errorMessage);
+      showAlert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

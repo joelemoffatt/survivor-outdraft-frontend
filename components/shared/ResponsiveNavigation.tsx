@@ -1,5 +1,6 @@
 import { View, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useSegments, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsive, Colors, Spacing } from '../../constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -24,6 +25,7 @@ export function ResponsiveNavigation({
   const segments = useSegments();
   const router = useRouter();
   const responsive = useResponsive();
+  const insets = useSafeAreaInsets();
 
   const currentScreen = segments[segments.length - 1] || 'index';
 
@@ -68,7 +70,7 @@ export function ResponsiveNavigation({
   if (responsive.isMobile) {
     // Bottom navigation bar for mobile
     return (
-      <View style={styles.mobileNavBar}>
+      <View style={[styles.mobileNavBar, { paddingBottom: insets.bottom }]}>
         {items.map(renderMobileNavItem)}
       </View>
     );
@@ -133,7 +135,8 @@ const styles = StyleSheet.create({
 
   mobileNavItem: {
     flex: 1,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
     alignItems: 'center',
     justifyContent: 'center',
     borderTopWidth: 3,

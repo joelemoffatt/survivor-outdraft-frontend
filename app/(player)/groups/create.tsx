@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
+import { showAlert } from '../../../utils/alert';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '../../../constants/theme';
@@ -73,7 +73,7 @@ export default function CreateGroupMultiPageTestingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { setSelectedGroupId } = useGroup();
+  const { setSelectedGroupId, refreshUserGroups } = useGroup();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<MultiPageFormData>(INITIAL_DATA);
@@ -92,7 +92,7 @@ export default function CreateGroupMultiPageTestingScreen() {
         setSeasons(seasonsData);
       } catch (error) {
         console.error('Failed to load seasons:', error);
-        Alert.alert('Error', 'Failed to load seasons. Please try again.');
+        showAlert('Error', 'Failed to load seasons. Please try again.');
       } finally {
         setLoadingSeasons(false);
       }
@@ -168,7 +168,7 @@ export default function CreateGroupMultiPageTestingScreen() {
     try {
       setSubmitting(true);
       if (!user?.id) {
-        Alert.alert('Error', 'You must be signed in to create a group.');
+        showAlert('Error', 'You must be signed in to create a group.');
         return;
       }
 
@@ -189,8 +189,8 @@ export default function CreateGroupMultiPageTestingScreen() {
       };
 
       const newGroup: GroupResponse = await apiService.createGroup(payload);
+      await refreshUserGroups();
       setSelectedGroupId(newGroup.id);
-      Alert.alert('Success', 'Group created successfully.');
       router.replace('/(player)/group');
     } finally {
       setSubmitting(false);

@@ -6,9 +6,9 @@ interface ConfirmDialogProps {
   title: string;
   message: string;
   confirmText?: string;
-  cancelText?: string;
+  cancelText?: string | null;
   onConfirm: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   confirmVariant?: 'primary' | 'danger';
 }
 
@@ -16,32 +16,35 @@ export function ConfirmDialog({
   visible,
   title,
   message,
-  confirmText = 'Confirm',
+  confirmText = 'OK',
   cancelText = 'Cancel',
   onConfirm,
   onCancel,
   confirmVariant = 'primary',
 }: ConfirmDialogProps) {
+  const showCancel = cancelText != null && onCancel != null;
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={onCancel ?? onConfirm}
     >
       <View style={styles.overlay}>
         <View style={styles.dialog}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
-          
+
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onCancel}
-            >
-              <Text style={styles.cancelButtonText}>{cancelText}</Text>
-            </TouchableOpacity>
-            
+            {showCancel && (
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onCancel}
+              >
+                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[
                 styles.button,

@@ -1,4 +1,5 @@
-import { Alert, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { showAlert } from '../../../utils/alert';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import apiService, { TribeRecord } from '../../../services/api';
@@ -28,7 +29,7 @@ export default function TribesScreen() {
         });
         setTribes(sorted);
       } catch (error) {
-        Alert.alert('Error', 'Failed to load tribes');
+        showAlert('Error', 'Failed to load tribes');
       } finally {
         setLoading(false);
       }

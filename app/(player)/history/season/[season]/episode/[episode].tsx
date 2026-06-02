@@ -1,5 +1,5 @@
-import { Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { showAlert } from '../../../../../../utils/alert';
 import { useEffect, useState } from 'react';
 import apiService from '../../../../../../services/api';
 import { EpisodeDetail } from '../../../../../../types/survivor';
@@ -49,7 +49,7 @@ export default function EpisodeHistory() {
         const detail = await apiService.getEpisodeDetail(Number(season), Number(episode));
         setEpisodeDetail(detail);
       } catch (error) {
-        Alert.alert('Error', 'Failed to load episode details');
+        showAlert('Error', 'Failed to load episode details');
       } finally {
         setLoading(false);
       }

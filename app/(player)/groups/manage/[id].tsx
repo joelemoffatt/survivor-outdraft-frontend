@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AppLoader from '../../../../components/shared/AppLoader';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { showAlert } from '../../../../utils/alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { BorderRadius, Colors, FontSizes, Spacing } from '../../../../constants/theme';
@@ -104,14 +104,14 @@ export default function ManageGroupDetailsScreen() {
     setLoadingEpisodes(true);
     apiService.getEpisodes(formData.seasonId)
       .then((data) => { if (active) setEpisodes(data); })
-      .catch(() => Alert.alert('Error', 'Failed to load episodes.'))
+      .catch(() => showAlert('Error', 'Failed to load episodes.'))
       .finally(() => { if (active) setLoadingEpisodes(false); });
     return () => { active = false; };
   }, [formData.seasonId]);
 
   const loadInitialData = async () => {
     if (!Number.isFinite(groupId) || groupId <= 0) {
-      Alert.alert('Error', 'Invalid group id');
+      showAlert('Error', 'Invalid group id');
       router.back();
       return;
     }
@@ -139,7 +139,7 @@ export default function ManageGroupDetailsScreen() {
         })),
       });
     } catch {
-      Alert.alert('Error', 'Failed to load group settings.');
+      showAlert('Error', 'Failed to load group settings.');
       router.back();
     } finally {
       setLoading(false);
@@ -240,9 +240,9 @@ export default function ManageGroupDetailsScreen() {
         })),
       }));
       await refreshGroupData();
-      Alert.alert('Saved', 'Group settings updated.');
+      showAlert('Saved', 'Group settings updated.');
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to save settings.');
+      showAlert('Error', err instanceof Error ? err.message : 'Failed to save settings.');
     } finally {
       setSaving(false);
     }
@@ -254,9 +254,9 @@ export default function ManageGroupDetailsScreen() {
       setResettingDraft(true);
       await apiService.resetDraft(groupId);
       await loadInitialData();
-      Alert.alert('Success', 'Draft has been reset.');
+      showAlert('Success', 'Draft has been reset.');
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to reset draft.');
+      showAlert('Error', err instanceof Error ? err.message : 'Failed to reset draft.');
     } finally {
       setResettingDraft(false);
     }
@@ -272,7 +272,7 @@ export default function ManageGroupDetailsScreen() {
       setSelectedGroupId(next?.id ?? null);
       router.replace('/(player)');
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete group.');
+      showAlert('Error', err instanceof Error ? err.message : 'Failed to delete group.');
       setDeletingGroup(false);
     }
   };
@@ -287,7 +287,7 @@ export default function ManageGroupDetailsScreen() {
       const fresh = await apiService.getGroupMembers(groupId);
       setMembers(fresh);
     } catch (err: any) {
-      Alert.alert('Invite Failed', err?.message ?? 'Could not invite user.');
+      showAlert('Invite Failed', err?.message ?? 'Could not invite user.');
     } finally {
       setAddMemberLoading(false);
     }
@@ -301,7 +301,7 @@ export default function ManageGroupDetailsScreen() {
       await apiService.cancelInvitation(target.id);
       setMembers((prev) => prev.filter((m) => m.id !== target.id));
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to remove member.');
+      showAlert('Error', err?.message ?? 'Failed to remove member.');
     }
   };
 

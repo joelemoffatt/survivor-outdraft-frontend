@@ -5,10 +5,10 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { showAlert } from '../../utils/alert';
 import { Colors, FontSizes, Spacing } from '../../constants/theme';
 import apiService from '../../services/api';
 
@@ -24,20 +24,20 @@ export default function InviteMember({ groupId, groupName, onInviteSent }: Invit
 
   const handleInvite = async () => {
     if (!username.trim()) {
-      Alert.alert('Error', 'Please enter a username');
+      showAlert('Error', 'Please enter a username');
       return;
     }
 
     try {
       setLoading(true);
       await apiService.inviteByUsername(groupId, username.trim());
-      Alert.alert('Success', `Invitation sent to ${username}!`);
+      showAlert('Success', `Invitation sent to ${username}!`);
       setUsername('');
       onInviteSent?.();
     } catch (error) {
       console.error('Failed to send invitation:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to send invitation';
-      Alert.alert('Error', errorMessage);
+      showAlert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
