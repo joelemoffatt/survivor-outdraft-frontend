@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Colors, Spacing } from '../../constants/theme';
 import apiService, {
   DraftDTO,
@@ -34,6 +34,7 @@ export default function DraftScreen({
   const [isPickingLoading, setIsPickingLoading] = useState(false);
 
   const isMyTurn = !!(user?.id && draftState?.currentTurnUser?.id === user.id);
+  const isPickingLoadingRef = useRef(false);
 
   // Fetch draft state
   useEffect(() => {
@@ -53,11 +54,18 @@ export default function DraftScreen({
     fetchDraftState();
   }, [groupId, user?.id]);
 
+  // Keep ref in sync so the poll can skip while a pick is in flight
+  useEffect(() => {
+    isPickingLoadingRef.current = isPickingLoading;
+  }, [isPickingLoading]);
+
   // Poll draft state every 3 seconds
   useEffect(() => {
     if (!draftState) return;
 
     const pollInterval = setInterval(async () => {
+      // Skip poll while a pick request is in flight — the response will update state
+      if (isPickingLoadingRef.current) return;
       try {
         const state = await apiService.getDraftState(groupId);
         setDraftState(state);
@@ -83,6 +91,7 @@ export default function DraftScreen({
 
     try {
       setIsPickingLoading(true);
+      isPickingLoadingRef.current = true;
       const updatedState = await apiService.makeDraftPick(
         draftState.id,
         castawayId
@@ -143,14 +152,21 @@ export default function DraftScreen({
       </View>
 
       {/* Current Turn Banner */}
-      <View style={[styles.turnBanner, isMyTurn && styles.myTurnBanner]}>
-        <Text style={styles.turnBannerText}>
-          {isMyTurn
-            ? 'Your Turn to Pick!'
-            : draftState.currentTurnUser
-            ? `Waiting for ${draftState.currentTurnUser.username}`
-            : 'Waiting for next turn'}
-        </Text>
+      <View style={[styles.turnBanner, isMyTurn && !isPickingLoading && styles.myTurnBanner, isPickingLoading && styles.submittingBanner]}>
+        {isPickingLoading ? (
+          <View style={styles.submittingRow}>
+            <ActivityIndicator size="small" color={Colors.primary} style={styles.submittingSpinner} />
+            <Text style={styles.turnBannerText}>Submitting your pick...</Text>
+          </View>
+        ) : (
+          <Text style={styles.turnBannerText}>
+            {isMyTurn
+              ? 'Your Turn to Pick!'
+              : draftState.currentTurnUser
+              ? `Waiting for ${draftState.currentTurnUser.username}`
+              : 'Waiting for next turn'}
+          </Text>
+        )}
       </View>
 
       {/* Draft Order - Show all remaining picks */}
@@ -367,6 +383,18 @@ const styles = StyleSheet.create({
   myTurnBanner: {
     backgroundColor: '#d4edda',
     borderLeftColor: Colors.success,
+  },
+  submittingBanner: {
+    backgroundColor: '#e8f4fd',
+    borderLeftColor: Colors.primary,
+  },
+  submittingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submittingSpinner: {
+    marginRight: Spacing.sm,
   },
   turnBannerText: {
     fontSize: 16,

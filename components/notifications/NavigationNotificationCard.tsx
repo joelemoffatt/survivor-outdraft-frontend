@@ -11,11 +11,15 @@ interface Props {
 
 export default function NavigationNotificationCard({ notification }: Props) {
   const router = useRouter();
-  const { setSelectedGroupId } = useGroup();
+  const { setSelectedGroupId, selectedGroupId, refreshGroupData } = useGroup();
   const isUnread = !notification.read;
 
   const handlePress = () => {
-    setSelectedGroupId(notification.groupId);
+    if (notification.groupId === selectedGroupId) {
+      refreshGroupData();
+    } else {
+      setSelectedGroupId(notification.groupId);
+    }
     router.push('/(player)/group');
   };
 

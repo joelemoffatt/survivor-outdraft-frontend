@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import AppLoader from "../../components/shared/AppLoader";
+import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
 import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
 import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
@@ -175,6 +176,10 @@ export default function GroupScreen() {
         />
       </View>
     );
+  }
+
+  if (group.loading) {
+    return <GroupLoadingScreen loadingText={group.loadingText} onForceRefresh={refreshGroupData} />;
   }
 
   return (

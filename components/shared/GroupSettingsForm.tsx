@@ -6,7 +6,7 @@ import FormPicker, { PickerOption } from './FormPicker';
 import PointRulesInput, { LocalRule } from './PointRulesInput';
 import MembersInput, { GroupMember } from './MembersInput';
 
-export type DraftStyle = 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+export type DraftStyle = 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR' | 'RIGGED';
 
 export interface GroupSettingsFormData {
   name: string;

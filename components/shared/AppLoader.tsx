@@ -3,11 +3,15 @@ import { Colors, FontSizes } from '../../constants/theme';
 
 const icon = require('../../assets/icon.png');
 
-export default function AppLoader() {
+interface Props {
+  label?: string;
+}
+
+export default function AppLoader({ label = 'Loading...' }: Props) {
   return (
     <View style={styles.container}>
       <Image source={icon} style={styles.icon} />
-      <Text style={styles.label}>Loading...</Text>
+      <Text style={styles.label}>{label}</Text>
     </View>
   );
 }

@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import AppLoader from "../../components/shared/AppLoader";
+import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGroup } from "../../contexts/GroupContext";
@@ -177,6 +178,10 @@ export default function PlayerHome() {
         <Text style={styles.errorText}>{error ?? "Failed to load home data."}</Text>
       </View>
     );
+  }
+
+  if (group.loading) {
+    return <GroupLoadingScreen loadingText={group.loadingText} />;
   }
 
   return (

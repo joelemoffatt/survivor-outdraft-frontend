@@ -24,6 +24,7 @@ const draftStyleLabels: Record<string, string> = {
   SNAKE: 'Snake',
   ROUND_ROBIN: 'Round Robin',
   LINEAR: 'Linear',
+  RIGGED: 'Rigged (Testing)',
 };
 
 const formatGroupStatus = (status?: GroupResponse['status']) => {

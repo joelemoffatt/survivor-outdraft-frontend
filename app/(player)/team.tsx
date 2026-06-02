@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import AppLoader from "../../components/shared/AppLoader";
+import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
 import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
 import { useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -42,7 +43,6 @@ export default function TeamScreen() {
   const [countdown, setCountdown] = useState<string>("");
   const [startingDraft, setStartingDraft] = useState(false);
   const [startDraftError, setStartDraftError] = useState<string | null>(null);
-  const [draftComplete, setDraftComplete] = useState(false);
   const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
   const [addMemberUsername, setAddMemberUsername] = useState("");
   const [addMemberLoading, setAddMemberLoading] = useState(false);
@@ -180,6 +180,10 @@ export default function TeamScreen() {
         <Text style={styles.infoText}>No team found for this group</Text>
       </View>
     );
+  }
+
+  if (group.loading) {
+    return <GroupLoadingScreen loadingText={group.loadingText} />;
   }
 
   // BEFORE DRAFT
@@ -352,15 +356,12 @@ export default function TeamScreen() {
   }
 
   // DURING DRAFT
-  if (group.status === "DRAFTING" && !draftComplete) {
+  if (group.status === "DRAFTING") {
     return (
       <DraftScreen
         groupId={selectedGroupId}
         teamSize={group.draft?.teamSize || 5}
-        onDraftComplete={async () => {
-          await refreshGroupData();
-          setDraftComplete(true);
-        }}
+        onDraftComplete={refreshGroupData}
       />
     );
   }

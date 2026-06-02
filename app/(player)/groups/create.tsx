@@ -66,6 +66,7 @@ const draftStyleOptions: PickerOption[] = [
   { label: 'Snake', value: 'SNAKE' },
   { label: 'Round Robin', value: 'ROUND_ROBIN' },
   { label: 'Linear', value: 'LINEAR' },
+  { label: 'Rigged (Testing)', value: 'RIGGED' },
 ];
 
 export default function CreateGroupMultiPageTestingScreen() {

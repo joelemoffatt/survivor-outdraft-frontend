@@ -28,7 +28,7 @@ interface GroupContextType {
   userGroups: GroupResponse[];
   groupData: GroupData;
   refreshGroupData: () => Promise<void>;
-  refreshUserGroups: () => Promise<void>;
+  refreshUserGroups: () => Promise<GroupResponse[]>;
 }
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
@@ -80,14 +80,25 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     await fetchGroupData(selectedGroupId, user.id, true);
   }, [selectedGroupId, user?.id, fetchGroupData]);
 
-  const refreshUserGroups = useCallback(async () => {
-    if (!user?.id) return;
+  // Auto-poll while group is in a loading state (e.g. score calculation after draft)
+  useEffect(() => {
+    if (!groupData.group?.loading || !selectedGroupId || !user?.id) return;
+    const interval = setInterval(() => {
+      fetchGroupData(selectedGroupId, user.id, true);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [groupData.group?.loading, selectedGroupId, user?.id, fetchGroupData]);
+
+  const refreshUserGroups = useCallback(async (): Promise<GroupResponse[]> => {
+    if (!user?.id) return [];
     try {
       const groups = await apiService.getUserGroups(user.id, { forceRefresh: true });
       setUserGroups(groups);
       setUserHasGroups(groups.length > 0);
+      return groups;
     } catch (error) {
       console.error('Failed to refresh user groups:', error);
+      return [];
     }
   }, [user?.id]);
 

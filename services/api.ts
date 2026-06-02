@@ -361,7 +361,7 @@ class ApiService {
     firstScoringEpisodeNumber?: number;
     draft: {
       teamSize: number;
-      style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+      style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR' | 'RIGGED';
       scheduledAt?: string;
     };
     pointRules: Array<{ ruleType: string; points: number }>;
@@ -380,7 +380,7 @@ class ApiService {
       firstScoringEpisodeNumber: number;
       draft: {
         teamSize: number;
-        style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+        style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR' | 'RIGGED';
         scheduledAt?: string | null;
       };
       pointRules?: Array<{ ruleType: string; points: number }>;
@@ -612,7 +612,7 @@ export interface GroupResponse {
   draft?: {
     id: number;
     status: 'PENDING' | 'DRAFTING' | 'COMPLETED';
-    style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+    style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR' | 'RIGGED';
     teamSize: number;
     scheduledAt: string | null;
     startedAt: string | null;
@@ -626,6 +626,8 @@ export interface GroupResponse {
   } | null;
   status: 'PENDING' | 'DRAFTING' | 'ACTIVE' | 'COMPLETED';
   createdAt: string;
+  loading?: boolean;
+  loadingText?: string | null;
   pointRules?: Array<{
     ruleType: string;
     points: number;
@@ -714,7 +716,7 @@ export interface DraftDTO {
   seasonName: string;
   createdBy?: DraftUserSummary;
   status: 'PENDING' | 'DRAFTING' | 'COMPLETED';
-  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR';
+  style: 'SNAKE' | 'ROUND_ROBIN' | 'LINEAR' | 'RIGGED';
   isComplete: boolean;
   scheduledAt?: string;
   startedAt?: string;

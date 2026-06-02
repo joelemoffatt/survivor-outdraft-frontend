@@ -42,13 +42,14 @@ const draftStyleOptions: PickerOption[] = [
   { label: 'Snake', value: 'SNAKE' },
   { label: 'Round Robin', value: 'ROUND_ROBIN' },
   { label: 'Linear', value: 'LINEAR' },
+  { label: 'Rigged (Testing)', value: 'RIGGED' },
 ];
 
 export default function ManageGroupDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const groupId = Number(params.id);
-  const { refreshGroupData, setSelectedGroupId } = useGroup();
+  const { refreshGroupData, setSelectedGroupId, refreshUserGroups } = useGroup();
 
   const [activeTab, setActiveTab] = useState<Tab>('details');
   const [loading, setLoading] = useState(true);
@@ -266,9 +267,10 @@ export default function ManageGroupDetailsScreen() {
       setDeleteGroupModalVisible(false);
       setDeletingGroup(true);
       await apiService.deleteGroup(groupId);
-      await refreshGroupData();
-      setSelectedGroupId(null);
-      router.replace('/(player)/groups/select');
+      const remaining = await refreshUserGroups();
+      const next = remaining.find(g => g.id !== groupId);
+      setSelectedGroupId(next?.id ?? null);
+      router.replace('/(player)');
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete group.');
       setDeletingGroup(false);
