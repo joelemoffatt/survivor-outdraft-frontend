@@ -1,27 +1,17 @@
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing } from '../../constants/theme';
+import { Colors, Layout, Spacing } from '../../constants/theme';
 import { GroupSelector } from './GroupSelector';
-import apiService from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 
-export const PLAYER_HEADER_ROW_HEIGHT = 59;
+export const PLAYER_HEADER_ROW_HEIGHT = Layout.playerHeaderRowHeight;
 
 export function PlayerHeader() {
   const router = useRouter();
-  const { user } = useAuth();
   const { userGroups, selectedGroupId, setSelectedGroupId, groupsLoaded } = useGroup();
-  const [pendingInviteCount, setPendingInviteCount] = useState(0);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    apiService.getPendingInvitations(user.id)
-      .then((invites) => setPendingInviteCount(invites.length))
-      .catch(() => {});
-  }, [user?.id]);
+  const { unreadCount } = useNotifications();
 
   const handleGroupSelect = (groupId: number) => {
     setSelectedGroupId(groupId);
@@ -53,10 +43,10 @@ export function PlayerHeader() {
             accessibilityLabel="Notifications"
           >
             <Ionicons name="notifications-outline" size={24} color="#fff" />
-            {pendingInviteCount > 0 && (
+            {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
-                  {pendingInviteCount > 9 ? '9+' : pendingInviteCount}
+                  {unreadCount > 9 ? '9+' : unreadCount}
                 </Text>
               </View>
             )}

@@ -537,6 +537,23 @@ class ApiService {
     this.clearGetCache();
     return result;
   }
+
+  // Notification endpoints
+  async getNotifications(): Promise<import('../types/notifications').AppNotification[]> {
+    return this.get('/v1/notifications');
+  }
+
+  async getNotificationUnreadCount(): Promise<{ unreadCount: number }> {
+    return this.get('/v1/notifications/unread-count');
+  }
+
+  async markNotificationsRead(ids: number[]): Promise<void> {
+    return this.post('/v1/notifications/mark-read', { ids });
+  }
+
+  async markAllNotificationsRead(): Promise<void> {
+    return this.post('/v1/notifications/mark-all-read', {});
+  }
 }
 
 export interface AuthResponse {

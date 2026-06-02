@@ -68,6 +68,10 @@ export const FontSizes = {
   title: 42,
 };
 
+export const Layout = {
+  playerHeaderRowHeight: 59,
+};
+
 export const BorderRadius = {
   sm: 4,
   md: 8,

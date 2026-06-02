@@ -2,9 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, SafeAreaVi
 import { useEffect, useRef, useState } from 'react';
 
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing } from '../../constants/theme';
+import { Colors, Layout, Spacing } from '../../constants/theme';
 import { GroupResponse } from '../../services/api';
-import { PLAYER_HEADER_ROW_HEIGHT } from './PlayerHeader';
 
 interface GroupSelectorProps {
   groups: GroupResponse[];
@@ -177,7 +176,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    height: PLAYER_HEADER_ROW_HEIGHT,
+    height: Layout.playerHeaderRowHeight,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.3)',
     backgroundColor: Colors.primary,
@@ -202,7 +201,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    height: PLAYER_HEADER_ROW_HEIGHT,
+    height: Layout.playerHeaderRowHeight,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.2)',
   },

@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { GroupProvider } from "../contexts/GroupContext";
+import { NotificationProvider } from "../contexts/NotificationContext";
 import { View } from "react-native";
 import AppLoader from "../components/shared/AppLoader";
 import { useEffect } from "react";
@@ -59,11 +60,13 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <GroupProvider>
-        <SafeAreaProvider>
-          <RootLayoutNav />
-        </SafeAreaProvider>
-      </GroupProvider>
+      <NotificationProvider>
+        <GroupProvider>
+          <SafeAreaProvider>
+            <RootLayoutNav />
+          </SafeAreaProvider>
+        </GroupProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

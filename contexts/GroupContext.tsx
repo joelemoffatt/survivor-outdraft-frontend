@@ -28,6 +28,7 @@ interface GroupContextType {
   userGroups: GroupResponse[];
   groupData: GroupData;
   refreshGroupData: () => Promise<void>;
+  refreshUserGroups: () => Promise<void>;
 }
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
@@ -78,6 +79,17 @@ export function GroupProvider({ children }: { children: ReactNode }) {
     if (!selectedGroupId || !user?.id) return;
     await fetchGroupData(selectedGroupId, user.id, true);
   }, [selectedGroupId, user?.id, fetchGroupData]);
+
+  const refreshUserGroups = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const groups = await apiService.getUserGroups(user.id, { forceRefresh: true });
+      setUserGroups(groups);
+      setUserHasGroups(groups.length > 0);
+    } catch (error) {
+      console.error('Failed to refresh user groups:', error);
+    }
+  }, [user?.id]);
 
   const updateSelectedGroupId = useCallback((id: number | null) => {
     setSelectedGroupId(id);
@@ -141,6 +153,7 @@ export function GroupProvider({ children }: { children: ReactNode }) {
       userGroups,
       groupData,
       refreshGroupData,
+      refreshUserGroups,
     }}>
       {children}
     </GroupContext.Provider>
