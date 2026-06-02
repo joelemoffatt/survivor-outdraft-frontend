@@ -41,6 +41,17 @@ export default function PlayerLayout() {
             <Stack.Screen name="group" options={{ animation: 'none' }} />
             <Stack.Screen name="groups" options={{ animation: 'none' }} />
             <Stack.Screen
+              name="notifications"
+              options={{
+                animation: 'none',
+                headerShown: true,
+                title: 'Notifications',
+                headerTitleAlign: 'left',
+                headerTitleStyle: { fontSize: 28, fontWeight: 'bold' },
+                headerLeft: () => <BackButton fallbackRoute="/(player)/" />,
+              }}
+            />
+            <Stack.Screen
               name="teams/[teamId]"
               options={{
                 animation: 'none',

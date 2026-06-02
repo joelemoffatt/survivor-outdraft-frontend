@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../constants/theme';
 import { GroupResponse } from '../../services/api';
+import { PLAYER_HEADER_ROW_HEIGHT } from './PlayerHeader';
 
 interface GroupSelectorProps {
   groups: GroupResponse[];
@@ -77,7 +78,7 @@ export function GroupSelector({
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Switch Group</Text>
               <TouchableOpacity onPress={() => setIsOpen(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={22} color={Colors.textSecondary} />
+                <Ionicons name="close" size={22} color="rgba(255,255,255,0.8)" />
               </TouchableOpacity>
             </View>
 
@@ -114,7 +115,7 @@ export function GroupSelector({
                       )}
                     </View>
                     {isSelected && (
-                      <Ionicons name="checkmark" size={18} color={Colors.primary} />
+                      <Ionicons name="checkmark" size={18} color="#fff" />
                     )}
                   </TouchableOpacity>
                 );
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 16,
     borderRadius: 4,
-    backgroundColor: '#a0a0a0',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
 
   triggerText: {
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
   },
 
   sheet: {
-    backgroundColor: '#d0d0d0',
+    backgroundColor: Colors.primary,
     borderBottomLeftRadius: 6,
     borderBottomRightRadius: 6,
     overflow: 'hidden',
@@ -176,16 +177,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    height: PLAYER_HEADER_ROW_HEIGHT,
     borderBottomWidth: 1,
-    borderBottomColor: '#b8b8b8',
-    backgroundColor: '#d0d0d0',
+    borderBottomColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: Colors.primary,
   },
 
   sheetTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.text,
+    color: '#fff',
   },
 
   closeButton: {
@@ -201,14 +202,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    height: PLAYER_HEADER_ROW_HEIGHT,
     borderBottomWidth: 1,
-    borderBottomColor: '#b8b8b8',
-    minHeight: 56,
+    borderBottomColor: 'rgba(255,255,255,0.2)',
   },
 
   optionSelected: {
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
 
   optionContent: {
@@ -218,22 +218,22 @@ const styles = StyleSheet.create({
 
   optionText: {
     fontSize: 15,
-    color: Colors.text,
+    color: '#fff',
     fontWeight: '500',
   },
 
   optionTextSelected: {
-    color: Colors.primary,
+    color: '#fff',
     fontWeight: '700',
   },
 
   seasonText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
   },
 
   seasonTextSelected: {
-    color: Colors.primary,
+    color: 'rgba(255,255,255,0.85)',
   },
 });

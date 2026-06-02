@@ -35,7 +35,7 @@ export const Colors = {
   medalGold: '#f4c542',
   medalSilver: '#c0c0c0',
   medalBronze: '#cd7f32',
-  lostFire: '#d24d2568',
+  lostFire: '#d24d256b',
 
   // UI
   border: '#e0e0e0',

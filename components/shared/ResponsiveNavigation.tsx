@@ -129,8 +129,6 @@ const styles = StyleSheet.create({
   mobileNavBar: {
     flexDirection: 'row',
     backgroundColor: '#2c3e50',
-    borderTopWidth: 1,
-    borderTopColor: '#34495e',
   },
 
   mobileNavItem: {

@@ -8,6 +8,8 @@ import apiService from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGroup } from '../../contexts/GroupContext';
 
+export const PLAYER_HEADER_ROW_HEIGHT = 59;
+
 export function PlayerHeader() {
   const router = useRouter();
   const { user } = useAuth();
@@ -37,7 +39,7 @@ export function PlayerHeader() {
               groups={userGroups}
               selectedGroupId={selectedGroupId}
               onSelectGroup={handleGroupSelect}
-              triggerColor={Colors.text}
+              triggerColor="#fff"
               disabled={!groupsLoaded}
             />
           )}
@@ -47,10 +49,10 @@ export function PlayerHeader() {
         <View style={styles.rightContent}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => router.push('/(player)/groups/invitations')}
+            onPress={() => router.push('/(player)/notifications')}
             accessibilityLabel="Notifications"
           >
-            <Ionicons name="notifications-outline" size={24} color={Colors.text} />
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
             {pendingInviteCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -60,13 +62,6 @@ export function PlayerHeader() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => router.push('/profile')}
-            accessibilityLabel="Profile"
-          >
-            <Ionicons name="person-circle-outline" size={24} color={Colors.text} />
-          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -75,7 +70,7 @@ export function PlayerHeader() {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#d0d0d0',
+    backgroundColor: Colors.primary,
     zIndex: 100,
   },
 
@@ -83,12 +78,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingLeft: Spacing.md,
+    paddingLeft: Spacing.lg,
     paddingRight: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.sm,
     gap: Spacing.md,
-    minHeight: 52,
+    height: PLAYER_HEADER_ROW_HEIGHT,
   },
 
   leftContent: {
@@ -127,7 +120,7 @@ const styles = StyleSheet.create({
   },
 
   infoText: {
-    color: Colors.textSecondary,
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
   },
 });
