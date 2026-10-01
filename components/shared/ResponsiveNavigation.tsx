@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   mobileNavItem: {
     flex: 1,
     paddingTop: 12,
-    paddingBottom: 4,
+    paddingBottom: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderTopWidth: 3,

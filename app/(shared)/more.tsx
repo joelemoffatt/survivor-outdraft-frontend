@@ -47,21 +47,6 @@ export default function MoreScreen() {
 
   const playerSections: MenuSection[] = [
     {
-      title: 'Groups',
-      items: [
-        {
-          label: 'Create Group',
-          icon: 'add-circle',
-          onPress: () => router.push('/(player)/groups/create'),
-        },
-        {
-          label: 'Group Invitations',
-          icon: 'mail',
-          onPress: () => router.push('/(player)/groups/invitations'),
-        },
-      ],
-    },
-    {
       title: 'History',
       items: [
         {
@@ -150,6 +135,11 @@ export default function MoreScreen() {
     {
       title: 'Settings',
       items: [
+        {
+          label: 'Create Group',
+          icon: 'add-circle',
+          onPress: () => router.push('/(player)/groups/create'),
+        },
         {
           label: 'Notifications',
           icon: 'notifications',
