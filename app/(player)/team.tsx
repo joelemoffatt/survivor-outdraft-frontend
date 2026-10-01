@@ -1,6 +1,7 @@
 import {
   Modal,
   Pressable,
+  RefreshControl,
   View,
   Text,
   TextInput,
@@ -12,9 +13,9 @@ import { showAlert } from "../../utils/alert";
 import AppLoader from "../../components/shared/AppLoader";
 import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
 import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   BorderRadius,
   Colors,
@@ -39,6 +40,12 @@ export default function TeamScreen() {
   const { user } = useAuth();
   const { selectedGroupId, groupsLoaded, userHasGroups, groupData, refreshGroupData } = useGroup();
   const { group, myTeam: team, members, loading, error } = groupData;
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshGroupData();
+    }, [refreshGroupData])
+  );
 
   const [countdown, setCountdown] = useState<string>("");
   const [startingDraft, setStartingDraft] = useState(false);
@@ -190,7 +197,11 @@ export default function TeamScreen() {
   if (group.status === "PENDING") {
     return (
       <>
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refreshGroupData} />}
+      >
         <Card style={styles.draftInfoCard} shadow="medium">
           <View style={styles.draftInfoHeader}>
             <Text style={styles.draftInfoTitle}>Draft Coming Soon</Text>

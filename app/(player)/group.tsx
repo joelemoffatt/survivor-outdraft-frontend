@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,8 +14,8 @@ import { showAlert } from "../../utils/alert";
 import AppLoader from "../../components/shared/AppLoader";
 import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
 import CreateOrJoinGroup from "../../components/shared/CreateOrJoinGroup";
-import { useMemo, useState } from "react";
-import { useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 import Card from "../../components/shared/Card";
 import Button from "../../components/shared/Button";
 import { useAuth } from "../../contexts/AuthContext";
@@ -88,6 +89,13 @@ export default function GroupScreen() {
   const { user } = useAuth();
   const { selectedGroupId, groupsLoaded, userHasGroups, groupData, refreshGroupData } = useGroup();
   const { group, teams, members, loading, error } = groupData;
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshGroupData();
+    }, [refreshGroupData])
+  );
+
   const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
   const [addMemberUsername, setAddMemberUsername] = useState("");
   const [addMemberLoading, setAddMemberLoading] = useState(false);
@@ -183,7 +191,11 @@ export default function GroupScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={refreshGroupData} />}
+    >
       <Card style={styles.headerCard} padding="lg" shadow="medium">
         <View style={styles.headerTop}>
           <View style={styles.headerText}>

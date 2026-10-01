@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,7 +10,7 @@ import {
 } from "react-native";
 import AppLoader from "../../components/shared/AppLoader";
 import GroupLoadingScreen from "../../components/shared/GroupLoadingScreen";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGroup } from "../../contexts/GroupContext";
 import apiService, { GroupMemberResponse } from "../../services/api";
@@ -51,8 +52,14 @@ export default function PlayerHome() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const { selectedGroupId, groupsLoaded, userHasGroups, groupData } = useGroup();
+  const { selectedGroupId, groupsLoaded, userHasGroups, groupData, refreshGroupData } = useGroup();
   const { group, teams, members, myTeam, loading, error } = groupData;
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshGroupData();
+    }, [refreshGroupData])
+  );
   const [countdown, setCountdown] = useState("");
   const [castaways, setCastaways] = useState<Castaway[]>([]);
   const [castawaysLoading, setCastawaysLoading] = useState(false);
@@ -185,7 +192,11 @@ export default function PlayerHome() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={refreshGroupData} />}
+    >
       <View style={styles.headerCard}>
         <Text style={styles.pageTitle}>Home</Text>
         <Text style={styles.pageSubtitle}>
