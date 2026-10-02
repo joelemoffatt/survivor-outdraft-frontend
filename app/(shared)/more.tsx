@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 import { getApiAssetUri } from '../../services/api';
+import { SHOW_DEV_FEATURES } from '../../constants/featureFlags';
 
 interface MenuSection {
   title?: string;
@@ -141,7 +142,7 @@ export default function MoreScreen() {
           onPress: () => router.push('/(player)/groups/create'),
         },
         // Notifications and App Preferences are not ready for production yet
-        ...(__DEV__
+        ...(SHOW_DEV_FEATURES
           ? [
               {
                 label: 'Notifications',
@@ -165,7 +166,7 @@ export default function MoreScreen() {
           icon: 'document-text',
           onPress: () => router.push('/settings/terms'),
         },
-        ...(__DEV__
+        ...(SHOW_DEV_FEATURES
           ? [
               {
                 label: 'About This App',
@@ -176,7 +177,7 @@ export default function MoreScreen() {
           : []),
       ],
     },
-    ...(__DEV__
+    ...(SHOW_DEV_FEATURES
       ? [
           {
             title: 'Developer',

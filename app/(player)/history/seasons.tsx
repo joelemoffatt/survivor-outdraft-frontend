@@ -9,6 +9,7 @@ import {
   HistoryEmpty,
   HistoryLoading,
 } from '../../../components/shared/HistoryUI';
+import { SHOW_DEV_FEATURES } from '../../../constants/featureFlags';
 
 const normalizeSeasonName = (value?: string): string => {
   if (!value) {
@@ -64,7 +65,7 @@ export default function SeasonsScreen() {
     const loadSeasons = async () => {
       try {
         const data = await apiService.getSeasons();
-        setSeasons(__DEV__ ? data : data.filter((season) => !HIDDEN_PRODUCTION_SEASONS.has(season.season)));
+        setSeasons(SHOW_DEV_FEATURES ? data : data.filter((season) => !HIDDEN_PRODUCTION_SEASONS.has(season.season)));
       } catch (error) {
         showAlert('Error', 'Failed to load seasons');
       } finally {

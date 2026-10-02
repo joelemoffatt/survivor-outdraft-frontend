@@ -9,6 +9,7 @@ import apiService, { CastawayPerformanceDetail } from '../../../../services/api'
 import { Castaway } from '../../../../types/survivor';
 import { getImportedCastawayImageSource } from '../../../../utils/castawayImages';
 import useDelayedLoader from '../../../../hooks/useDelayedLoader';
+import { SHOW_DEV_FEATURES } from '../../../../constants/featureFlags';
 
 export default function CastawayDetailsScreen() {
   const { id, season: seasonParam, jsonId: jsonIdParam } = useLocalSearchParams<{
@@ -77,7 +78,7 @@ export default function CastawayDetailsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <CastawayProfileCard castaway={castaway} imageSource={castawayImageSource} />
 
-      {__DEV__ && (
+      {SHOW_DEV_FEATURES && (
         <CastawayPerformanceAggregateCards
           performances={performances}
           castawayName={castaway.name}
