@@ -921,7 +921,6 @@ export const importedCastawayImages: Record<string, number> = {
   "US51US0752": require("../assets/castawayPictures/imported/US51US0752.png"),
   "US51US0753": require("../assets/castawayPictures/imported/US51US0753.png"),
   "US51US0754": require("../assets/castawayPictures/imported/US51US0754.png"),
-  "US51US0755": require("../assets/castawayPictures/imported/US51US0755.png"),
   "US51US0756": require("../assets/castawayPictures/imported/US51US0756.png"),
   "US51US0757": require("../assets/castawayPictures/imported/US51US0757.png"),
   "US51US0758": require("../assets/castawayPictures/imported/US51US0758.png"),
