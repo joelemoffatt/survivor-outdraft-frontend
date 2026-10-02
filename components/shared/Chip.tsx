@@ -19,6 +19,7 @@ interface ChipProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   disabled?: boolean;
+  numberOfLines?: number;
 }
 
 export default function Chip({
@@ -29,13 +30,18 @@ export default function Chip({
   style,
   textStyle,
   disabled = false,
+  numberOfLines,
 }: ChipProps) {
   const variantStyle = getVariantStyle(variant);
   const textColor = getTextColor(variant);
 
   const content = (
     <View style={[styles.chip, variantStyle, style]}>
-      <Text style={[styles.label, { color: textColor }, textStyle]}>
+      <Text
+        style={[styles.label, numberOfLines ? styles.labelTruncated : null, { color: textColor }, textStyle]}
+        numberOfLines={numberOfLines}
+        ellipsizeMode="tail"
+      >
         {label}
       </Text>
       {onRemove && (
@@ -100,6 +106,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FontSizes.small,
     fontWeight: '500',
+  },
+  labelTruncated: {
+    flexShrink: 1,
   },
   removeIcon: {
     marginLeft: Spacing.xs,

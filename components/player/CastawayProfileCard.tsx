@@ -150,7 +150,9 @@ export default function CastawayProfileCard({ castaway, imageSource }: CastawayP
         <View style={styles.personalitySection}>
           <Text style={styles.personalityTitle}>Three Words</Text>
           <View style={styles.personalityWrap}>
-            {threeWordChips.map((word) => <Chip key={word} label={word} variant="primary" />)}
+            {threeWordChips.map((word) => (
+              <Chip key={word} label={word} variant="primary" numberOfLines={1} style={styles.personalityChip} />
+            ))}
           </View>
         </View>
       ) : null}
@@ -254,5 +256,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
+  },
+  personalityChip: {
+    maxWidth: '100%',
   },
 });
