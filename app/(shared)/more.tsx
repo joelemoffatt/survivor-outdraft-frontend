@@ -140,16 +140,21 @@ export default function MoreScreen() {
           icon: 'add-circle',
           onPress: () => router.push('/(player)/groups/create'),
         },
-        {
-          label: 'Notifications',
-          icon: 'notifications',
-          onPress: () => router.push('/settings/notifications'),
-        },
-        {
-          label: 'App Preferences',
-          icon: 'settings',
-          onPress: () => router.push('/settings/preferences'),
-        },
+        // Notifications and App Preferences are not ready for production yet
+        ...(__DEV__
+          ? [
+              {
+                label: 'Notifications',
+                icon: 'notifications',
+                onPress: () => router.push('/settings/notifications'),
+              },
+              {
+                label: 'App Preferences',
+                icon: 'settings',
+                onPress: () => router.push('/settings/preferences'),
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -160,23 +165,31 @@ export default function MoreScreen() {
           icon: 'document-text',
           onPress: () => router.push('/settings/terms'),
         },
-        {
-          label: 'About This App',
-          icon: 'information-circle',
-          onPress: () => router.push('/settings/about'),
-        },
+        ...(__DEV__
+          ? [
+              {
+                label: 'About This App',
+                icon: 'information-circle',
+                onPress: () => router.push('/settings/about'),
+              },
+            ]
+          : []),
       ],
     },
-    {
-      title: 'Developer',
-      items: [
-        {
-          label: 'Session Debug',
-          icon: 'bug',
-          onPress: () => router.push('/settings/session-debug'),
-        },
-      ],
-    },
+    ...(__DEV__
+      ? [
+          {
+            title: 'Developer',
+            items: [
+              {
+                label: 'Session Debug',
+                icon: 'bug',
+                onPress: () => router.push('/settings/session-debug'),
+              },
+            ],
+          },
+        ]
+      : []),
     {
       items: [
         {

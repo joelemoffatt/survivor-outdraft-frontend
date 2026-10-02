@@ -77,11 +77,13 @@ export default function CastawayDetailsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <CastawayProfileCard castaway={castaway} imageSource={castawayImageSource} />
 
-      <CastawayPerformanceAggregateCards
-        performances={performances}
-        castawayName={castaway.name}
-        castawayFullName={castaway.full_name}
-      />
+      {__DEV__ && (
+        <CastawayPerformanceAggregateCards
+          performances={performances}
+          castawayName={castaway.name}
+          castawayFullName={castaway.full_name}
+        />
+      )}
     </ScrollView>
   );
 }
