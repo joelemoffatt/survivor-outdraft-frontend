@@ -13,6 +13,8 @@ import apiService, {
   DraftDTO,
 } from '../../services/api';
 import DraftCastawayBlock from './DraftCastawayBlock';
+import CastawayProfileCard from './CastawayProfileCard';
+import { getImportedCastawayImageSource } from '../../utils/castawayImages';
 import { useAuth } from '../../contexts/AuthContext';
 import { Castaway } from '../../types/survivor';
 
@@ -71,6 +73,11 @@ export default function DraftScreen({
 
   const jsonIdByCastawayId = new Map<number, string>();
   seasonCastaways.forEach((castaway) => jsonIdByCastawayId.set(castaway.id, castaway.json_id));
+
+  // Clear the selection (and its bio) once it's no longer our turn
+  useEffect(() => {
+    if (!isMyTurn) setSelectedCastaway(null);
+  }, [isMyTurn]);
 
   // Keep ref in sync so the poll can skip while a pick is in flight
   useEffect(() => {
@@ -158,6 +165,15 @@ export default function DraftScreen({
       </View>
     );
   }
+
+  // Full bio for the selected castaway; fall back to just the name if season bios haven't loaded
+  const selectedDraftCastaway = draftState.draftCastaways?.find(
+    (castaway) => castaway.castawayPerformanceId === selectedCastaway
+  );
+  const selectedCastawayDetails: Castaway | null = selectedDraftCastaway
+    ? seasonCastaways.find((castaway) => castaway.id === selectedDraftCastaway.castawayId) ??
+      ({ name: selectedDraftCastaway.castawayName, full_name: selectedDraftCastaway.castawayName } as Castaway)
+    : null;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -310,6 +326,18 @@ export default function DraftScreen({
         </View>
       )}
 
+      {/* Selected Castaway Bio */}
+      {selectedCastawayDetails && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Selected Castaway</Text>
+          <Text style={styles.selectedHint}>Tap their card again to draft</Text>
+          <CastawayProfileCard
+            castaway={selectedCastawayDetails}
+            imageSource={getImportedCastawayImageSource(imageSeasonNumber, selectedCastawayDetails.json_id)}
+          />
+        </View>
+      )}
+
       {/* Team Rosters */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Team Rosters</Text>
@@ -429,6 +457,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  selectedHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: -Spacing.sm,
     marginBottom: Spacing.md,
   },
   draftOrderScroll: {
