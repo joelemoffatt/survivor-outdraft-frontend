@@ -699,6 +699,7 @@ export interface DraftPickSlot {
   team: DraftTeamSummary;
   isPicked: boolean;
   castawayPerformanceId?: number;
+  castawayId?: number;
   castawayName?: string;
   pickedAt?: string;
 }
@@ -706,6 +707,7 @@ export interface DraftPickSlot {
 export interface DraftCastaway {
   draftId: number;
   castawayPerformanceId: number;
+  castawayId: number;
   castawayName: string;
 }
 

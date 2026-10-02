@@ -69,25 +69,8 @@ export default function DraftScreen({
   const seasonNumberMatch = draftState?.seasonName?.match(/\d+/);
   const imageSeasonNumber = seasonNumberMatch ? Number(seasonNumberMatch[0]) : draftState?.seasonId;
 
-  const normalizeName = (value?: string) => (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
-  const jsonIdByName = new Map<string, string>();
-  const firstNameCounts = new Map<string, number>();
-  seasonCastaways.forEach((castaway) => {
-    const first = normalizeName(castaway.name).split(' ')[0];
-    if (first) firstNameCounts.set(first, (firstNameCounts.get(first) || 0) + 1);
-  });
-  seasonCastaways.forEach((castaway) => {
-    if (castaway.name) jsonIdByName.set(normalizeName(castaway.name), castaway.json_id);
-    if (castaway.full_name) jsonIdByName.set(normalizeName(castaway.full_name), castaway.json_id);
-    const first = normalizeName(castaway.name).split(' ')[0];
-    if (first && firstNameCounts.get(first) === 1 && !jsonIdByName.has(first)) {
-      jsonIdByName.set(first, castaway.json_id);
-    }
-  });
-  const getJsonIdForName = (name: string) => {
-    const normalized = normalizeName(name);
-    return jsonIdByName.get(normalized) ?? jsonIdByName.get(normalized.split(' ')[0]);
-  };
+  const jsonIdByCastawayId = new Map<number, string>();
+  seasonCastaways.forEach((castaway) => jsonIdByCastawayId.set(castaway.id, castaway.json_id));
 
   // Keep ref in sync so the poll can skip while a pick is in flight
   useEffect(() => {
@@ -313,7 +296,7 @@ export default function DraftScreen({
                     castaway: {
                       name: castaway.castawayName,
                       full_name: castaway.castawayName,
-                      json_id: getJsonIdForName(castaway.castawayName),
+                      json_id: jsonIdByCastawayId.get(castaway.castawayId),
                     },
                   })) as any}
                 selectedCastaway={selectedCastaway}
