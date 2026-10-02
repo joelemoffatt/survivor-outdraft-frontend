@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import { useEffect, useState } from 'react';
 import { Colors, Spacing } from '../../constants/theme';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { getImportedCastawayImageSource } from '../../utils/castawayImages';
 
 interface CastawayData {
@@ -22,7 +21,6 @@ interface CastawayData {
 
 interface DraftCastawayBlockProps {
   castaways: CastawayData[];
-  selectedCastaway?: number | null;
   onCastawayPress: (castawayId: number) => void;
   disabled?: boolean;
   userDraftedCastawayIds?: Set<number>;
@@ -43,7 +41,6 @@ const getImageForCastaway = (seasonId?: number, jsonId?: string): any => {
 
 export default function DraftCastawayBlock({
   castaways,
-  selectedCastaway,
   onCastawayPress,
   disabled = false,
   userDraftedCastawayIds = new Set(),
@@ -83,7 +80,6 @@ export default function DraftCastawayBlock({
                     width: squareSize,
                     height: squareSize,
                   },
-                  selectedCastaway === castaway.id && styles.castawaySquareSelected,
                   userDrafted && styles.castawaySquareUserDrafted,
                   isDisabled && !userDrafted && styles.castawaySquareDisabled,
                 ]}
@@ -116,11 +112,6 @@ export default function DraftCastawayBlock({
                     <Text style={styles.userDraftedText}>YOUR PICK</Text>
                   </View>
                 )}
-                {selectedCastaway === castaway.id && (
-                  <View style={styles.selectionIndicator}>
-                    <Ionicons name="checkmark" size={24} color="#fff" />
-                  </View>
-                )}
               </TouchableOpacity>
             );
           })}
@@ -147,11 +138,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#e0e0e0',
     justifyContent: 'space-between',
-  },
-  castawaySquareSelected: {
-    borderColor: Colors.primary,
-    borderWidth: 3,
-    backgroundColor: '#e3f2fd',
   },
   castawaySquareUserDrafted: {
     opacity: 0.55,
@@ -203,18 +189,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
-  },
-  selectionIndicator: {
-    position: 'absolute',
-    top: Spacing.sm,
-    right: Spacing.sm,
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
   },
 });

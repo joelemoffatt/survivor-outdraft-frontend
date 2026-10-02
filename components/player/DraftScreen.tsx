@@ -13,6 +13,8 @@ import apiService, {
   DraftDTO,
 } from '../../services/api';
 import DraftCastawayBlock from './DraftCastawayBlock';
+import DraftCastawayModal from './DraftCastawayModal';
+import { getImportedCastawayImageSource } from '../../utils/castawayImages';
 import { useAuth } from '../../contexts/AuthContext';
 import { Castaway } from '../../types/survivor';
 
@@ -31,7 +33,7 @@ export default function DraftScreen({
   const [draftState, setDraftState] = useState<DraftDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCastaway, setSelectedCastaway] = useState<number | null>(null);
+  const [viewingCastawayPerformanceId, setViewingCastawayPerformanceId] = useState<number | null>(null);
   const [isPickingLoading, setIsPickingLoading] = useState(false);
   const [seasonCastaways, setSeasonCastaways] = useState<Castaway[]>([]);
 
@@ -115,7 +117,7 @@ export default function DraftScreen({
         castawayId
       );
       setDraftState(updatedState);
-      setSelectedCastaway(null);
+      setViewingCastawayPerformanceId(null);
 
       // Check if draft is complete
       if (updatedState.isComplete && onDraftComplete) {
@@ -127,19 +129,6 @@ export default function DraftScreen({
     } finally {
       setIsPickingLoading(false);
     }
-  };
-
-  const handleCastawayPress = async (castawayId: number) => {
-    if (!isMyTurn || isPickingLoading) {
-      return;
-    }
-
-    if (selectedCastaway === castawayId) {
-      await handleMakePick(castawayId);
-      return;
-    }
-
-    setSelectedCastaway(castawayId);
   };
 
   if (loading) {
@@ -158,6 +147,68 @@ export default function DraftScreen({
       </View>
     );
   }
+
+  // Get current user's drafted castaway IDs from picks
+  const draftPool = draftState.draftCastaways ?? [];
+  const userDraftedCastawayIds = new Set<number>();
+  const myParticipant = draftState.participants.find((participant) => participant.user.id === user?.id);
+  const myTeamId = myParticipant?.teamId;
+
+  const draftedCounts = new Map<number, number>();
+  draftState.picks
+    .filter((pick) => !!pick.castawayPerformanceId)
+    .forEach((pick) => {
+      const castawayPerformanceId = pick.castawayPerformanceId!;
+      draftedCounts.set(
+        castawayPerformanceId,
+        (draftedCounts.get(castawayPerformanceId) || 0) + 1
+      );
+    });
+
+  draftState.picks
+    .filter((pick) => pick.isPicked && pick.team?.id === myTeamId && !!pick.castawayPerformanceId)
+    .forEach((pick) => userDraftedCastawayIds.add(pick.castawayPerformanceId!));
+
+  const maxMeaningfulCap = Math.max(1, draftState.totalParticipants || 1);
+  const teamCap = myParticipant?.maxDraftsPerCastaway || draftState.maxDraftsPerCastaway || 1;
+
+  const countDraftableAtCap = (cap: number) =>
+    draftPool.filter((castaway) => {
+      if (userDraftedCastawayIds.has(castaway.castawayPerformanceId)) {
+        return false;
+      }
+      const draftedCount = draftedCounts.get(castaway.castawayPerformanceId) || 0;
+      return draftedCount < cap;
+    }).length;
+
+  let effectiveCap = teamCap;
+  while (countDraftableAtCap(effectiveCap) === 0 && effectiveCap < maxMeaningfulCap) {
+    effectiveCap += 1;
+  }
+
+  const draftableCastaways = draftPool.filter((castaway) => {
+    if (userDraftedCastawayIds.has(castaway.castawayPerformanceId)) {
+      return false;
+    }
+    const draftedCount = draftedCounts.get(castaway.castawayPerformanceId) || 0;
+    return draftedCount < effectiveCap;
+  });
+
+  // Castaway shown in the bio modal; draft button only when it's our turn and they're still draftable
+  const viewingDraftCastaway = draftPool.find(
+    (castaway) => castaway.castawayPerformanceId === viewingCastawayPerformanceId
+  );
+  // Fall back to just the name if the season bio hasn't loaded
+  const viewingCastaway: Castaway | null = viewingDraftCastaway
+    ? seasonCastaways.find((castaway) => castaway.id === viewingDraftCastaway.castawayId) ??
+      ({ name: viewingDraftCastaway.castawayName, full_name: viewingDraftCastaway.castawayName } as Castaway)
+    : null;
+  const canDraftViewingCastaway =
+    isMyTurn &&
+    !!viewingDraftCastaway &&
+    draftableCastaways.some(
+      (castaway) => castaway.castawayPerformanceId === viewingDraftCastaway.castawayPerformanceId
+    );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -238,75 +289,22 @@ export default function DraftScreen({
       {draftState.draftCastaways?.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Available Castaways</Text>
-          {(() => {
-            // Get current user's drafted castaway IDs from picks
-            const userDraftedCastawayIds = new Set<number>();
-            const myParticipant = draftState.participants.find((participant) => participant.user.id === user?.id);
-            const myTeamId = myParticipant?.teamId;
-
-            const draftedCounts = new Map<number, number>();
-            draftState.picks
-              .filter((pick) => !!pick.castawayPerformanceId)
-              .forEach((pick) => {
-                const castawayPerformanceId = pick.castawayPerformanceId!;
-                draftedCounts.set(
-                  castawayPerformanceId,
-                  (draftedCounts.get(castawayPerformanceId) || 0) + 1
-                );
-              });
-
-            draftState.picks
-              .filter((pick) => pick.isPicked && pick.team?.id === myTeamId && !!pick.castawayPerformanceId)
-              .forEach((pick) => userDraftedCastawayIds.add(pick.castawayPerformanceId!));
-
-            const maxMeaningfulCap = Math.max(1, draftState.totalParticipants || 1);
-            const teamCap = myParticipant?.maxDraftsPerCastaway || draftState.maxDraftsPerCastaway || 1;
-
-            const countDraftableAtCap = (cap: number) =>
-              draftState.draftCastaways.filter((castaway) => {
-                if (userDraftedCastawayIds.has(castaway.castawayPerformanceId)) {
-                  return false;
-                }
-                const draftedCount = draftedCounts.get(castaway.castawayPerformanceId) || 0;
-                return draftedCount < cap;
-              }).length;
-
-            let effectiveCap = teamCap;
-            while (countDraftableAtCap(effectiveCap) === 0 && effectiveCap < maxMeaningfulCap) {
-              effectiveCap += 1;
-            }
-
-            const draftableCastaways = draftState.draftCastaways.filter((castaway) => {
-              if (userDraftedCastawayIds.has(castaway.castawayPerformanceId)) {
-                return false;
-              }
-              const draftedCount = draftedCounts.get(castaway.castawayPerformanceId) || 0;
-              return draftedCount < effectiveCap;
-            });
-
-            if (draftableCastaways.length === 0) {
-              return null;
-            }
-            
-            return (
-              <DraftCastawayBlock
-                castaways={draftableCastaways
-                  .map((castaway) => ({
-                    id: castaway.castawayPerformanceId,
-                    castaway: {
-                      name: castaway.castawayName,
-                      full_name: castaway.castawayName,
-                      json_id: jsonIdByCastawayId.get(castaway.castawayId),
-                    },
-                  })) as any}
-                selectedCastaway={selectedCastaway}
-                onCastawayPress={handleCastawayPress}
-                disabled={!isMyTurn || isPickingLoading}
-                userDraftedCastawayIds={userDraftedCastawayIds}
-                seasonId={imageSeasonNumber}
-              />
-            );
-          })()}
+          {draftableCastaways.length > 0 && (
+            <DraftCastawayBlock
+              castaways={draftableCastaways
+                .map((castaway) => ({
+                  id: castaway.castawayPerformanceId,
+                  castaway: {
+                    name: castaway.castawayName,
+                    full_name: castaway.castawayName,
+                    json_id: jsonIdByCastawayId.get(castaway.castawayId),
+                  },
+                })) as any}
+              onCastawayPress={setViewingCastawayPerformanceId}
+              userDraftedCastawayIds={userDraftedCastawayIds}
+              seasonId={imageSeasonNumber}
+            />
+          )}
         </View>
       )}
 
@@ -360,6 +358,15 @@ export default function DraftScreen({
           {draftState.totalPicks} picks
         </Text>
       </View>
+      <DraftCastawayModal
+        visible={viewingCastawayPerformanceId !== null}
+        castaway={viewingCastaway}
+        imageSource={getImportedCastawayImageSource(imageSeasonNumber, viewingCastaway?.json_id)}
+        canDraft={canDraftViewingCastaway}
+        isDrafting={isPickingLoading}
+        onDraft={() => viewingDraftCastaway && handleMakePick(viewingDraftCastaway.castawayPerformanceId)}
+        onClose={() => setViewingCastawayPerformanceId(null)}
+      />
     </ScrollView>
   );
 }
