@@ -9,12 +9,14 @@ import {
 import { useEffect, useState } from 'react';
 import { Colors, Spacing } from '../../constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { getImportedCastawayImageSource } from '../../utils/castawayImages';
 
 interface CastawayData {
   id: number;
   castaway: {
     full_name: string;
     name: string;
+    json_id?: string;
   };
 }
 
@@ -24,6 +26,7 @@ interface DraftCastawayBlockProps {
   onCastawayPress: (castawayId: number) => void;
   disabled?: boolean;
   userDraftedCastawayIds?: Set<number>;
+  seasonId?: number;
 }
 
 // Image mapping for castaway pictures
@@ -60,7 +63,9 @@ const getColumnsForWidth = (width: number): number => {
   return 6;                       // Desktop/Laptop
 };
 
-const getImageForCastaway = (name: string): any => {
+const getImageForCastaway = (name: string, seasonId?: number, jsonId?: string): any => {
+  const importedSource = getImportedCastawayImageSource(seasonId, jsonId);
+  if (importedSource) return importedSource;
   const normalized = name.toLowerCase().split(/\s+/)[0];
   return castawayImageMap[normalized] || require('../../assets/placeholder.png');
 };
@@ -71,6 +76,7 @@ export default function DraftCastawayBlock({
   onCastawayPress,
   disabled = false,
   userDraftedCastawayIds = new Set(),
+  seasonId,
 }: DraftCastawayBlockProps) {
   const [availableWidth, setAvailableWidth] = useState(0);
   const columns = getColumnsForWidth(availableWidth);
@@ -115,7 +121,7 @@ export default function DraftCastawayBlock({
                 activeOpacity={isDisabled ? 1 : 0.7}
               >
                 <Image
-                  source={getImageForCastaway(castaway.castaway.name)}
+                  source={getImageForCastaway(castaway.castaway.name, seasonId, castaway.castaway.json_id)}
                   style={[
                     styles.castawayImage,
                     userDrafted && styles.castawayImageUserDrafted,

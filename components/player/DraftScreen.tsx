@@ -14,6 +14,7 @@ import apiService, {
 } from '../../services/api';
 import DraftCastawayBlock from './DraftCastawayBlock';
 import { useAuth } from '../../contexts/AuthContext';
+import { Castaway } from '../../types/survivor';
 
 interface DraftScreenProps {
   groupId: number;
@@ -32,6 +33,7 @@ export default function DraftScreen({
   const [error, setError] = useState<string | null>(null);
   const [selectedCastaway, setSelectedCastaway] = useState<number | null>(null);
   const [isPickingLoading, setIsPickingLoading] = useState(false);
+  const [seasonCastaways, setSeasonCastaways] = useState<Castaway[]>([]);
 
   const isMyTurn = !!(user?.id && draftState?.currentTurnUser?.id === user.id);
   const isPickingLoadingRef = useRef(false);
@@ -53,6 +55,21 @@ export default function DraftScreen({
 
     fetchDraftState();
   }, [groupId, user?.id]);
+
+  // Load season castaways so draft cards can use the same portraits as castaway avatars
+  const draftSeasonId = draftState?.seasonId;
+  useEffect(() => {
+    if (!draftSeasonId) return;
+    apiService.getCastaways(draftSeasonId)
+      .then(setSeasonCastaways)
+      .catch((err) => console.error('Failed to load season castaways:', err));
+  }, [draftSeasonId]);
+
+  const jsonIdByName = new Map<string, string>();
+  seasonCastaways.forEach((castaway) => {
+    if (castaway.name) jsonIdByName.set(castaway.name.trim().toLowerCase(), castaway.json_id);
+    if (castaway.full_name) jsonIdByName.set(castaway.full_name.trim().toLowerCase(), castaway.json_id);
+  });
 
   // Keep ref in sync so the poll can skip while a pick is in flight
   useEffect(() => {
@@ -278,12 +295,14 @@ export default function DraftScreen({
                     castaway: {
                       name: castaway.castawayName,
                       full_name: castaway.castawayName,
+                      json_id: jsonIdByName.get(castaway.castawayName.trim().toLowerCase()),
                     },
                   })) as any}
                 selectedCastaway={selectedCastaway}
                 onCastawayPress={handleCastawayPress}
                 disabled={!isMyTurn || isPickingLoading}
                 userDraftedCastawayIds={userDraftedCastawayIds}
+                seasonId={draftState.seasonId}
               />
             );
           })()}
