@@ -158,25 +158,25 @@ export default function MoreScreen() {
           : []),
       ],
     },
-    {
-      title: 'About',
-      items: [
-        {
-          label: 'Terms of Service',
-          icon: 'document-text',
-          onPress: () => router.push('/settings/terms'),
-        },
-        ...(SHOW_DEV_FEATURES
-          ? [
+    ...(SHOW_DEV_FEATURES
+      ? [
+          {
+            title: 'About',
+            items: [
+              {
+                label: 'Terms of Service',
+                icon: 'document-text',
+                onPress: () => router.push('/settings/terms'),
+              },
               {
                 label: 'About This App',
                 icon: 'information-circle',
                 onPress: () => router.push('/settings/about'),
               },
-            ]
-          : []),
-      ],
-    },
+            ],
+          },
+        ]
+      : []),
     ...(SHOW_DEV_FEATURES
       ? [
           {
