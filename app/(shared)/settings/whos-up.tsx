@@ -6,9 +6,11 @@ import {
   Modal,
   Platform,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   View,
+  ViewStyle,
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -142,6 +144,47 @@ function PlayerCircle({
   );
 }
 
+// Pressable relies on click/responder events, which mobile browsers (and the
+// RN responder system) drop while other fingers are already on the screen.
+// Fire on the raw touchend instead, and ignore the follow-up press if one comes.
+function TapButton({
+  onTap,
+  disabled,
+  style,
+  accessibilityLabel,
+  children,
+}: {
+  onTap: () => void;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
+  children: React.ReactNode;
+}) {
+  const lastTouchTapRef = useRef(0);
+
+  return (
+    <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      disabled={disabled}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => {
+        e.stopPropagation();
+        if (disabled) return;
+        lastTouchTapRef.current = Date.now();
+        onTap();
+      }}
+      onPress={() => {
+        if (Date.now() - lastTouchTapRef.current < 800) return;
+        onTap();
+      }}
+      style={style}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 export default function WhosUpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -152,6 +195,8 @@ export default function WhosUpScreen() {
   const [highlightIdx, setHighlightIdx] = useState<number | null>(null);
   const [winnerIdx, setWinnerIdx] = useState<number | null>(null);
   const nextColorIdxRef = useRef(0);
+  const phaseRef = useRef<Phase>('registering');
+  phaseRef.current = phase;
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const clearTimeouts = () => {
@@ -163,6 +208,7 @@ export default function WhosUpScreen() {
     clearTimeouts();
     setPlayers([]);
     setPhase('registering');
+    phaseRef.current = 'registering';
     setHighlightIdx(null);
     setWinnerIdx(null);
     nextColorIdxRef.current = 0;
@@ -172,7 +218,10 @@ export default function WhosUpScreen() {
     return () => clearTimeouts();
   }, []);
 
+  const closingRef = useRef(false);
   const close = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
     clearTimeouts();
     if (router.canGoBack()) {
       router.back();
@@ -244,7 +293,8 @@ export default function WhosUpScreen() {
   );
 
   const start = useCallback(() => {
-    if (players.length < 2) return;
+    if (phaseRef.current !== 'registering' || players.length < 2) return;
+    phaseRef.current = 'cycling';
     setPhase('cycling');
     const winner = Math.floor(Math.random() * players.length);
     setWinnerIdx(winner);
@@ -323,22 +373,20 @@ export default function WhosUpScreen() {
         {/* Corner buttons hide during winner phase so the color flood covers everything */}
         {phase !== 'winner' && (
           <>
-            <Pressable
+            <TapButton
               accessibilityLabel="Reset"
-              accessibilityRole="button"
-              onPress={reset}
+              onTap={reset}
               style={[styles.cornerButton, { top: insets.top + CORNER_BUTTON_MARGIN, left: CORNER_BUTTON_MARGIN }]}
             >
               <Text style={styles.cornerButtonText}>↻</Text>
-            </Pressable>
-            <Pressable
+            </TapButton>
+            <TapButton
               accessibilityLabel="Close"
-              accessibilityRole="button"
-              onPress={close}
+              onTap={close}
               style={[styles.cornerButton, { top: insets.top + CORNER_BUTTON_MARGIN, right: CORNER_BUTTON_MARGIN }]}
             >
               <Text style={styles.cornerButtonText}>×</Text>
-            </Pressable>
+            </TapButton>
           </>
         )}
 
@@ -347,10 +395,9 @@ export default function WhosUpScreen() {
             pointerEvents="box-none"
             style={[styles.startRow, { bottom: insets.bottom + START_ZONE_BOTTOM_OFFSET }]}
           >
-            <Pressable
-              accessibilityRole="button"
+            <TapButton
               disabled={!canStart}
-              onPress={start}
+              onTap={start}
               style={[
                 styles.startButton,
                 canStart ? styles.startButtonActive : styles.startButtonIdle,
@@ -358,7 +405,7 @@ export default function WhosUpScreen() {
               ]}
             >
               <Text style={[styles.startText, canStart ? styles.startTextActive : styles.startTextIdle]}>{startLabel}</Text>
-            </Pressable>
+            </TapButton>
           </View>
         )}
       </View>
