@@ -141,6 +141,11 @@ export default function MoreScreen() {
           icon: 'add-circle',
           onPress: () => router.push('/(player)/groups/create'),
         },
+        {
+          label: 'Who’s Up',
+          icon: 'finger-print',
+          onPress: () => router.push('/settings/whos-up'),
+        },
         // Notifications and App Preferences are not ready for production yet
         ...(SHOW_DEV_FEATURES
           ? [
