@@ -9,8 +9,6 @@ import {
   HistoryEmpty,
   HistoryLoading,
 } from '../../../components/shared/HistoryUI';
-import { SHOW_DEV_FEATURES } from '../../../constants/featureFlags';
-
 const normalizeSeasonName = (value?: string): string => {
   if (!value) {
     return '';
@@ -31,9 +29,6 @@ const removeLeadingSeasonNumber = (value: string, seasonNumber: number): string 
 };
 
 const hasRegionPrefix = (value: string): boolean => /^([^:]+):\s+.+$/.test(value);
-
-// Season 51 is still being set up, so only show it in development builds
-const HIDDEN_PRODUCTION_SEASONS = new Set([51]);
 
 const getSeasonTitle = (season: Season): string => {
   console.log('[Seasons] seasonName before:', season.seasonName);
@@ -65,7 +60,7 @@ export default function SeasonsScreen() {
     const loadSeasons = async () => {
       try {
         const data = await apiService.getSeasons();
-        setSeasons(SHOW_DEV_FEATURES ? data : data.filter((season) => !HIDDEN_PRODUCTION_SEASONS.has(season.season)));
+        setSeasons(data);
       } catch (error) {
         showAlert('Error', 'Failed to load seasons');
       } finally {

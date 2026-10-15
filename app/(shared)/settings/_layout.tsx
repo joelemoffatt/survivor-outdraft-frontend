@@ -40,13 +40,6 @@ export default function SettingsLayout() {
           title: 'About This App',
         }}
       />
-      <Stack.Screen
-        name="whos-up"
-        options={{
-          headerShown: false,
-          title: 'Who’s Up',
-        }}
-      />
     </Stack>
   );
 }
