@@ -140,8 +140,12 @@ export default function EpisodeHistory() {
             <HistoryLineGroup key={`tribal-${tribalIndex}`}>
               <HistoryItemTitle>{tribal.tribeName}</HistoryItemTitle>
               <HistoryItemSubtitle>{getTribalSentence(tribal)}</HistoryItemSubtitle>
-              {/* Render tribal votes */}
-              {tribal.votes.map((vote, voteIndex) => (
+              {/* Render tribal votes (deduped — upstream can return duplicates per voter) */}
+              {Array.from(
+                new Map(
+                  tribal.votes.map((vote) => [`${vote.voterName}|${vote.votedForName}`, vote]),
+                ).values(),
+              ).map((vote, voteIndex) => (
                 <HistoryLineText key={`tribal-${tribalIndex}-vote-${voteIndex}`}>
                   {getTribalVoteSentence(vote)}
                 </HistoryLineText>
