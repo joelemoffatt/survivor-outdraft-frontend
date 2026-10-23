@@ -40,6 +40,13 @@ export default function SettingsLayout() {
           title: 'About This App',
         }}
       />
+      <Stack.Screen
+        name="loader-preview"
+        options={{
+          ...commonOptions,
+          title: 'Loader Preview',
+        }}
+      />
     </Stack>
   );
 }

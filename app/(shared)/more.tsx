@@ -187,6 +187,11 @@ export default function MoreScreen() {
                 icon: 'bug',
                 onPress: () => router.push('/settings/session-debug'),
               },
+              {
+                label: 'Loader Preview',
+                icon: 'flame',
+                onPress: () => router.push('/settings/loader-preview'),
+              },
             ],
           },
         ]
