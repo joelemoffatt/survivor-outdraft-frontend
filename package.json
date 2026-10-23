@@ -7,7 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "web:export": "expo export -p web",
+    "web:export": "expo export -p web && node scripts/patch-pwa-head.mjs",
     "deploy:web": "npm run web:export && firebase deploy --only hosting --project project-3a4e8cbe-52bf-4e46-9e9",
     "quad:users": "node scripts/launch-quadrants.mjs",
     "quad:users:reset": "RESET_AUTH=1 node scripts/launch-quadrants.mjs",
