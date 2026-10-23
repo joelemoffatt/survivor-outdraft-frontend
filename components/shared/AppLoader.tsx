@@ -1,7 +1,7 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { Colors, FontSizes } from '../../constants/theme';
 
-const icon = require('../../assets/icon.png');
+const icon = require('../../assets/icon-circle.png');
 
 interface Props {
   label?: string;
