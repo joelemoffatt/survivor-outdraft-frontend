@@ -7,6 +7,8 @@ export type LocalRuleType =
   | 'TRIBAL_IMMUNITY'
   | 'FOUND_IDOL'
   | 'FOUND_ADVANTAGE'
+  | 'PLAYED_IDOL_SUCCESSFULLY'
+  | 'PLAYED_ADVANTAGE_SUCCESSFULLY'
   | 'SOLE_SURVIVOR'
   | 'RUNNER_UP'
   | 'MADE_MERGE'
@@ -29,6 +31,8 @@ export const DEFAULT_RULE_TEMPLATES: RuleTemplate[] = [
   { ruleType: 'TRIBAL_IMMUNITY', label: 'Tribal Immunity', defaultPoints: 2 },
   { ruleType: 'FOUND_IDOL', label: 'Found Idol', defaultPoints: 1 },
   { ruleType: 'FOUND_ADVANTAGE', label: 'Found Advantage', defaultPoints: 1 },
+  { ruleType: 'PLAYED_IDOL_SUCCESSFULLY', label: 'Played Idol Successfully', defaultPoints: 2 },
+  { ruleType: 'PLAYED_ADVANTAGE_SUCCESSFULLY', label: 'Played Advantage Successfully', defaultPoints: 2 },
   { ruleType: 'SOLE_SURVIVOR', label: 'Sole Survivor', defaultPoints: 5 },
   { ruleType: 'RUNNER_UP', label: 'Runner-Up', defaultPoints: 2 },
   { ruleType: 'MADE_MERGE', label: 'Made the Merge', defaultPoints: 1 },
