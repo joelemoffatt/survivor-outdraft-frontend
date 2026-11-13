@@ -6,7 +6,7 @@ import type {
 
 export type RecapPreset = 'full' | 'tight' | 'hype';
 
-const APP_URL = 'outdraft.joelmoffatt.com';
+const APP_URL = 'https://outdraft.joelmoffatt.com';
 
 /** Strip "{castawayName} - " prefix from event labels (same convention as components/shared/team.tsx). */
 function cleanEventLabel(eventLabel: string, castawayName: string): string {
