@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppLoader from '../../../components/shared/AppLoader';
 import { Stack, useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import EmptyState from '../../../components/shared/EmptyState';
+import EpisodeRecapSheet from '../../../components/shared/EpisodeRecapSheet';
 import { getLocalRuleLabel } from '../../../components/admin/GroupRulesEditor';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useGroup } from '../../../contexts/GroupContext';
@@ -63,9 +65,14 @@ export default function GroupDetailsScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { selectedGroupId, groupData } = useGroup();
-  const { group, members, loading, error } = groupData;
+  const { group, members, teams, loading, error } = groupData;
   const showLoadingSpinner = useDelayedLoader(loading, 200);
   const [activeTab, setActiveTab] = useState<Tab>('details');
+  const [recapOpen, setRecapOpen] = useState(false);
+
+  const isOwner = Boolean(group && user && group.admin.id === user.id);
+  const episodeNumber = group?.latestEpisodeWatched?.episodeNumber ?? 0;
+  const canCopyRecap = isOwner && episodeNumber > 0 && teams.length > 0;
 
   const sortedRules = useMemo(
     () =>
@@ -146,6 +153,17 @@ export default function GroupDetailsScreen() {
         {/* Details Tab */}
         {activeTab === 'details' && (
           <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+            {canCopyRecap && (
+              <TouchableOpacity
+                style={styles.recapButton}
+                onPress={() => setRecapOpen(true)}
+              >
+                <Ionicons name="share-outline" size={18} color="#fff" />
+                <Text style={styles.recapButtonLabel}>
+                  Copy Ep{episodeNumber} Recap
+                </Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.card}>
               <InfoRow label="Group Name" value={group.name} />
               <InfoRow label="Status" value={formatGroupStatus(group.status)} />
@@ -238,6 +256,15 @@ export default function GroupDetailsScreen() {
           </ScrollView>
         )}
       </View>
+
+      {group && (
+        <EpisodeRecapSheet
+          visible={recapOpen}
+          onClose={() => setRecapOpen(false)}
+          group={group}
+          teams={teams}
+        />
+      )}
     </>
   );
 }
@@ -246,6 +273,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+
+  // Episode recap button
+  recapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.sm + 2,
+    marginBottom: Spacing.md,
+  },
+  recapButtonLabel: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: FontSizes.medium,
   },
 
   // Tab bar

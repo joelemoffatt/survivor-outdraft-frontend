@@ -23,6 +23,7 @@
     "@react-native-community/datetimepicker": "8.4.4",
     "dayjs": "^1.11.20",
     "expo": "~54.0.33",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-image-picker": "~17.0.10",
     "expo-linking": "~8.0.11",
