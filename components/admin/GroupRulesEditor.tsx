@@ -40,8 +40,17 @@ export const DEFAULT_RULE_TEMPLATES: RuleTemplate[] = [
   { ruleType: 'QUIT', label: 'Quit', defaultPoints: -2 },
 ];
 
-export const getLocalRuleLabel = (ruleType: string) =>
-  DEFAULT_RULE_TEMPLATES.find((rule) => rule.ruleType === ruleType)?.label ?? ruleType;
+export const getLocalRuleLabel = (ruleType: string): string => {
+  const match = DEFAULT_RULE_TEMPLATES.find((rule) => rule.ruleType === ruleType);
+  if (match) return match.label;
+  // Defensive fallback: humanize any raw snake-case code so the UI never
+  // shows "PLAYED_IDOL_SUCCESSFULLY" verbatim to the user.
+  return ruleType
+    .toLowerCase()
+    .split('_')
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ');
+};
 
 export const getDefaultLocalRules = (): LocalRule[] =>
   DEFAULT_RULE_TEMPLATES.map((rule) => ({
