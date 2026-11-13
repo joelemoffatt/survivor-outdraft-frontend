@@ -18,6 +18,8 @@ export type LocalRuleType =
   | 'TRIBAL_IMMUNITY'
   | 'FOUND_IDOL'
   | 'FOUND_ADVANTAGE'
+  | 'PLAYED_IDOL_SUCCESSFULLY'
+  | 'PLAYED_ADVANTAGE_SUCCESSFULLY'
   | 'SOLE_SURVIVOR'
   | 'RUNNER_UP'
   | 'MADE_MERGE'
@@ -40,12 +42,22 @@ export const RULE_TEMPLATES: RuleTemplate[] = [
   { ruleType: 'TRIBAL_IMMUNITY', label: 'Tribal Immunity', defaultPoints: 2 },
   { ruleType: 'FOUND_IDOL', label: 'Found Idol', defaultPoints: 1 },
   { ruleType: 'FOUND_ADVANTAGE', label: 'Found Advantage', defaultPoints: 1 },
+  { ruleType: 'PLAYED_IDOL_SUCCESSFULLY', label: 'Played Idol Successfully', defaultPoints: 2 },
+  { ruleType: 'PLAYED_ADVANTAGE_SUCCESSFULLY', label: 'Played Advantage Successfully', defaultPoints: 2 },
   { ruleType: 'SOLE_SURVIVOR', label: 'Sole Survivor', defaultPoints: 5 },
   { ruleType: 'RUNNER_UP', label: 'Runner-Up', defaultPoints: 2 },
   { ruleType: 'MADE_MERGE', label: 'Made the Merge', defaultPoints: 1 },
   { ruleType: 'MED_EVAC', label: 'Med Evac', defaultPoints: -2 },
   { ruleType: 'QUIT', label: 'Quit', defaultPoints: -2 },
 ];
+
+/** Humanize any unknown snake-case rule code so the UI never shows raw strings. */
+const humanizeRuleType = (ruleType: string): string =>
+  ruleType
+    .toLowerCase()
+    .split('_')
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(' ');
 
 export const getDefaultLocalRules = (): LocalRule[] =>
   RULE_TEMPLATES.map((rule) => ({
@@ -68,7 +80,9 @@ interface RuleRowProps {
 }
 
 function RuleRow({ rule, index, displayValue, onPointsChange, onPointsBlur, onDelete }: RuleRowProps) {
-  const ruleLabel = RULE_TEMPLATES.find((t) => t.ruleType === rule.ruleType)?.label || rule.ruleType;
+  const ruleLabel =
+    RULE_TEMPLATES.find((t) => t.ruleType === rule.ruleType)?.label ||
+    humanizeRuleType(rule.ruleType);
 
   return (
     <View style={styles.ruleRow}>
