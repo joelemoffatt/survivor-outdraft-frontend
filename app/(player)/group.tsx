@@ -18,6 +18,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import Card from "../../components/shared/Card";
 import Button from "../../components/shared/Button";
+import EpisodeRecapSheet from "../../components/shared/EpisodeRecapSheet";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGroup } from "../../contexts/GroupContext";
 import apiService, { GroupMemberResponse, GroupResponse } from "../../services/api";
@@ -99,7 +100,10 @@ export default function GroupScreen() {
   const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
   const [addMemberUsername, setAddMemberUsername] = useState("");
   const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [recapOpen, setRecapOpen] = useState(false);
   const isGroupLeader = user ? Number(user.id) === Number(group?.admin?.id) : false;
+  const latestEpNum = group?.latestEpisodeWatched?.episodeNumber ?? 0;
+  const canCopyRecap = isGroupLeader && latestEpNum > 0 && teams.length > 0;
   const showLoadingSpinner = useDelayedLoader(loading, 200);
 
   const handleAddMember = async () => {
@@ -268,6 +272,16 @@ export default function GroupScreen() {
 
       </Card>
 
+      {canCopyRecap && (
+        <TouchableOpacity
+          style={styles.recapButton}
+          onPress={() => setRecapOpen(true)}
+        >
+          <Ionicons name="share-outline" size={18} color="#fff" />
+          <Text style={styles.recapButtonLabel}>Copy Ep{latestEpNum} Recap</Text>
+        </TouchableOpacity>
+      )}
+
       {group.status === "PENDING" ? (
         <View style={styles.memberListSection}>
           <Text style={styles.sectionTitle}>Members</Text>
@@ -359,6 +373,15 @@ export default function GroupScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {group && (
+        <EpisodeRecapSheet
+          visible={recapOpen}
+          onClose={() => setRecapOpen(false)}
+          group={group}
+          teams={teams}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -377,6 +400,21 @@ const styles = StyleSheet.create({
   centerButton: { marginTop: Spacing.md },
   content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, paddingBottom: Spacing.lg },
   headerCard: { marginBottom: Spacing.md },
+  recapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.sm + 2,
+    marginBottom: Spacing.md,
+  },
+  recapButtonLabel: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: FontSizes.medium,
+  },
   headerTop: {
     flexDirection: "row",
     alignItems: "flex-start",
